@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="academix-primary" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#a855f7" />
+    </linearGradient>
+    <linearGradient id="academix-accent" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <!-- Background glowing node -->
+  <circle cx="24" cy="24" r="22" fill="#0f172a" stroke="url(#academix-primary)" stroke-width="1.5" />
+  
+  <!-- Outer shield segments -->
+  <path d="M24 6L8 15v12c0 8.5 7 15 16 17c9-2 16-8.5 16-17V15L24 6z" fill="url(#academix-primary)" fill-opacity="0.05" stroke="url(#academix-primary)" stroke-width="1" stroke-dasharray="2 2" />
+
+  <!-- Dynamic 'A' Structure -->
+  <!-- Left Wing -->
+  <path d="M13 36 L21 16 L24 22 L18 36 Z" fill="url(#academix-accent)" />
+  <!-- Right Wing -->
+  <path d="M35 36 L27 16 L24 22 L30 36 Z" fill="url(#academix-accent)" opacity="0.8" />
+  <!-- Mortarboard Diamond / Apex representing learning -->
+  <path d="M24 8 L33 14 L24 20 L15 14 Z" fill="url(#academix-primary)" filter="url(#glow)" />
+  <!-- Floating Knowledge Sphere / Central Core -->
+  <circle cx="24" cy="24" r="3.5" fill="#ffffff" filter="url(#glow)" />
+  <circle cx="24" cy="24" r="2" fill="url(#academix-accent)" />
+</svg>
