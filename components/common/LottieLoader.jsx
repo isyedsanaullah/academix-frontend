@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Image from 'next/image';
 
 export default function LottieLoader({
   fullScreen = false,
@@ -14,21 +13,30 @@ export default function LottieLoader({
   const [animationData, setAnimationData] = useState(null);
 
   useEffect(() => {
-    // Dynamically import lottie-react only on the client
-    import('lottie-react').then((mod) => {
-      setLottieComp(() => mod.default);
-    });
+    // Dynamically load lottie-react component on client
+    import('lottie-react')
+      .then((mod) => {
+        const Comp = mod.Lottie || mod.default || mod;
+        setLottieComp(() => Comp);
+      })
+      .catch((err) => {
+        console.error('Failed to import lottie-react:', err);
+      });
 
-    // Fetch branded loader animation from public/logo/
-    fetch('/logo/reframe-blur-rise.json')
-      .then((r) => r.json())
-      .then((data) => setAnimationData(data))
-      .catch(() =>
-        fetch('/logo/reframe-draw-on.json')
-          .then((r) => r.json())
-          .then((data) => setAnimationData(data))
-          .catch(() => setAnimationData(null))
-      );
+    // Fetch the original loader.json from public directory
+    fetch('/loader.json')
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
+      .then((json) => setAnimationData(json))
+      .catch((err) => {
+        console.error('Failed to load /loader.json, trying fallback:', err);
+        fetch('/logo/loader.json')
+          .then((res) => res.json())
+          .then((json) => setAnimationData(json))
+          .catch(() => setAnimationData(null));
+      });
   }, []);
 
   const content = (
@@ -42,13 +50,7 @@ export default function LottieLoader({
             style={{ width: '100%', height: '100%' }}
           />
         ) : (
-          /* Fallback: logo centred inside a spinner ring */
-          <div className="relative flex items-center justify-center w-full h-full">
-            <div className="absolute inset-0 rounded-full border-2 border-indigo-500/20 border-t-indigo-500 animate-spin" />
-            <div className="w-1/2 h-1/2 relative">
-              <Image src="/logo.svg" alt="Academix" fill className="object-contain" priority />
-            </div>
-          </div>
+          <div className="w-10 h-10 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
         )}
       </div>
       {text && (

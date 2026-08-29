@@ -8,6 +8,7 @@ import {
 } from 'react-icons/hi';
 import { auth, googleProvider } from '@/lib/firebase';
 import { signInWithPopup, signOut } from 'firebase/auth';
+import LottieLoader from '@/components/common/LottieLoader';
 
 const API = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) 
   ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api$/, '') 
@@ -264,12 +265,7 @@ const PublicCollegePage = () => {
   const admissionsOpen = !!season && new Date() <= new Date(season.endDate);
   const showFileWarning = hasRestoredDraftFiles && (!files.photo || !files.sscDMC);
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#080c12', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ width: 32, height: 32, border: '3px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-    </div>
-  );
+  if (loading) return <LottieLoader fullScreen text="Loading College Portal..." />;
 
   if (!data) return (
     <div style={{ minHeight: '100vh', background: '#080c12', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171', fontSize: 18 }}>
