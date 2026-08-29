@@ -33,92 +33,61 @@ export default function RecentActivityWidget({ role = 'student', limit = 5 }) {
   const historyPath = `/${role}/activity-log`;
 
   return (
-    <div
-      style={{
-        padding: '20px',
-        borderRadius: '16px',
-        background: 'var(--card-bg, #0d1117)',
-        border: '1px solid var(--border-color, rgba(255, 255, 255, 0.06))',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '14px',
-      }}
-      className="glass-card"
-    >
+    <div className="glass-card p-4 sm:p-6 bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.06] rounded-2xl shadow-xs dark:shadow-none flex flex-col gap-4 w-full">
       {/* Widget Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <HiOutlineClock size={16} style={{ color: '#818cf8' }} />
+      <div className="flex items-center justify-between flex-wrap gap-3 pb-2 border-b border-slate-100 dark:border-white/[0.04]">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-500/12 border border-indigo-100 dark:border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+            <HiOutlineClock size={18} />
           </div>
-          <h3 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary, #ffffff)', margin: 0 }}>
-            Recent Activity
-          </h3>
+          <div>
+            <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white m-0">
+              Recent Activity
+            </h3>
+            <p className="text-[11px] text-slate-500 dark:text-white/40 m-0">
+              Latest system audit trails and operational logs
+            </p>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={loadActivities}
             title="Refresh logs"
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--text-tertiary, rgba(255, 255, 255, 0.4))',
-              cursor: 'pointer',
-              padding: '4px',
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'center',
-            }}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:text-white/40 dark:hover:text-white/80 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
           >
-            <HiOutlineRefresh size={14} />
+            <HiOutlineRefresh size={16} />
           </button>
           <Link
             href={historyPath}
-            style={{
-              fontSize: '12px',
-              fontWeight: 600,
-              color: '#818cf8',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              textDecoration: 'none',
-              padding: '4px 8px',
-              borderRadius: '6px',
-              background: 'rgba(99,102,241,0.08)',
-              transition: 'all 0.15s',
-            }}
+            className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-all"
           >
-            View All Activity <HiOutlineArrowRight size={13} />
+            <span>View All</span>
+            <HiOutlineArrowRight size={13} />
           </Link>
         </div>
       </div>
 
       {/* Content State */}
       {loading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '10px 0' }}>
+        <div className="flex flex-col gap-2.5 py-2 w-full">
           {[1, 2, 3].map((n) => (
             <div
               key={n}
-              style={{
-                height: '56px',
-                borderRadius: '12px',
-                background: 'rgba(255, 255, 255, 0.03)',
-                animation: 'pulse 1.5s infinite ease-in-out',
-              }}
+              className="h-16 rounded-xl bg-slate-100 dark:bg-white/[0.03] animate-pulse w-full"
             />
           ))}
         </div>
       ) : error ? (
-        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '12px' }}>
-          Unable to load recent activity.
+        <div className="py-8 text-center text-slate-500 dark:text-white/40 text-xs w-full">
+          Unable to load recent activity logs.
         </div>
       ) : activities.length === 0 ? (
-        <div style={{ padding: '24px 12px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '12px' }}>
+        <div className="py-8 text-center text-slate-500 dark:text-white/40 text-xs w-full">
           No recent activity reported.
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div className="flex flex-col gap-2.5 w-full">
           {activities.map((act) => (
             <ActivityItem key={act.id} activity={act} isCompact={true} />
           ))}
