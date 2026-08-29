@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
+import LottieLoader from '@/components/common/LottieLoader';
 import {
   HiOutlineOfficeBuilding, HiOutlineMail, HiOutlinePhone,
   HiOutlineLocationMarker, HiOutlineGlobe, HiOutlineCalendar,
@@ -61,7 +62,7 @@ export default function CollegeProfilePage() {
   }, [shortcut]);
 
   if (loading) {
-    return <ProfileSkeleton />;
+    return <LottieLoader fullScreen text="Loading College Profile..." />;
   }
 
   if (error || !data) {

@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
+import LottieLoader from '@/components/common/LottieLoader';
 import {
   HiOutlineSearch, HiOutlineLocationMarker, HiOutlineMail,
   HiOutlineSpeakerphone, HiOutlineClipboardList, HiOutlineLogin,
@@ -107,14 +109,17 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#04070d] text-white/85 flex flex-col font-sans selection:bg-indigo-500/30 selection:text-indigo-200">
 
+      {/* ── FULLSCREEN LOADER ───────────────────────────────────── */}
+      {loadingColleges && <LottieLoader fullScreen text="Loading Colleges..." />}
+
       {/* ── STICKY HEADER ───────────────────────────────────────── */}
       <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-[#04070d]/80 backdrop-blur-xl shadow-[0_1px_0_rgba(255,255,255,0.05)]">
         <div className="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-10 h-14 sm:h-[62px] flex items-center justify-between gap-2 sm:gap-4">
 
           {/* Logo */}
           <div className="flex items-center gap-2 sm:gap-3 cursor-pointer shrink-0 min-w-0" onClick={scrollToDirectory}>
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-[10px] bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md sm:shadow-lg shadow-indigo-600/25 shrink-0">
-              <HiOutlineAcademicCap className="text-white w-4 h-4 sm:w-[18px] sm:h-[18px]" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 relative">
+              <Image src="/logo.svg" alt="Academix" fill className="object-contain" priority />
             </div>
             <div className="min-w-0">
               <h1 className="text-sm sm:text-[15px] font-extrabold text-white leading-none tracking-tight">Academix</h1>
