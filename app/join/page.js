@@ -237,15 +237,15 @@ export default function JoinPage() {
 
       {/* ── HEADER ────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-[#04070d]/80 backdrop-blur-xl">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 h-[62px] flex items-center justify-between">
+        <div className="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-10 h-14 sm:h-[62px] flex items-center justify-between gap-2 sm:gap-4">
 
-          <a href="/" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-[10px] bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-600/25 shrink-0">
-              <HiOutlineAcademicCap size={18} className="text-white" />
+          <a href="/" className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-[10px] bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md sm:shadow-lg shadow-indigo-600/25 shrink-0">
+              <HiOutlineAcademicCap className="text-white w-4 h-4 sm:w-[18px] sm:h-[18px]" />
             </div>
-            <div>
-              <p className="text-[15px] font-extrabold text-white leading-none tracking-tight">Academix</p>
-              <p className="text-[9px] text-white/35 font-semibold uppercase tracking-widest mt-0.5 leading-none">Join Academix</p>
+            <div className="min-w-0">
+              <p className="text-sm sm:text-[15px] font-extrabold text-white leading-none tracking-tight">Academix</p>
+              <p className="text-[8px] sm:text-[9px] text-white/35 font-semibold uppercase tracking-wider sm:tracking-widest mt-0.5 leading-none truncate">Join Academix</p>
             </div>
           </a>
 
@@ -257,13 +257,13 @@ export default function JoinPage() {
             <a href="/" className="hover:text-white transition-colors">Colleges</a>
           </nav>
 
-          <div className="flex items-center gap-3">
-            <button onClick={() => scrollTo('pricing')} className="hidden sm:inline-flex btn-primary py-1.5 px-3.5 text-xs">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+            <button onClick={() => scrollTo('pricing')} className="btn-primary py-1 sm:py-1.5 px-2.5 sm:px-3.5 text-[11px] sm:text-xs font-semibold rounded-lg sm:rounded-xl">
               View Plans
             </button>
-            <button onClick={() => router.push('/login')} className="btn-secondary py-1.5 px-3.5 text-xs">
-              <HiOutlineLogin size={13} />
-              Login
+            <button onClick={() => router.push('/login')} className="btn-secondary py-1 sm:py-1.5 px-2.5 sm:px-3.5 text-[11px] sm:text-xs font-medium gap-1 sm:gap-1.5 rounded-lg sm:rounded-xl">
+              <HiOutlineLogin className="w-3 h-3 sm:w-[13px] sm:h-[13px] text-violet-400 shrink-0" />
+              <span>Login</span>
             </button>
           </div>
         </div>
