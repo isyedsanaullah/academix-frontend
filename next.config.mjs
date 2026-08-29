@@ -8,6 +8,7 @@ const BACKEND_URL = process.env.BACKEND_URL || (process.env.NEXT_PUBLIC_API_URL 
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  turbopack: {},
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },

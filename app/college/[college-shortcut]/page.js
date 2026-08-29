@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
 import LottieLoader from '@/components/common/LottieLoader';
+import PublicFooter from '@/components/common/PublicFooter';
 import {
   HiOutlineOfficeBuilding, HiOutlineMail, HiOutlinePhone,
   HiOutlineLocationMarker, HiOutlineGlobe, HiOutlineCalendar,
@@ -550,6 +551,9 @@ export default function CollegeProfilePage() {
           </motion.div>
         )}
 
+      </div>
+      <div className="mt-16">
+        <PublicFooter />
       </div>
     </div>
   );

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import PublicFooter from '@/components/common/PublicFooter';
 import { motion } from 'framer-motion';
 import {
   HiOutlineAcademicCap, HiArrowRight, HiOutlineCheckCircle,
@@ -237,16 +238,16 @@ export default function JoinPage() {
     <div className="min-h-screen bg-[#04070d] text-white/85 flex flex-col font-sans selection:bg-indigo-500/30 selection:text-indigo-200">
 
       {/* ── HEADER ────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-[#04070d]/80 backdrop-blur-xl">
-        <div className="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-10 h-14 sm:h-[62px] flex items-center justify-between gap-2 sm:gap-4">
+      <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-[#04070d]/85 backdrop-blur-xl shadow-[0_1px_0_rgba(255,255,255,0.05)]">
+        <div className="max-w-[1440px] mx-auto px-3.5 sm:px-6 lg:px-10 h-16 sm:h-[68px] flex items-center justify-between gap-3 sm:gap-4">
 
-          <a href="/" className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 relative">
+          <a href="/" className="flex items-center gap-2.5 sm:gap-3.5 shrink-0 min-w-0">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 shrink-0 relative">
               <Image src="/logo.svg" alt="Academix" fill className="object-contain" priority />
             </div>
             <div className="min-w-0">
-              <p className="text-sm sm:text-[15px] font-extrabold text-white leading-none tracking-tight">Academix</p>
-              <p className="text-[8px] sm:text-[9px] text-white/35 font-semibold uppercase tracking-wider sm:tracking-widest mt-0.5 leading-none truncate">Join Academix</p>
+              <p className="text-base sm:text-[17px] font-extrabold text-white leading-none tracking-tight">Academix</p>
+              <p className="text-[9px] sm:text-[10px] text-white/40 font-semibold uppercase tracking-wider sm:tracking-widest mt-1 leading-none truncate">Join Academix</p>
             </div>
           </a>
 
@@ -258,12 +259,12 @@ export default function JoinPage() {
             <a href="/" className="hover:text-white transition-colors">Colleges</a>
           </nav>
 
-          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-            <button onClick={() => scrollTo('pricing')} className="btn-primary py-1 sm:py-1.5 px-2.5 sm:px-3.5 text-[11px] sm:text-xs font-semibold rounded-lg sm:rounded-xl">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <button onClick={() => scrollTo('pricing')} className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs font-semibold text-indigo-300 hover:text-white bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/25 hover:border-indigo-500/40 rounded-xl transition-all shadow-sm active:scale-95">
               View Plans
             </button>
-            <button onClick={() => router.push('/login')} className="btn-secondary py-1 sm:py-1.5 px-2.5 sm:px-3.5 text-[11px] sm:text-xs font-medium gap-1 sm:gap-1.5 rounded-lg sm:rounded-xl">
-              <HiOutlineLogin className="w-3 h-3 sm:w-[13px] sm:h-[13px] text-violet-400 shrink-0" />
+            <button onClick={() => router.push('/login')} className="inline-flex items-center gap-1.5 px-3.5 sm:px-4.5 py-2 text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 rounded-xl transition-all shadow-[0_2px_10px_rgba(99,102,241,0.28)] hover:shadow-[0_4px_14px_rgba(99,102,241,0.4)] active:scale-95">
+              <HiOutlineLogin className="w-3.5 h-3.5 text-white/90 shrink-0" />
               <span>Login</span>
             </button>
           </div>
@@ -271,38 +272,34 @@ export default function JoinPage() {
       </header>
 
       {/* ── HERO ──────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden pt-20 pb-20 border-b border-white/[0.04]">
+      <section className="relative overflow-hidden pt-16 pb-16 sm:pt-20 sm:pb-20 border-b border-white/[0.04]">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] rounded-full bg-indigo-600/[0.05] blur-3xl pointer-events-none" />
         <div className="absolute top-8 right-16 w-80 h-80 rounded-full bg-violet-600/[0.03] blur-2xl pointer-events-none" />
         <div className="pointer-events-none absolute inset-0 opacity-[0.015]"
           style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
 
-        <div className="max-w-[860px] mx-auto px-4 sm:px-6 text-center space-y-7 relative z-10">
-          <motion.div {...fadeUp(0.0)} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/15 text-indigo-400 text-[10px] font-bold tracking-wider uppercase">
-            <HiOutlineSparkles size={11} className="animate-pulse" />
-            For Colleges & Institutions
-          </motion.div>
-
-          <motion.h1 {...fadeUp(0.1)} className="text-4xl sm:text-6xl font-black text-white tracking-tight leading-[1.05]">
+        <div className="max-w-[860px] mx-auto px-4 sm:px-6 text-center space-y-6 relative z-10">
+          <motion.h1 {...fadeUp(0.0)} className="text-3xl sm:text-6xl font-black text-white tracking-tight leading-[1.1]">
             Bring Your College<br className="hidden sm:block" /> to Academix
           </motion.h1>
 
-          <motion.p {...fadeUp(0.2)} className="text-sm sm:text-lg text-white/50 max-w-2xl mx-auto leading-relaxed">
+          <motion.p {...fadeUp(0.1)} className="text-sm sm:text-lg text-white/50 max-w-2xl mx-auto leading-relaxed">
             Manage admissions, academics, attendance, fees, certificates, communication, and other college operations through one centralized platform.
           </motion.p>
 
-          <motion.div {...fadeUp(0.3)} className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <motion.div {...fadeUp(0.2)} className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 w-full max-w-md mx-auto">
             <button
               onClick={() => scrollTo('pricing')}
-              className="w-full sm:w-auto btn-primary py-3 px-7 text-sm font-bold shadow-indigo-600/30"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-3 px-7 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white text-xs sm:text-sm font-bold shadow-[0_4px_16px_rgba(99,102,241,0.35)] transition-all active:scale-98"
             >
-              View Plans <HiArrowRight size={15} className="ml-1 shrink-0" />
+              <span>View Plans</span>
+              <HiArrowRight size={15} className="shrink-0" />
             </button>
             <button
               onClick={() => scrollTo('contact')}
-              className="w-full sm:w-auto btn-secondary py-3 px-7 text-sm font-semibold"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-3 px-7 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-white text-xs sm:text-sm font-semibold transition-all active:scale-98"
             >
-              Contact Developer
+              <span>Contact Developer</span>
             </button>
           </motion.div>
         </div>
@@ -592,8 +589,8 @@ export default function JoinPage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold text-white/35 uppercase tracking-wider">Phone</p>
-                  <a href="tel:+923469581362" className="text-xs text-white hover:text-indigo-400 transition-colors font-medium">
-                    +92 346 9581362
+                  <a href="tel:+923135013303" className="text-xs text-white hover:text-indigo-400 transition-colors font-medium">
+                    +92 313 5013303
                   </a>
                 </div>
               </div>
@@ -602,7 +599,7 @@ export default function JoinPage() {
                 <p className="text-[10px] font-semibold text-white/35 uppercase tracking-wider">Quick Actions</p>
                 <button
                   onClick={() => router.push('/request-subscription')}
-                  className="w-full btn-primary py-2 justify-center text-xs"
+                  className="w-full btn-primary py-2.5 justify-center text-xs font-bold"
                 >
                   Request a Subscription
                 </button>
@@ -672,7 +669,7 @@ export default function JoinPage() {
                         id="join-phone"
                         value={contactForm.phone}
                         onChange={e => setContactForm({ ...contactForm, phone: e.target.value })}
-                        placeholder="03xx-xxxxxxx (optional)"
+                        placeholder="03135013303 (optional)"
                         className="input-field pl-9 text-xs py-2"
                       />
                     </div>
@@ -723,36 +720,7 @@ export default function JoinPage() {
       </section>
 
       {/* ── FOOTER ───────────────────────────────────────────────── */}
-      <footer className="border-t border-white/[0.05] bg-[#04070d] py-10">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-[8px] bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0">
-                <HiOutlineAcademicCap size={16} className="text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-extrabold text-white tracking-tight">Academix</p>
-                <p className="text-[10px] text-white/30 mt-0.5">Digital campus management platform.</p>
-              </div>
-            </div>
-
-            <nav className="flex flex-wrap gap-4 text-xs text-white/40 font-medium">
-              <button onClick={() => scrollTo('features')} className="hover:text-indigo-400 transition-colors">Features</button>
-              <button onClick={() => scrollTo('pricing')} className="hover:text-indigo-400 transition-colors">Plans</button>
-              <button onClick={() => scrollTo('ownership')} className="hover:text-indigo-400 transition-colors">Full Ownership</button>
-              <button onClick={() => scrollTo('contact')} className="hover:text-indigo-400 transition-colors">Contact</button>
-              <a href="/" className="hover:text-indigo-400 transition-colors">College Directory</a>
-              <a href="/privacy-policy" className="hover:text-indigo-400 transition-colors">Privacy Policy</a>
-              <a href="/terms" className="hover:text-indigo-400 transition-colors">Terms</a>
-              <button onClick={() => router.push('/login')} className="hover:text-indigo-400 transition-colors">Login</button>
-            </nav>
-          </div>
-
-          <div className="border-t border-white/[0.05] mt-8 pt-6 text-center text-[10px] text-white/20">
-            © {new Date().getFullYear()} Academix. All rights reserved.
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

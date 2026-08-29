@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import PublicFooter from '@/components/common/PublicFooter';
 import { HiOutlineArrowRight, HiOutlineShieldCheck, HiOutlineDocumentText, HiOutlineLockClosed, HiOutlineExclamationCircle } from 'react-icons/hi';
 
 const SECTIONS = [
@@ -36,20 +37,20 @@ export default function PrivacyPolicyPage() {
   return (
     <div className="min-h-screen bg-[#04070d] text-white/85 flex flex-col font-sans">
       {/* HEADER */}
-      <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-[#04070d]/80 backdrop-blur-xl shadow-[0_1px_0_rgba(255,255,255,0.05)]">
-        <div className="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-10 h-14 sm:h-[62px] flex items-center justify-between gap-2 sm:gap-4">
-          <div className="flex items-center gap-2 sm:gap-3 cursor-pointer shrink-0 min-w-0" onClick={() => router.push('/')}>
-            <div className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 relative">
+      <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-[#04070d]/85 backdrop-blur-xl shadow-[0_1px_0_rgba(255,255,255,0.05)]">
+        <div className="max-w-[1440px] mx-auto px-3.5 sm:px-6 lg:px-10 h-16 sm:h-[68px] flex items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-2.5 sm:gap-3.5 cursor-pointer shrink-0 min-w-0" onClick={() => router.push('/')}>
+            <div className="w-10 h-10 sm:w-11 sm:h-11 shrink-0 relative">
               <Image src="/logo.svg" alt="Academix" fill className="object-contain" priority />
             </div>
             <div className="min-w-0">
-              <h1 className="text-sm sm:text-[15px] font-extrabold text-white leading-none tracking-tight">Academix</h1>
-              <p className="text-[8px] sm:text-[9px] text-white/35 font-semibold uppercase tracking-wider sm:tracking-widest mt-0.5 leading-none truncate">
+              <h1 className="text-base sm:text-[17px] font-extrabold text-white leading-none tracking-tight">Academix</h1>
+              <p className="text-[9px] sm:text-[10px] text-white/40 font-semibold uppercase tracking-wider sm:tracking-widest mt-1 leading-none truncate">
                 Privacy Policy
               </p>
             </div>
           </div>
-          <button onClick={() => router.push('/')} className="btn-secondary py-1 sm:py-1.5 px-2.5 sm:px-3.5 text-[11px] sm:text-xs rounded-lg sm:rounded-xl shrink-0">
+          <button onClick={() => router.push('/')} className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs font-semibold text-white/70 hover:text-white bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 rounded-xl transition-all shadow-sm shrink-0">
             Back to Home
           </button>
         </div>
@@ -290,10 +291,7 @@ export default function PrivacyPolicyPage() {
       </div>
 
       {/* FOOTER */}
-      <footer className="border-t border-white/[0.05] bg-[#04070d] py-8 text-center text-xs text-white/30 space-y-2 mt-auto">
-        <p className="font-semibold text-white/50">Academix SaaS College Management Platform</p>
-        <p>© 2026 Academix — All rights reserved.</p>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

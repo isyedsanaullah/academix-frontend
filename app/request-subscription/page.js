@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import PublicFooter from '@/components/common/PublicFooter';
 import { HiOutlineAcademicCap, HiOutlineCheckCircle, HiOutlineExclamationCircle, HiOutlineMail, HiOutlinePhone, HiOutlineOfficeBuilding, HiOutlineShieldCheck, HiOutlineSparkles } from 'react-icons/hi';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -347,10 +348,7 @@ export default function RequestSubscriptionPage() {
       </div>
 
       {/* FOOTER */}
-      <footer className="border-t border-white/[0.05] bg-[#04070d] py-6 text-center text-xs text-white/30 space-y-1">
-        <p className="font-semibold text-white/45">Academix — College Portal</p>
-        <p>© {new Date().getFullYear()} Academix. All rights reserved.</p>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }
