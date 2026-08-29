@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
+import Image from 'next/image';
 import { useAuthStore } from '../../store/authStore';
 import {
   HiOutlineViewGrid, HiOutlineAcademicCap, HiOutlineUserGroup, HiOutlineCurrencyDollar,
@@ -220,10 +221,14 @@ const Sidebar = ({ mobileOpen, onClose }) => {
   return (
     <aside className="flex flex-col h-full w-64 bg-white dark:bg-[#0d1117] border-r border-gray-200 dark:border-white/[0.06] transition-colors duration-200">
       {/* Logo + Brand */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-200 dark:border-white/[0.06]">
-        <div className="min-w-0">
-          <p className={`text-sm font-bold tracking-tight leading-none ${rm.color}`}>{rm.label} Panel</p>
-          <p className="text-[10px] text-gray-500 dark:text-white/30 mt-0.5 truncate">E-Services Platform</p>
+      <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-200 dark:border-white/[0.06]">
+        {/* Logo mark */}
+        <div className="w-8 h-8 shrink-0 relative">
+          <Image src="/logo.svg" alt="Academix" fill className="object-contain" priority />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-extrabold text-gray-900 dark:text-white leading-none tracking-tight">Academix</p>
+          <p className={`text-[9px] font-bold uppercase tracking-widest mt-0.5 ${rm.color}`}>{rm.label} Panel</p>
         </div>
         <button onClick={onClose} className="ml-auto p-1 rounded-lg text-gray-500 dark:text-white/30 hover:text-gray-800 dark:hover:text-white/70 hover:bg-gray-100 dark:hover:bg-white/5 transition lg:hidden">
           <HiOutlineX size={18} />

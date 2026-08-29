@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import Sidebar from './Sidebar';
 import {
   HiOutlineMenu, HiOutlineBell, HiOutlineSearch, HiOutlineLogout,
@@ -494,12 +495,24 @@ const DashboardLayout = ({ children }) => {
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <header className="flex items-center gap-4 px-5 py-3.5 border-b border-gray-200 dark:border-white/[0.06] bg-white/80 dark:bg-[#0d1117]/80 backdrop-blur-md shrink-0 transition-colors duration-200">
+          {/* Mobile: logo + hamburger; Desktop: page title */}
           <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-500 dark:text-white/40 hover:text-gray-800 dark:hover:text-white/80 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition lg:hidden">
             <HiOutlineMenu size={20} />
           </button>
-          <div className="flex-1 min-w-0">
+          {/* Mobile logo (visible only when sidebar is hidden) */}
+          <div className="flex items-center gap-2 lg:hidden shrink-0">
+            <div className="w-6 h-6 relative">
+              <Image src="/logo.svg" alt="Academix" fill className="object-contain" priority />
+            </div>
+            <span className="text-sm font-extrabold text-gray-900 dark:text-white tracking-tight">Academix</span>
+          </div>
+          <div className="flex-1 min-w-0 hidden lg:block">
             <h2 className="text-sm font-semibold text-gray-800 dark:text-white/80 truncate">{pageTitle}</h2>
             {user?.college && <p className="text-[11px] text-gray-500 dark:text-white/30 truncate">{user.college.name}</p>}
+          </div>
+          {/* Desktop page title only on mobile as well */}
+          <div className="flex-1 min-w-0 lg:hidden text-right">
+            <h2 className="text-xs font-semibold text-gray-600 dark:text-white/50 truncate">{pageTitle}</h2>
           </div>
           <div className="flex items-center gap-1.5">
             {/* Theme Toggle Button */}
