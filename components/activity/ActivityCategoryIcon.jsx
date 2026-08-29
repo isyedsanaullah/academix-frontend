@@ -18,49 +18,32 @@ import {
 } from 'react-icons/hi';
 
 const CATEGORY_MAP = {
-  Authentication: { icon: HiOutlineKey, colorLight: '#0284c7', colorDark: '#38bdf8', bgLight: '#f0f9ff', bgDark: 'rgba(56, 189, 248, 0.12)', borderLight: '#bae6fd', borderDark: 'rgba(56, 189, 248, 0.25)' },
-  Academic: { icon: HiOutlineAcademicCap, colorLight: '#4f46e5', colorDark: '#818cf8', bgLight: '#eef2ff', bgDark: 'rgba(129, 140, 248, 0.12)', borderLight: '#c7d2fe', borderDark: 'rgba(129, 140, 248, 0.25)' },
-  Assignment: { icon: HiOutlineClipboardList, colorLight: '#7c3aed', colorDark: '#a78bfa', bgLight: '#f5f3ff', bgDark: 'rgba(167, 139, 250, 0.12)', borderLight: '#ddd6fe', borderDark: 'rgba(167, 139, 250, 0.25)' },
-  Examination: { icon: HiOutlineDocumentText, colorLight: '#d97706', colorDark: '#fbbf24', bgLight: '#fffbeb', bgDark: 'rgba(251, 191, 36, 0.12)', borderLight: '#fde68a', borderDark: 'rgba(251, 191, 36, 0.25)' },
-  Attendance: { icon: HiOutlineClipboardCheck, colorLight: '#16a34a', colorDark: '#4ade80', bgLight: '#f0fdf4', bgDark: 'rgba(74, 222, 128, 0.12)', borderLight: '#bbf7d0', borderDark: 'rgba(74, 222, 128, 0.25)' },
-  Finance: { icon: HiOutlineCurrencyDollar, colorLight: '#059669', colorDark: '#34d399', bgLight: '#ecfdf5', bgDark: 'rgba(52, 211, 153, 0.12)', borderLight: '#a7f3d0', borderDark: 'rgba(52, 211, 153, 0.25)' },
-  Student: { icon: HiOutlineUserGroup, colorLight: '#2563eb', colorDark: '#60a5fa', bgLight: '#eff6ff', bgDark: 'rgba(96, 165, 250, 0.12)', borderLight: '#bfdbfe', borderDark: 'rgba(96, 165, 250, 0.25)' },
-  Teacher: { icon: HiOutlineBriefcase, colorLight: '#db2777', colorDark: '#f472b6', bgLight: '#fdf2f8', bgDark: 'rgba(244, 114, 182, 0.12)', borderLight: '#fbcfe8', borderDark: 'rgba(244, 114, 182, 0.25)' },
-  Administration: { icon: HiOutlineCog, colorLight: '#e11d48', colorDark: '#fb7185', bgLight: '#fff1f2', bgDark: 'rgba(251, 113, 133, 0.12)', borderLight: '#fecdd3', borderDark: 'rgba(251, 113, 133, 0.25)' },
-  Announcement: { icon: HiOutlineSpeakerphone, colorLight: '#d97706', colorDark: '#f59e0b', bgLight: '#fffbeb', bgDark: 'rgba(245, 158, 11, 0.12)', borderLight: '#fde68a', borderDark: 'rgba(245, 158, 11, 0.25)' },
-  Profile: { icon: HiOutlineUser, colorLight: '#2563eb', colorDark: '#93c5fd', bgLight: '#eff6ff', bgDark: 'rgba(147, 197, 253, 0.12)', borderLight: '#bfdbfe', borderDark: 'rgba(147, 197, 253, 0.25)' },
-  College: { icon: HiOutlineOfficeBuilding, colorLight: '#9333ea', colorDark: '#c084fc', bgLight: '#faf5ff', bgDark: 'rgba(192, 132, 252, 0.12)', borderLight: '#e9d5ff', borderDark: 'rgba(192, 132, 252, 0.25)' },
-  System: { icon: HiOutlineShieldCheck, colorLight: '#0284c7', colorDark: '#38bdf8', bgLight: '#f0f9ff', bgDark: 'rgba(56, 189, 248, 0.12)', borderLight: '#bae6fd', borderDark: 'rgba(56, 189, 248, 0.25)' },
+  Authentication: { icon: HiOutlineKey, cls: 'bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-200 dark:border-sky-500/20' },
+  Academic: { icon: HiOutlineAcademicCap, cls: 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/20' },
+  Assignment: { icon: HiOutlineClipboardList, cls: 'bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-500/20' },
+  Examination: { icon: HiOutlineDocumentText, cls: 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20' },
+  Attendance: { icon: HiOutlineClipboardCheck, cls: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' },
+  Finance: { icon: HiOutlineCurrencyDollar, cls: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' },
+  Student: { icon: HiOutlineUserGroup, cls: 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20' },
+  Teacher: { icon: HiOutlineBriefcase, cls: 'bg-pink-50 dark:bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-200 dark:border-pink-500/20' },
+  Administration: { icon: HiOutlineCog, cls: 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-500/20' },
+  Announcement: { icon: HiOutlineSpeakerphone, cls: 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20' },
+  Profile: { icon: HiOutlineUser, cls: 'bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-200 dark:border-sky-500/20' },
+  College: { icon: HiOutlineOfficeBuilding, cls: 'bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-500/20' },
+  System: { icon: HiOutlineShieldCheck, cls: 'bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-200 dark:border-cyan-500/20' },
 };
 
 export default function ActivityCategoryIcon({ category, size = 18 }) {
-  const config = CATEGORY_MAP[category] || { 
-    icon: HiOutlineSparkles, 
-    colorLight: '#4f46e5', 
-    colorDark: '#818cf8', 
-    bgLight: '#eef2ff', 
-    bgDark: 'rgba(129, 140, 248, 0.12)',
-    borderLight: '#c7d2fe',
-    borderDark: 'rgba(129, 140, 248, 0.25)'
+  const config = CATEGORY_MAP[category] || {
+    icon: HiOutlineSparkles,
+    cls: 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/20'
   };
-  
+
   const IconComponent = config.icon;
 
   return (
     <div
-      style={{
-        width: size * 2.2,
-        height: size * 2.2,
-      }}
-      className="rounded-xl flex items-center justify-center shrink-0 border transition-colors bg-[var(--cat-bg)] border-[var(--cat-border)] text-[var(--cat-color)]"
-      ref={(el) => {
-        if (el) {
-          const isDark = document.documentElement.classList.contains('dark');
-          el.style.setProperty('--cat-bg', isDark ? config.bgDark : config.bgLight);
-          el.style.setProperty('--cat-border', isDark ? config.borderDark : config.borderLight);
-          el.style.setProperty('--cat-color', isDark ? config.colorDark : config.colorLight);
-        }
-      }}
+      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl border flex items-center justify-center shrink-0 transition-colors shadow-xs ${config.cls}`}
     >
       <IconComponent size={size} />
     </div>

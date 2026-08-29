@@ -1,33 +1,99 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import {
-  HiOutlineSearch, HiOutlineMail, HiOutlinePhone, HiOutlineOfficeBuilding,
-  HiOutlineUserGroup, HiOutlineClock, HiOutlineChevronRight, HiOutlineFilter,
-  HiOutlineClipboardList, HiOutlineChatAlt, HiOutlineBadgeCheck, HiOutlineXCircle
+  HiOutlineSearch,
+  HiOutlineMail,
+  HiOutlinePhone,
+  HiOutlineOfficeBuilding,
+  HiOutlineUserGroup,
+  HiOutlineClock,
+  HiOutlineChevronRight,
+  HiOutlineFilter,
+  HiOutlineClipboardList,
+  HiOutlineChatAlt,
+  HiOutlineBadgeCheck,
+  HiOutlineXCircle,
+  HiOutlineX,
+  HiOutlineCheckCircle,
+  HiOutlineExclamationCircle,
+  HiOutlineSparkles,
+  HiOutlineChat,
+  HiOutlineCheck
 } from 'react-icons/hi';
 
-const PLAN_BADGES = {
-  standard: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-  professional: 'bg-violet-500/10 text-violet-400 border-violet-500/20',
-  premium: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  ownership: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
-};
-
 const PLAN_LABELS = {
-  standard: 'Standard',
-  professional: 'Professional',
-  premium: 'Premium',
-  ownership: 'Full Ownership',
+  free: 'Free Plan',
+  basic: 'Basic Plan',
+  standard: 'Standard Plan',
+  professional: 'Professional Plan',
+  premium: 'Premium Plan',
+  ownership: 'Full System Ownership',
+  enterprise: 'Enterprise Plan'
 };
 
-const STATUS_BADGES = {
-  new: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  contacted: 'bg-sky-500/10 text-sky-400 border-sky-500/20',
-  in_review: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  approved: 'bg-green-500/10 text-green-400 border-green-500/20',
-  rejected: 'bg-red-500/10 text-red-400 border-red-500/20',
-  converted: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25'
+const STATUS_LABELS = {
+  new: 'New Request',
+  contacted: 'Contacted Applicant',
+  in_review: 'In Review',
+  approved: 'Approved Request',
+  rejected: 'Rejected Request',
+  converted: 'Converted Client'
+};
+
+// Dynamic Badge Styling Helpers for Light & Dark Themes
+const getPlanBadgeClass = (planId) => {
+  const p = (planId || '').toLowerCase();
+  switch (p) {
+    case 'free':
+    case 'basic':
+      return 'bg-slate-100 dark:bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-500/20';
+    case 'standard':
+      return 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20';
+    case 'professional':
+    case 'premium':
+      return 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-500/20';
+    case 'ownership':
+    case 'enterprise':
+      return 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/20';
+    default:
+      return 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20';
+  }
+};
+
+const getStatusBadgeClass = (status) => {
+  const s = (status || '').toLowerCase();
+  switch (s) {
+    case 'new':
+      return 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20';
+    case 'contacted':
+      return 'bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-500/20';
+    case 'in_review':
+      return 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/20';
+    case 'approved':
+      return 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20';
+    case 'rejected':
+      return 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/20';
+    case 'converted':
+      return 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/30';
+    default:
+      return 'bg-slate-100 dark:bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-500/20';
+  }
+};
+
+// Helper to separate "Preferred Contact: Method" from true admin notes
+const parseNotesAndContact = (rawNotes) => {
+  if (!rawNotes) return { preferredContact: null, adminNotes: '' };
+  
+  if (rawNotes.startsWith('Preferred Contact:')) {
+    const lines = rawNotes.split('\n');
+    const preferredContact = lines[0].replace('Preferred Contact:', '').trim();
+    const adminNotes = lines.slice(1).join('\n').trim();
+    return { preferredContact, adminNotes };
+  }
+
+  return { preferredContact: null, adminNotes: rawNotes };
 };
 
 const SubscriptionRequests = () => {
@@ -66,7 +132,7 @@ const SubscriptionRequests = () => {
       setRequests(data.data || []);
       setTotal(data.pagination?.total || 0);
       setPages(data.pagination?.pages || 1);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load subscription requests');
     } finally {
       setLoading(false);
@@ -85,9 +151,10 @@ const SubscriptionRequests = () => {
 
   const selectRequest = (req) => {
     setSelected(req);
+    const { adminNotes } = parseNotesAndContact(req.notes);
     setUpdateForm({
-      status: req.status,
-      notes: req.notes || ''
+      status: req.status || 'new',
+      notes: adminNotes || ''
     });
   };
 
@@ -97,13 +164,23 @@ const SubscriptionRequests = () => {
 
     setUpdating(true);
     try {
-      const { data } = await api.put(`/super-admin/subscription-requests/${selected.id}`, updateForm);
+      const { preferredContact } = parseNotesAndContact(selected.notes);
+      
+      // Re-attach preferred contact prefix if it existed originally
+      let finalNotes = updateForm.notes.trim();
+      if (preferredContact) {
+        finalNotes = finalNotes
+          ? `Preferred Contact: ${preferredContact}\n${finalNotes}`
+          : `Preferred Contact: ${preferredContact}`;
+      }
+
+      const { data } = await api.put(`/super-admin/subscription-requests/${selected.id}`, {
+        status: updateForm.status,
+        notes: finalNotes
+      });
       toast.success(data.message || 'Request updated successfully');
-      
-      // Update selected reference
+
       setSelected(data.data);
-      
-      // Refresh list
       fetchRequests();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update request');
@@ -115,101 +192,229 @@ const SubscriptionRequests = () => {
   const handleQuickStatusChange = async (id, status) => {
     try {
       const { data } = await api.put(`/super-admin/subscription-requests/${id}`, { status });
-      toast.success(`Marked request as ${status}`);
+      toast.success(`Marked request as ${STATUS_LABELS[status] || status}`);
       fetchRequests();
       if (selected && selected.id === id) {
         setSelected(data.data);
-        setUpdateForm(prev => ({ ...prev, status }));
+        const { adminNotes } = parseNotesAndContact(data.data.notes);
+        setUpdateForm(prev => ({ ...prev, status, notes: adminNotes }));
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update status');
     }
   };
 
+  // KPI Metrics calculation
+  const newCount = useMemo(() => requests.filter(r => r.status === 'new').length, [requests]);
+  const inReviewCount = useMemo(() => requests.filter(r => r.status === 'in_review' || r.status === 'contacted').length, [requests]);
+  const approvedCount = useMemo(() => requests.filter(r => r.status === 'approved' || r.status === 'converted').length, [requests]);
+
+  const activeSelectedInfo = useMemo(() => {
+    if (!selected) return null;
+    const { preferredContact, adminNotes } = parseNotesAndContact(selected.notes);
+    return {
+      preferredContact,
+      adminNotes
+    };
+  }, [selected]);
+
   return (
-    <div className="space-y-6">
+    <div className="animate-fade-in space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-extrabold text-white tracking-tight">Subscription Requests</h1>
-          <p className="text-xs text-white/40 mt-1">Manage onboarding requests from colleges evaluating Academix</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-[#0d1117] p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-white/[0.06] shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center justify-center font-bold shrink-0">
+            <HiOutlineClipboardList size={22} />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Subscription Requests
+            </h1>
+            <p className="text-slate-500 dark:text-white/40 text-xs sm:text-sm mt-0.5">
+              Review institution onboarding applications and plan evaluations
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Main Grid: Filters & Table + Sidebar */}
+      {/* KPI Metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="glass-card p-4 sm:p-5 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-slate-500 dark:text-white/40 uppercase tracking-wider">
+              Total Inquiries
+            </p>
+            <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">
+              {total}
+            </p>
+            <p className="text-[11px] text-slate-400 dark:text-white/30 mt-0.5">Submitted requests</p>
+          </div>
+          <div className="w-11 h-11 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/15 shrink-0">
+            <HiOutlineClipboardList size={22} />
+          </div>
+        </div>
+
+        <div className="glass-card p-4 sm:p-5 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-slate-500 dark:text-white/40 uppercase tracking-wider">
+              New Requests
+            </p>
+            <p className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 mt-1">
+              {newCount}
+            </p>
+            <p className="text-[11px] text-slate-400 dark:text-white/30 mt-0.5">Awaiting first contact</p>
+          </div>
+          <div className="w-11 h-11 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/15 shrink-0">
+            <HiOutlineClock size={22} />
+          </div>
+        </div>
+
+        <div className="glass-card p-4 sm:p-5 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-slate-500 dark:text-white/40 uppercase tracking-wider">
+              In Review / Contacted
+            </p>
+            <p className="text-2xl sm:text-3xl font-black text-purple-600 dark:text-purple-400 mt-1">
+              {inReviewCount}
+            </p>
+            <p className="text-[11px] text-slate-400 dark:text-white/30 mt-0.5">Active conversations</p>
+          </div>
+          <div className="w-11 h-11 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-500/15 shrink-0">
+            <HiOutlineChatAlt size={22} />
+          </div>
+        </div>
+
+        <div className="glass-card p-4 sm:p-5 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-slate-500 dark:text-white/40 uppercase tracking-wider">
+              Approved / Converted
+            </p>
+            <p className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+              {approvedCount}
+            </p>
+            <p className="text-[11px] text-slate-400 dark:text-white/30 mt-0.5">Onboarded workspace</p>
+          </div>
+          <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/15 shrink-0">
+            <HiOutlineBadgeCheck size={22} />
+          </div>
+        </div>
+      </div>
+
+      {/* Main Container: Filters & Table + Responsive Detail Panel */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         
-        {/* Table Column (70%) */}
-        <div className="flex-1 w-full space-y-4">
+        {/* Table & Filters Column */}
+        <div className="flex-1 w-full space-y-4 min-w-0">
           
           {/* Filters Bar */}
-          <div className="bg-[#0d1117] border border-white/[0.06] rounded-2xl p-4 flex flex-col md:flex-row gap-3 items-center justify-between">
-            <form onSubmit={handleSearchSubmit} className="relative w-full md:w-80">
-              <HiOutlineSearch size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+          <div className="glass-card p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-md">
+              <HiOutlineSearch size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40 pointer-events-none" />
               <input
+                type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Search college, email or phone..."
-                className="input-field pl-9 text-xs py-2"
+                placeholder="Search college, admin email, or phone..."
+                className="input-field pl-10 pr-9 text-xs"
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => { setSearch(''); fetchRequests(); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-white/40 dark:hover:text-white transition"
+                  title="Clear search"
+                >
+                  <HiOutlineX size={16} />
+                </button>
+              )}
             </form>
 
-            <div className="flex gap-2 w-full md:w-auto">
+            <div className="flex items-center gap-2">
               <select
                 value={planFilter}
                 onChange={e => { setPlanFilter(e.target.value); setPage(1); }}
-                className="input-field text-xs py-2 bg-[#1a2230] flex-1 md:flex-initial"
+                className="input-field text-xs capitalize py-2.5"
               >
                 <option value="">All Plans</option>
-                <option value="standard">Standard</option>
-                <option value="professional">Professional</option>
-                <option value="premium">Premium</option>
-                <option value="ownership">Full System Ownership</option>
+                <option value="free">Free Plan</option>
+                <option value="standard">Standard Plan</option>
+                <option value="premium">Premium Plan</option>
+                <option value="ownership">Full Ownership</option>
               </select>
 
               <select
                 value={statusFilter}
                 onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-                className="input-field text-xs py-2 bg-[#1a2230] flex-1 md:flex-initial"
+                className="input-field text-xs capitalize py-2.5"
               >
                 <option value="">All Statuses</option>
-                <option value="new">New</option>
+                <option value="new">New Request</option>
                 <option value="contacted">Contacted</option>
                 <option value="in_review">In Review</option>
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
                 <option value="converted">Converted</option>
               </select>
+
+              {(search || planFilter || statusFilter) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch('');
+                    setPlanFilter('');
+                    setStatusFilter('');
+                    setPage(1);
+                  }}
+                  className="btn-secondary py-2.5 px-3 text-xs shrink-0"
+                >
+                  Reset
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Table Card */}
-          <div className="bg-[#0d1117] border border-white/[0.06] rounded-2xl overflow-hidden">
+          {/* Data Table */}
+          <div className="glass-card overflow-hidden">
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
-                <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                <p className="text-xs text-white/40">Loading subscription requests...</p>
+              <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/40">
+                <div className="w-9 h-9 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mb-3" />
+                <p className="text-xs font-medium">Loading subscription inquiries...</p>
               </div>
             ) : requests.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
-                <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/15">
+              <div className="text-center py-16 px-4">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center justify-center mx-auto mb-3">
                   <HiOutlineClipboardList size={24} />
                 </div>
-                <h3 className="text-sm font-bold text-white/70">No requests found</h3>
-                <p className="text-xs text-white/30 max-w-xs leading-relaxed">No pending requests matched your criteria. New request notifications are automatically delivered here.</p>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">No requests found</h3>
+                <p className="text-xs text-slate-500 dark:text-white/40 mt-1 max-w-sm mx-auto">
+                  No subscription inquiries matched your search or status filter criteria.
+                </p>
+                {(search || planFilter || statusFilter) && (
+                  <button
+                    onClick={() => {
+                      setSearch('');
+                      setPlanFilter('');
+                      setStatusFilter('');
+                      setPage(1);
+                    }}
+                    className="btn-secondary text-xs mt-4"
+                  >
+                    Clear Filters
+                  </button>
+                )}
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>College Name</th>
+                      <th className="pl-5">College Name</th>
                       <th>Admin Contact</th>
-                      <th>Plan</th>
+                      <th>Selected Plan</th>
                       <th>Students</th>
-                      <th>Date</th>
+                      <th>Request Date</th>
                       <th>Status</th>
-                      <th>Actions</th>
+                      <th className="pr-5 text-right">Quick Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -217,51 +422,93 @@ const SubscriptionRequests = () => {
                       <tr
                         key={req.id}
                         onClick={() => selectRequest(req)}
-                        className={`cursor-pointer ${selected?.id === req.id ? 'bg-white/[0.03]' : ''}`}
+                        className={`cursor-pointer transition hover:bg-slate-50/80 dark:hover:bg-white/[0.02] ${
+                          selected?.id === req.id ? 'bg-indigo-50/60 dark:bg-white/[0.04]' : ''
+                        }`}
                       >
-                        <td className="font-bold text-white text-xs">{req.collegeName}</td>
+                        <td className="pl-5 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500/20 to-violet-500/20 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-xs shrink-0">
+                              {req.collegeName?.slice(0, 2)?.toUpperCase() || 'CO'}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-bold text-slate-900 dark:text-white text-sm truncate">
+                                {req.collegeName}
+                              </p>
+                              {req.message && (
+                                <p className="text-[11px] text-slate-400 dark:text-white/30 truncate max-w-xs">
+                                  💬 {req.message}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
                         <td>
                           <div className="space-y-0.5">
-                            <div className="flex items-center gap-1 text-[11px] text-white/60">
-                              <HiOutlineMail size={12} className="text-white/20" />
-                              <span>{req.adminEmail}</span>
+                            <div className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-white/80 font-medium">
+                              <HiOutlineMail size={13} className="text-slate-400 dark:text-white/30 shrink-0" />
+                              <span className="truncate">{req.adminEmail}</span>
                             </div>
-                            <div className="flex items-center gap-1 text-[11px] text-white/40">
-                              <HiOutlinePhone size={12} className="text-white/20" />
+                            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-white/40">
+                              <HiOutlinePhone size={13} className="text-slate-400 dark:text-white/30 shrink-0" />
                               <span>{req.phone}</span>
                             </div>
                           </div>
                         </td>
+
                         <td>
-                          <span className={`badge border ${PLAN_BADGES[req.selectedPlan?.toLowerCase()] || 'bg-white/5 text-white/50 border-white/10'}`}>
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border capitalize ${getPlanBadgeClass(
+                              req.selectedPlan
+                            )}`}
+                          >
                             {PLAN_LABELS[req.selectedPlan?.toLowerCase()] || req.selectedPlan || '—'}
                           </span>
                         </td>
-                        <td className="text-xs font-semibold text-white/75">{req.studentCount?.toLocaleString()}</td>
-                        <td className="text-[11px] text-white/40 font-medium">
-                          <div className="flex items-center gap-1">
-                            <HiOutlineClock size={11} className="text-white/20" />
-                            <span>{new Date(req.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                          </div>
+
+                        <td className="text-xs font-bold text-slate-800 dark:text-white/80">
+                          {req.studentCount?.toLocaleString()}
                         </td>
+
+                        <td className="text-slate-500 dark:text-white/50 text-xs font-mono">
+                          {new Date(req.createdAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </td>
+
                         <td>
-                          <span className={`badge border ${STATUS_BADGES[req.status] || ''}`}>
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border capitalize ${getStatusBadgeClass(
+                              req.status
+                            )}`}
+                          >
+                            {req.status === 'approved' || req.status === 'converted' ? (
+                              <HiOutlineCheckCircle size={13} />
+                            ) : req.status === 'rejected' ? (
+                              <HiOutlineXCircle size={13} />
+                            ) : (
+                              <HiOutlineClock size={13} />
+                            )}
                             {req.status}
                           </span>
                         </td>
-                        <td>
-                          <div className="flex gap-1.5" onClick={e => e.stopPropagation()}>
+
+                        <td className="pr-5 text-right">
+                          <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
                             <button
                               onClick={() => handleQuickStatusChange(req.id, 'contacted')}
-                              className="btn-secondary px-2 py-1 text-[10px] bg-[#1a2230] border-white/5 hover:text-white"
+                              className="btn-secondary py-1 px-2.5 text-[11px]"
                               title="Mark as Contacted"
                             >
                               Contact
                             </button>
                             <button
                               onClick={() => handleQuickStatusChange(req.id, 'approved')}
-                              className="btn-secondary px-2 py-1 text-[10px] bg-emerald-500/10 border-emerald-500/15 text-emerald-400 hover:bg-emerald-500/20"
-                              title="Approve"
+                              className="btn-primary py-1 px-2.5 text-[11px]"
+                              title="Approve Request"
                             >
                               Approve
                             </button>
@@ -274,22 +521,24 @@ const SubscriptionRequests = () => {
               </div>
             )}
 
-            {/* Pagination footer */}
+            {/* Pagination Footer */}
             {pages > 1 && (
-              <div className="px-4 py-3 border-t border-white/[0.05] flex items-center justify-between bg-white/[0.01]">
-                <p className="text-[10px] text-white/35 font-medium">Showing page {page} of {pages} ({total} entries)</p>
-                <div className="flex gap-1.5">
+              <div className="px-5 py-3 border-t border-slate-200 dark:border-white/[0.06] flex items-center justify-between bg-slate-50/50 dark:bg-white/[0.01]">
+                <p className="text-xs text-slate-500 dark:text-white/40 font-medium">
+                  Showing page <strong>{page}</strong> of <strong>{pages}</strong> ({total} inquiries)
+                </p>
+                <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => setPage(prev => Math.max(prev - 1, 1))}
                     disabled={page === 1}
-                    className="btn-secondary px-2.5 py-1 text-[10px] disabled:opacity-30"
+                    className="btn-secondary px-3 py-1 text-xs disabled:opacity-40"
                   >
-                    Prev
+                    Previous
                   </button>
                   <button
                     onClick={() => setPage(prev => Math.min(prev + 1, pages))}
                     disabled={page === pages}
-                    className="btn-secondary px-2.5 py-1 text-[10px] disabled:opacity-30"
+                    className="btn-secondary px-3 py-1 text-xs disabled:opacity-40"
                   >
                     Next
                   </button>
@@ -299,140 +548,197 @@ const SubscriptionRequests = () => {
           </div>
         </div>
 
-        {/* Sidebar Details Pane (30%) */}
+        {/* Details Pane / Sidebar Drawer (Desktop: Sticky Panel; Mobile: Modal Overlay) */}
         <AnimatePresence>
           {selected && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="w-full lg:w-[350px] bg-[#0d1117] border border-white/[0.06] rounded-2xl p-5 space-y-6 shrink-0"
-            >
-              <div className="flex items-center justify-between border-b border-white/[0.05] pb-3">
-                <h3 className="text-sm font-extrabold text-white">Request Details</h3>
-                <button
-                  onClick={() => setSelected(null)}
-                  className="p-1 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/5 transition"
-                >
-                  <HiOutlineX size={16} />
-                </button>
-              </div>
+            <>
+              {/* Mobile Backdrop Overlay */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setSelected(null)}
+                className="fixed inset-0 bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs z-40 lg:hidden"
+              />
 
-              {/* Stats & Contacts block */}
-              <div className="space-y-4 text-xs">
-                <div>
-                  <p className="text-[10px] font-bold text-white/30 uppercase tracking-wide">College Workspace</p>
-                  <h4 className="text-sm font-bold text-white mt-1 leading-snug">{selected.collegeName}</h4>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-wide">Selected Plan</p>
-                    <span className={`inline-block mt-1 badge border ${PLAN_BADGES[selected.selectedPlan?.toLowerCase()] || 'bg-white/5 text-white/50 border-white/10'}`}>
-                      {PLAN_LABELS[selected.selectedPlan?.toLowerCase()] || selected.selectedPlan || '—'}
-                    </span>
+              {/* Drawer Container */}
+              <motion.div
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 30 }}
+                className="fixed lg:relative inset-y-0 right-0 z-50 lg:z-auto w-full max-w-md lg:w-[380px] bg-white dark:bg-[#0d1117] border-l lg:border border-slate-200 dark:border-white/[0.08] lg:rounded-2xl p-5 space-y-5 shadow-2xl lg:shadow-sm overflow-y-auto shrink-0"
+              >
+                {/* Pane Header */}
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/[0.08] pb-3">
+                  <div className="flex items-center gap-2">
+                    <HiOutlineClipboardList className="text-indigo-600 dark:text-indigo-400" size={18} />
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                      Request Details
+                    </h3>
                   </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-wide">Student Count</p>
-                    <p className="font-bold text-white mt-1 text-sm">{selected.studentCount?.toLocaleString()}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-[10px] font-bold text-white/30 uppercase tracking-wide">Contact Details</p>
-                  <div className="mt-1.5 space-y-2">
-                    <a
-                      href={`mailto:${selected.adminEmail}`}
-                      className="flex items-center gap-2 p-2 rounded-xl bg-white/[0.02] border border-white/[0.04] text-indigo-400 hover:bg-white/[0.04] transition-colors"
-                    >
-                      <HiOutlineMail size={14} />
-                      <span className="truncate">{selected.adminEmail}</span>
-                    </a>
-                    <a
-                      href={`tel:${selected.phone}`}
-                      className="flex items-center gap-2 p-2 rounded-xl bg-white/[0.02] border border-white/[0.04] text-indigo-400 hover:bg-white/[0.04] transition-colors"
-                    >
-                      <HiOutlinePhone size={14} />
-                      <span>{selected.phone}</span>
-                    </a>
-                  </div>
-                </div>
-
-                {selected.message && (
-                  <div>
-                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-wide">Message / Requirements</p>
-                    <div className="mt-1.5 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] text-white/70 italic text-[11px] leading-relaxed max-h-32 overflow-y-auto">
-                      {selected.message}
-                    </div>
-                  </div>
-                )}
-
-                {selected.reviewedBy && (
-                  <div className="p-3 rounded-xl bg-indigo-500/[0.03] border border-indigo-500/10 text-[10px] text-indigo-400/80 space-y-0.5">
-                    <p className="font-bold uppercase tracking-wider text-[8px] text-white/40">Review Information</p>
-                    <p>By: {selected.reviewedBy}</p>
-                    <p>On: {new Date(selected.reviewedAt).toLocaleString()}</p>
-                  </div>
-                )}
-              </div>
-
-              <hr className="border-white/[0.05]" />
-
-              {/* Review & update form */}
-              <form onSubmit={handleUpdate} className="space-y-4">
-                <div>
-                  <label htmlFor="update-status" className="block text-[10px] font-bold text-white/40 uppercase tracking-wide mb-1.5">
-                    Update Request Status
-                  </label>
-                  <select
-                    id="update-status"
-                    value={updateForm.status}
-                    onChange={e => setUpdateForm({ ...updateForm, status: e.target.value })}
-                    className="input-field text-xs bg-[#1a2230]"
-                    disabled={updating}
+                  <button
+                    onClick={() => setSelected(null)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:text-white/40 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.06] transition"
+                    title="Close details"
                   >
-                    <option value="new">New Request</option>
-                    <option value="contacted">Contacted Applicant</option>
-                    <option value="in_review">In Review</option>
-                    <option value="approved">Approved Request</option>
-                    <option value="rejected">Rejected Request</option>
-                    <option value="converted">Converted to Client</option>
-                  </select>
+                    <HiOutlineX size={18} />
+                  </button>
                 </div>
 
-                <div>
-                  <label htmlFor="update-notes" className="block text-[10px] font-bold text-white/40 uppercase tracking-wide mb-1.5">
-                    Internal Notes / Comments
-                  </label>
-                  <textarea
-                    id="update-notes"
-                    value={updateForm.notes}
-                    onChange={e => setUpdateForm({ ...updateForm, notes: e.target.value })}
-                    placeholder="Enter private review log or applicant comments..."
-                    className="input-field text-xs min-h-20"
-                    disabled={updating}
-                  />
-                </div>
+                {/* College & Contact Information */}
+                <div className="space-y-4 text-xs">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider">
+                      College Workspace Name
+                    </p>
+                    <h4 className="text-base font-extrabold text-slate-900 dark:text-white mt-1 leading-snug">
+                      {selected.collegeName}
+                    </h4>
+                  </div>
 
-                <button
-                  type="submit"
-                  disabled={updating}
-                  className="w-full btn-primary py-2 justify-center text-xs font-bold transition-all disabled:opacity-50"
-                >
-                  {updating ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Saving...
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06]">
+                      <p className="text-[10px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider">
+                        Selected Plan
+                      </p>
+                      <span
+                        className={`inline-block mt-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border capitalize ${getPlanBadgeClass(
+                          selected.selectedPlan
+                        )}`}
+                      >
+                        {PLAN_LABELS[selected.selectedPlan?.toLowerCase()] || selected.selectedPlan || '—'}
+                      </span>
                     </div>
-                  ) : (
-                    'Save Status & Notes'
+
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06]">
+                      <p className="text-[10px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider">
+                        Student Count
+                      </p>
+                      <p className="font-extrabold text-slate-900 dark:text-white mt-1 text-sm">
+                        {selected.studentCount?.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Contact Methods & Preferred Channel */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider">
+                        Admin Contact Channels
+                      </p>
+                      {activeSelectedInfo?.preferredContact && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-500/20">
+                          <HiOutlineSparkles size={12} /> Prefers: {activeSelectedInfo.preferredContact}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <a
+                        href={`mailto:${selected.adminEmail}`}
+                        className="flex items-center gap-2.5 p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06] text-indigo-600 dark:text-indigo-400 font-semibold hover:bg-slate-100 dark:hover:bg-white/[0.05] transition"
+                      >
+                        <HiOutlineMail size={16} className="shrink-0" />
+                        <span className="truncate">{selected.adminEmail}</span>
+                      </a>
+
+                      <a
+                        href={`tel:${selected.phone}`}
+                        className="flex items-center gap-2.5 p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06] text-indigo-600 dark:text-indigo-400 font-semibold hover:bg-slate-100 dark:hover:bg-white/[0.05] transition"
+                      >
+                        <HiOutlinePhone size={16} className="shrink-0" />
+                        <span>{selected.phone}</span>
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Applicant Message / Requirements Box */}
+                  {selected.message && (
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider mb-1">
+                        Applicant Message / Requirements
+                      </p>
+                      <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06] text-slate-700 dark:text-white/80 text-xs italic leading-relaxed max-h-36 overflow-y-auto">
+                        "{selected.message}"
+                      </div>
+                    </div>
                   )}
-                </button>
-              </form>
-            </motion.div>
+
+                  {/* Audit Review Info */}
+                  {selected.reviewedBy && (
+                    <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-500/[0.05] border border-indigo-200 dark:border-indigo-500/15 text-[11px] text-indigo-800 dark:text-indigo-300 space-y-0.5">
+                      <p className="font-bold uppercase tracking-wider text-[9px] text-indigo-600 dark:text-indigo-400">
+                        Review History
+                      </p>
+                      <p>Reviewed By: <strong>{selected.reviewedBy}</strong></p>
+                      <p>Reviewed On: {new Date(selected.reviewedAt).toLocaleString()}</p>
+                    </div>
+                  )}
+                </div>
+
+                <hr className="border-slate-200 dark:border-white/[0.06]" />
+
+                {/* Review & Update Status Form */}
+                <form onSubmit={handleUpdate} className="space-y-4">
+                  <div>
+                    <label
+                      htmlFor="update-status"
+                      className="block text-xs font-bold text-slate-600 dark:text-white/60 uppercase tracking-wider mb-1.5"
+                    >
+                      Update Request Status *
+                    </label>
+                    <select
+                      id="update-status"
+                      value={updateForm.status}
+                      onChange={e => setUpdateForm({ ...updateForm, status: e.target.value })}
+                      className="input-field text-xs font-semibold py-2.5 capitalize"
+                      disabled={updating}
+                    >
+                      <option value="new">New Request</option>
+                      <option value="contacted">Contacted Applicant</option>
+                      <option value="in_review">In Review</option>
+                      <option value="approved">Approved Request</option>
+                      <option value="rejected">Rejected Request</option>
+                      <option value="converted">Converted Client</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="update-notes"
+                      className="block text-xs font-bold text-slate-600 dark:text-white/60 uppercase tracking-wider mb-1.5"
+                    >
+                      Internal Notes / Admin Log
+                    </label>
+                    <textarea
+                      id="update-notes"
+                      value={updateForm.notes}
+                      onChange={e => setUpdateForm({ ...updateForm, notes: e.target.value })}
+                      placeholder="Type private admin review notes or internal comments..."
+                      className="input-field text-xs min-h-24 py-2"
+                      disabled={updating}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={updating}
+                    className="w-full btn-primary py-2.5 justify-center text-xs font-bold shadow-lg shadow-indigo-500/20"
+                  >
+                    {updating ? (
+                      <span className="inline-flex items-center gap-2">
+                        <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Saving Updates...
+                      </span>
+                    ) : (
+                      'Save Status & Internal Notes'
+                    )}
+                  </button>
+                </form>
+              </motion.div>
+            </>
           )}
         </AnimatePresence>
-
       </div>
     </div>
   );

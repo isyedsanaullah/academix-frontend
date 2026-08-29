@@ -1,13 +1,25 @@
+'use client';
+
 import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
-  HiOutlinePaperAirplane, HiOutlinePlus, HiOutlineTrash,
-  HiOutlineChatAlt2, HiOutlineMenu, HiOutlineX,
-  HiOutlineSparkles, HiOutlineClipboardCopy,
-  HiOutlineSpeakerphone, HiOutlineClock
+  HiOutlinePaperAirplane,
+  HiOutlinePlus,
+  HiOutlineTrash,
+  HiOutlineChatAlt2,
+  HiOutlineMenu,
+  HiOutlineX,
+  HiOutlineSparkles,
+  HiOutlineClipboardCopy,
+  HiOutlineSpeakerphone,
+  HiOutlineClock,
+  HiOutlineDocumentText,
+  HiOutlineDownload,
+  HiOutlineEye,
+  HiOutlineSearch
 } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 import AnnouncementCard from '../../components/common/AnnouncementCard';
@@ -22,12 +34,16 @@ const AIChat = () => {
   const [streaming, setStreaming] = useState(false);
   const [streamText, setStreamText] = useState('');
   const [streamStage, setStreamStage] = useState('');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileHistoryOpen, setMobileHistoryOpen] = useState(false);
   const [inputDisabled, setInputDisabled] = useState(false);
+  const [historySearch, setHistorySearch] = useState('');
 
-  // Announcement Mode State
+  // Mode Permissions
   const isAnnouncementAllowed = ['admin', 'principal', 'superAdmin'].includes(user?.role);
-  const [chatMode, setChatMode] = useState('chat'); // 'chat' | 'announcement'
+  const isReportAllowed = user?.role === 'superAdmin';
+
+  // Active Mode: 'chat' | 'announcement' | 'report'
+  const [chatMode, setChatMode] = useState('chat');
   const [activeDraft, setActiveDraft] = useState(null);
   const [recentDrafts, setRecentDrafts] = useState([]);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -37,14 +53,22 @@ const AIChat = () => {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  useEffect(() => { fetchHistory(); fetchDrafts(); }, []);
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, streamText, streamStage]);
+  useEffect(() => {
+    fetchHistory();
+    if (isAnnouncementAllowed) fetchDrafts();
+  }, [user?.role]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, streamText, streamStage]);
 
   const fetchHistory = async () => {
     try {
       const { data } = await api.get('/ai/chat/history');
       setConversations(data.data || []);
-    } catch { /* no history yet */ }
+    } catch {
+      /* no history yet */
+    }
   };
 
   const fetchDrafts = async () => {
@@ -52,7 +76,9 @@ const AIChat = () => {
     try {
       const { data } = await api.get('/ai/chat/drafts');
       setRecentDrafts(data.data || []);
-    } catch { /* no drafts */ }
+    } catch {
+      /* no drafts */
+    }
   };
 
   const loadConversation = async (id) => {
@@ -62,17 +88,20 @@ const AIChat = () => {
       const fetchedMsgs = data.data.messages || [];
       setMessages(fetchedMsgs);
 
-      // Check if conversation has an active draft
+      if (data.data.metadata?.mode) {
+        setChatMode(data.data.metadata.mode);
+      }
       if (data.data.metadata?.activeDraft) {
         setActiveDraft(data.data.metadata.activeDraft);
-        setChatMode('announcement');
       } else {
         setActiveDraft(null);
       }
 
-      setSidebarOpen(false);
+      setMobileHistoryOpen(false);
       setInputDisabled(false);
-    } catch { toast.error('Failed to load conversation'); }
+    } catch {
+      toast.error('Failed to load conversation');
+    }
   };
 
   const startNewChat = () => {
@@ -82,7 +111,7 @@ const AIChat = () => {
     setStreamStage('');
     setActiveDraft(null);
     setInput('');
-    setSidebarOpen(false);
+    setMobileHistoryOpen(false);
     setInputDisabled(false);
     inputRef.current?.focus();
   };
@@ -94,7 +123,9 @@ const AIChat = () => {
       setConversations(prev => prev.filter(c => c._id !== id));
       if (activeConv?._id === id) startNewChat();
       toast.success('Deleted');
-    } catch { toast.error('Failed'); }
+    } catch {
+      toast.error('Failed to delete chat');
+    }
   };
 
   const sendMessage = async (overrideMsg = null, refineAction = null) => {
@@ -102,7 +133,6 @@ const AIChat = () => {
     if (!msg || streaming) return;
     if (!overrideMsg) setInput('');
 
-    // Add user message
     const userMsg = {
       role: 'user',
       content: msg,
@@ -112,7 +142,13 @@ const AIChat = () => {
     setMessages(prev => [...prev, userMsg]);
     setStreaming(true);
     setStreamText('');
-    setStreamStage(chatMode === 'announcement' ? 'Analyzing announcement request...' : '');
+    setStreamStage(
+      chatMode === 'report'
+        ? 'Analyzing report requirements & structure...'
+        : chatMode === 'announcement'
+        ? 'Analyzing situation & enforcing business rules...'
+        : ''
+    );
 
     try {
       const token = localStorage.getItem('academix_token');
@@ -120,7 +156,7 @@ const AIChat = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
           message: msg,
@@ -141,6 +177,7 @@ const AIChat = () => {
       let fullText = '';
       let convId = activeConv?._id;
       let announcementData = null;
+      let reportData = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -150,116 +187,103 @@ const AIChat = () => {
         const lines = chunk.split('\n');
 
         for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          try {
-            const parsed = JSON.parse(line.slice(6));
-
-            if (parsed.type === 'meta' && parsed.conversationId) {
-              convId = parsed.conversationId;
-              continue;
-            }
-
-            if (parsed.type === 'status' && parsed.stage) {
-              setStreamStage(parsed.stage);
-              continue;
-            }
-
-            if (parsed.type === 'announcement' && parsed.announcement) {
-              announcementData = parsed.announcement;
-              setActiveDraft(parsed.announcement);
-              continue;
-            }
-
-            if (parsed.limitExceeded) {
-              setInputDisabled(true);
-            }
-
-            if (parsed.text && !parsed.done) {
-              fullText += parsed.text;
-              setStreamText(fullText);
-            }
-
-            if (parsed.done) {
-              // Finalize response
-              if (announcementData) {
-                const assistantMsg = {
-                  role: 'assistant',
-                  mode: 'announcement',
-                  content: announcementData.title,
-                  announcement: announcementData,
-                  timestamp: new Date()
-                };
-                setMessages(prev => [...prev, assistantMsg]);
-              } else if (fullText) {
-                const assistantMsg = {
-                  role: 'assistant',
-                  content: fullText,
-                  timestamp: new Date()
-                };
-                setMessages(prev => [...prev, assistantMsg]);
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.type === 'meta' && data.conversationId) {
+                convId = data.conversationId;
               }
-
-              setStreamText('');
-              setStreamStage('');
-
-              if (convId && !activeConv) {
-                setActiveConv({ _id: convId });
+              if (data.type === 'status') {
+                setStreamStage(data.stage);
               }
-              fetchHistory();
-              fetchDrafts();
+              if (data.type === 'text') {
+                fullText += data.text;
+                setStreamText(fullText);
+              }
+              if (data.type === 'announcement') {
+                announcementData = data.announcement;
+              }
+              if (data.type === 'report_ready') {
+                reportData = data.report;
+              }
+              if (data.type === 'error') {
+                throw new Error(data.message);
+              }
+            } catch (e) {
+              if (e.message && e.message !== 'Unexpected end of JSON input') {
+                throw e;
+              }
             }
-          } catch { /* skip parse errors */ }
+          }
         }
       }
+
+      // Add assistant response
+      if (reportData) {
+        const assistantMsg = {
+          role: 'assistant',
+          content: `Generated PDF Report: **${reportData.title}**\n\n${reportData.subtitle}`,
+          mode: 'report',
+          report: reportData,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, assistantMsg]);
+      } else if (announcementData) {
+        setActiveDraft(announcementData);
+        const assistantMsg = {
+          role: 'assistant',
+          content: `**${announcementData.title}**\n\n${announcementData.content}`,
+          mode: 'announcement',
+          announcement: announcementData,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, assistantMsg]);
+        fetchDrafts();
+      } else if (fullText) {
+        const assistantMsg = {
+          role: 'assistant',
+          content: fullText,
+          mode: chatMode,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, assistantMsg]);
+      }
+
+      fetchHistory();
+      if (convId && !activeConv) {
+        setActiveConv({ _id: convId });
+      }
     } catch (err) {
-      toast.error(err.message || 'Failed to send');
-      setStreamText('');
-      setStreamStage('');
+      toast.error(err.message || 'Error occurred during generation');
     } finally {
       setStreaming(false);
+      setStreamText('');
+      setStreamStage('');
     }
   };
 
-  // Announcement Action Handlers
+  const copyText = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copied to clipboard');
+  };
+
+  // Announcement Actions
   const handlePublishClick = (draft) => {
     setDraftToPublish(draft);
     setConfirmModalOpen(true);
-  };
-
-  // Persist announcement status change back into the saved conversation message in DB
-  const persistAnnouncementStatus = async (draft, status, extra = {}) => {
-    const convId = activeConv?._id;
-    if (!convId || !draft?.draftSessionId) return;
-    try {
-      await api.patch(`/ai/chat/${convId}/announcement-status`, {
-        draftSessionId: draft.draftSessionId,
-        status,
-        ...extra
-      });
-    } catch { /* non-critical — UI already updated */ }
   };
 
   const handleConfirmPublish = async () => {
     if (!draftToPublish) return;
     setIsPublishing(true);
     try {
-      const { data } = await api.post('/announcements', {
+      await api.post('/announcements', {
         ...draftToPublish,
         status: 'Published'
       });
-      toast.success('📢 Announcement published successfully!');
+      toast.success('Announcement published successfully');
       setConfirmModalOpen(false);
-
-      // Update active draft & message status in local state
-      const updatedDraft = { ...draftToPublish, status: 'Published', id: data.data._id };
-      setActiveDraft(updatedDraft);
-      setMessages(prev => prev.map(m => m.announcement?.draftSessionId === draftToPublish.draftSessionId
-        ? { ...m, announcement: updatedDraft }
-        : m
-      ));
-
-      // Persist status into DB so reload shows correct state
-      await persistAnnouncementStatus(draftToPublish, 'Published', { announcementId: data.data._id });
+      setActiveDraft(null);
       fetchDrafts();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to publish announcement');
@@ -270,353 +294,484 @@ const AIChat = () => {
 
   const handleSaveDraft = async (draft) => {
     try {
-      const { data } = await api.post('/announcements', {
+      await api.post('/announcements', {
         ...draft,
         status: 'Draft'
       });
-      toast.success('💾 Announcement saved as Draft!');
-      const updatedDraft = { ...draft, status: 'Draft (Saved)', id: data.data._id };
-      setActiveDraft(updatedDraft);
-      setMessages(prev => prev.map(m => m.announcement?.draftSessionId === draft.draftSessionId
-        ? { ...m, announcement: updatedDraft }
-        : m
-      ));
+      toast.success('Draft saved');
+      setActiveDraft(null);
       fetchDrafts();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to save draft');
     }
   };
 
-  const handleSchedule = async (draft) => {
-    if (!draft.scheduledFor) {
-      toast.error('Please select a scheduled date and time');
-      return;
-    }
+  const handleSchedule = async (draft, date) => {
     try {
-      const { data } = await api.post('/announcements', {
+      await api.post('/announcements', {
         ...draft,
-        status: 'Scheduled'
+        status: 'Scheduled',
+        scheduledFor: date
       });
-      toast.success(`📅 Announcement scheduled for ${new Date(draft.scheduledFor).toLocaleString()}!`);
-      const updatedDraft = { ...draft, status: 'Scheduled', id: data.data._id };
-      setActiveDraft(updatedDraft);
-      setMessages(prev => prev.map(m => m.announcement?.draftSessionId === draft.draftSessionId
-        ? { ...m, announcement: updatedDraft }
-        : m
-      ));
-
-      // Persist status into DB so reload shows correct state
-      await persistAnnouncementStatus(draft, 'Scheduled', {
-        scheduledFor: draft.scheduledFor,
-        announcementId: data.data._id
-      });
+      toast.success('Announcement scheduled');
+      setActiveDraft(null);
       fetchDrafts();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to schedule announcement');
+      toast.error(err.response?.data?.message || 'Failed to schedule');
     }
   };
 
-  const handleRefine = (actionId, actionLabel) => {
-    sendMessage(`Refine announcement: ${actionLabel}`, actionId);
+  const handleRefine = (actionType) => {
+    sendMessage(`Refine this announcement: ${actionType}`, actionType);
   };
 
   const handleEditChange = (updatedDraft) => {
     setActiveDraft(updatedDraft);
   };
 
-  const copyText = (text) => {
-    navigator.clipboard.writeText(text);
-    toast.success('Copied!', { duration: 1500 });
-  };
-
   const roleLabel = {
-    student: 'Course Material Assistant',
-    teacher: 'Teaching Assistant',
-    principal: 'Management Advisor & Announcement Center',
-    admin: 'AI Assistant & Announcement Center',
-    superAdmin: 'AI Assistant & Announcement Center'
+    superAdmin: 'Super Admin Intelligence & Report Engine',
+    admin: 'College Administrator AI Assistant',
+    principal: 'Principal Leadership Assistant',
+    teacher: 'Teacher Instructional Copilot',
+    student: 'Student Study Companion',
+    registrar: 'Registrar Admissions Assistant',
+    accountant: 'Accountant Treasury Assistant'
   };
 
-  const announcementPrompts = [
-    'Tomorrow college will remain closed because of heavy rain.',
-    'Mid exams are postponed until further notice.',
-    'Fee submission deadline has been extended to Friday.',
-    'Teachers meeting tomorrow at 10 AM in Conference Hall.',
-    'Admissions are now open for academic session 2026-2027.'
-  ];
+  // Filtered conversation list
+  const filteredConversations = conversations.filter(c => {
+    if (!historySearch.trim()) return true;
+    return (c.title || '').toLowerCase().includes(historySearch.toLowerCase().trim());
+  });
 
   return (
-    <div className="flex h-[calc(100vh-73px)] -m-5 sm:-m-6">
-      {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:relative z-30 lg:z-auto inset-y-0 left-0 w-72 bg-[#0a0e14] border-r border-white/[0.06] flex flex-col transition-transform duration-200`}>
-        <div className="p-3 border-b border-white/[0.06]">
-          <button onClick={startNewChat} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/15 transition text-sm font-semibold">
-            <HiOutlinePlus size={16} /> New Chat
+    <div className="w-full h-[calc(100vh-5.5rem)] flex flex-col md:flex-row rounded-2xl overflow-hidden border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#0d1117] shadow-sm">
+      {/* ─── DESKTOP SIDEBAR ────────────────────────────────────────────── */}
+      <div className="hidden md:flex flex-col w-72 lg:w-80 shrink-0 border-r border-slate-200/80 dark:border-white/[0.06] bg-slate-50/70 dark:bg-[#12161f]">
+        {/* Sidebar Header */}
+        <div className="p-3.5 border-b border-slate-200/80 dark:border-white/[0.06] flex items-center justify-between gap-2">
+          <button
+            onClick={startNewChat}
+            className="flex-1 flex items-center justify-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition"
+          >
+            <HiOutlinePlus size={16} /> New Session
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
-          {conversations.length === 0 ? (
-            <p className="text-center text-white/20 text-xs py-8">No conversations yet</p>
-          ) : conversations.map(conv => (
-            <div key={conv._id} onClick={() => loadConversation(conv._id)}
-              role="button" tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') loadConversation(conv._id); }}
-              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition group cursor-pointer ${
-                activeConv?._id === conv._id
-                  ? 'bg-white/[0.06] text-white/80'
-                  : 'text-white/40 hover:bg-white/[0.03] hover:text-white/60'
-              }`}>
-              {conv.metadata?.mode === 'announcement' ? (
-                <HiOutlineSpeakerphone size={14} className="shrink-0 text-amber-400" />
-              ) : (
-                <HiOutlineChatAlt2 size={14} className="shrink-0" />
-              )}
-              <span className="text-xs truncate flex-1">{conv.title}</span>
-              <button onClick={(e) => deleteConv(conv._id, e)}
-                className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-500/20 text-white/20 hover:text-red-400 transition">
-                <HiOutlineTrash size={12} />
-              </button>
+        {/* History Search */}
+        <div className="p-3 border-b border-slate-200/80 dark:border-white/[0.06]">
+          <div className="relative">
+            <HiOutlineSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search chat history..."
+              value={historySearch}
+              onChange={e => setHistorySearch(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.08] text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+        </div>
+
+        {/* Conversation List */}
+        <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin">
+          {filteredConversations.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-400 dark:text-white/40">
+              No previous conversations
             </div>
-          ))}
+          ) : (
+            filteredConversations.map(conv => {
+              const isActive = activeConv?._id === conv._id;
+              const isReport = conv.metadata?.mode === 'report';
+              const isAnnounce = conv.metadata?.mode === 'announcement';
+
+              return (
+                <div
+                  key={conv._id}
+                  onClick={() => loadConversation(conv._id)}
+                  className={`flex items-center justify-between gap-2 p-2.5 rounded-xl text-xs font-medium cursor-pointer transition group ${
+                    isActive
+                      ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-bold border border-indigo-200/60 dark:border-indigo-500/20'
+                      : 'text-slate-600 dark:text-white/60 hover:bg-white dark:hover:bg-white/[0.03] hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    {isReport ? (
+                      <HiOutlineDocumentText size={16} className="text-violet-500 shrink-0" />
+                    ) : isAnnounce ? (
+                      <HiOutlineSpeakerphone size={16} className="text-amber-500 shrink-0" />
+                    ) : (
+                      <HiOutlineChatAlt2 size={16} className="text-slate-400 shrink-0" />
+                    )}
+                    <span className="truncate">{conv.title || 'Untitled Chat'}</span>
+                  </div>
+
+                  <button
+                    onClick={e => deleteConv(conv._id, e)}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 rounded-md transition"
+                    title="Delete Conversation"
+                  >
+                    <HiOutlineTrash size={14} />
+                  </button>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
-      {/* Sidebar Overlay */}
-      {sidebarOpen && <div className="fixed inset-0 z-20 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
+      {/* ─── MOBILE HISTORY DRAWER / MODAL ─────────────────────────────── */}
+      {mobileHistoryOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          {/* Backdrop */}
+          <div
+            onClick={() => setMobileHistoryOpen(false)}
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+          />
 
-      {/* Main Chat */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#0b0f17]">
-        {/* Chat Header */}
-        <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-white/[0.06] bg-[#0d1117]/50 shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/5">
-              <HiOutlineMenu size={18} />
-            </button>
-            <HiOutlineSparkles className="text-indigo-400 shrink-0" size={18} />
-            <span className="text-sm font-semibold text-white/70 truncate">{roleLabel[user?.role] || 'AI Assistant'}</span>
-            {activeConv && <span className="text-[11px] text-white/25 truncate">— {activeConv.title || 'Chat'}</span>}
-          </div>
-
-          {/* Mode Switcher Pill */}
-          {isAnnouncementAllowed && (
-            <div className="flex items-center bg-white/5 p-1 rounded-xl border border-white/10 shrink-0">
-              <button
-                onClick={() => setChatMode('chat')}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
-                  chatMode === 'chat'
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-white/50 hover:text-white hover:bg-white/5'
-                }`}>
-                💬 Chat
-              </button>
-              <button
-                onClick={() => setChatMode('announcement')}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
-                  chatMode === 'announcement'
-                    ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-bold shadow-md'
-                    : 'text-white/50 hover:text-white hover:bg-white/5'
-                }`}>
-                📢 Announcement
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Recent Drafts Bar (Announcement Mode) */}
-        {isAnnouncementAllowed && chatMode === 'announcement' && recentDrafts.length > 0 && (
-          <div className="px-4 py-2 bg-amber-500/5 border-b border-amber-500/10 flex items-center gap-2 overflow-x-auto shrink-0">
-            <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1 shrink-0">
-              <HiOutlineClock size={12} /> Recent Drafts:
-            </span>
-            <div className="flex gap-1.5 overflow-x-auto py-0.5">
-              {recentDrafts.map(d => (
-                <button
-                  key={d.conversationId}
-                  onClick={() => loadConversation(d.conversationId)}
-                  className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-white/70 hover:text-white transition shrink-0 truncate max-w-[200px]">
-                  {d.title}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-6">
-          {messages.length === 0 && !streamText && !streaming ? (
-            <div className="flex flex-col items-center justify-center h-full text-center px-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-amber-500/20 flex items-center justify-center mb-4 border border-indigo-500/20">
-                {chatMode === 'announcement' ? (
-                  <HiOutlineSpeakerphone className="text-amber-400" size={30} />
-                ) : (
-                  <HiOutlineSparkles className="text-indigo-400" size={28} />
-                )}
+          {/* Drawer Content */}
+          <div className="relative w-4/5 max-w-xs h-full bg-white dark:bg-[#12161f] border-r border-slate-200 dark:border-white/[0.06] shadow-2xl flex flex-col z-10 animate-slide-right">
+            <div className="p-4 border-b border-slate-200 dark:border-white/[0.06] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <HiOutlineClock size={18} className="text-indigo-600 dark:text-indigo-400" />
+                <span className="text-sm font-bold text-slate-900 dark:text-white">Chat History</span>
               </div>
-
-              <h2 className="text-lg font-bold text-white/80 mb-1">
-                {chatMode === 'announcement' ? 'AI Announcement Generator' : roleLabel[user?.role] || 'AI Assistant'}
-              </h2>
-
-              <p className="text-white/30 text-sm max-w-md mb-6">
-                {chatMode === 'announcement'
-                  ? 'Describe a situation in plain language. AI will format, structure, and categorize a ready-to-publish announcement preview with complete actions.'
-                  : 'Ask about educational management, academic queries, or study materials.'}
-              </p>
-
-              {/* Quick Prompts for Announcement Mode */}
-              {chatMode === 'announcement' && (
-                <div className="w-full max-w-lg space-y-2">
-                  <p className="text-xs font-semibold text-white/40 uppercase tracking-wider">Try an example situation:</p>
-                  <div className="flex flex-col gap-1.5">
-                    {announcementPrompts.map((promptText, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => sendMessage(promptText)}
-                        className="px-3.5 py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.06] text-xs text-white/70 text-left transition hover:border-amber-500/30 flex items-center justify-between group">
-                        <span>"{promptText}"</span>
-                        <HiOutlinePaperAirplane size={14} className="text-amber-400 opacity-0 group-hover:opacity-100 transition rotate-90" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <button
+                onClick={() => setMobileHistoryOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white"
+              >
+                <HiOutlineX size={18} />
+              </button>
             </div>
-          ) : (
-            <div className="max-w-3xl mx-auto space-y-6">
-              {messages.map((msg, idx) => (
-                <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
-                  {msg.role === 'assistant' && (
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 mt-1">
-                      {msg.mode === 'announcement' ? (
-                        <HiOutlineSpeakerphone className="text-amber-300" size={16} />
-                      ) : (
-                        <HiOutlineSparkles className="text-white" size={14} />
-                      )}
-                    </div>
-                  )}
 
-                  <div className={`max-w-[92%] sm:max-w-[85%] ${
-                    msg.role === 'user'
-                      ? 'bg-indigo-500/15 border border-indigo-500/20 rounded-2xl rounded-br-md px-4 py-3'
-                      : msg.mode === 'announcement' && msg.announcement
-                      ? 'w-full'
-                      : 'bg-white/[0.03] border border-white/[0.06] rounded-2xl rounded-bl-md px-4 py-3'
-                  }`}>
-                    {msg.role === 'user' ? (
-                      <p className="text-white/85 text-sm whitespace-pre-wrap">{msg.content}</p>
-                    ) : msg.mode === 'announcement' && msg.announcement ? (
-                      <AnnouncementCard
-                        announcement={msg.announcement}
-                        mode="preview"
-                        onPublish={handlePublishClick}
-                        onSaveDraft={handleSaveDraft}
-                        onSchedule={handleSchedule}
-                        onRefine={handleRefine}
-                        onEditChange={handleEditChange}
-                        authorName={user?.name || 'Administrator'}
-                      />
-                    ) : (
-                      <div className="prose-chat text-sm">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-                        <button onClick={() => copyText(msg.content)}
-                          className="mt-2 flex items-center gap-1 text-[10px] text-white/20 hover:text-white/50 transition">
-                          <HiOutlineClipboardCopy size={12} /> Copy
-                        </button>
-                      </div>
-                    )}
-                  </div>
+            <div className="p-3 border-b border-slate-200 dark:border-white/[0.06]">
+              <button
+                onClick={startNewChat}
+                className="w-full flex items-center justify-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white shadow-sm"
+              >
+                <HiOutlinePlus size={16} /> New Session
+              </button>
+            </div>
 
-                  {msg.role === 'user' && (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 mt-1 text-white font-bold text-xs">
-                      {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                    </div>
-                  )}
+            {/* Conversation List */}
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+              {conversations.map(conv => (
+                <div
+                  key={conv._id}
+                  onClick={() => loadConversation(conv._id)}
+                  className="flex items-center justify-between p-3 rounded-xl text-xs font-medium text-slate-700 dark:text-white/70 hover:bg-slate-100 dark:hover:bg-white/[0.04]"
+                >
+                  <span className="truncate flex-1">{conv.title}</span>
+                  <button
+                    onClick={e => deleteConv(conv._id, e)}
+                    className="p-1 text-slate-400 hover:text-rose-600"
+                  >
+                    <HiOutlineTrash size={14} />
+                  </button>
                 </div>
               ))}
-
-              {/* Streaming Progress Status Pill */}
-              {streaming && streamStage && (
-                <div className="flex gap-3 items-center">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shrink-0 animate-pulse">
-                    <HiOutlineSparkles className="text-slate-950 font-bold" size={16} />
-                  </div>
-                  <div className="px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs font-semibold text-amber-300 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                    <span>{streamStage}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Streaming Response */}
-              {streaming && streamText && (
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 mt-1">
-                    <HiOutlineSparkles className="text-white" size={14} />
-                  </div>
-                  <div className="max-w-[85%] bg-white/[0.03] border border-white/[0.06] rounded-2xl rounded-bl-md px-4 py-3">
-                    <div className="prose-chat text-sm">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{streamText}</ReactMarkdown>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div ref={messagesEndRef} />
             </div>
-          )}
+          </div>
         </div>
+      )}
 
-        {/* Input Area */}
-        <div className="shrink-0 border-t border-white/[0.06] bg-[#0d1117]/50 p-4">
-          <div className="max-w-3xl mx-auto space-y-2">
-            {/* Mode Indicator Chip above textarea */}
-            {isAnnouncementAllowed && (
-              <div className="flex items-center justify-between text-xs px-1">
-                <span className="text-white/40 font-medium">Mode:</span>
-                <span className={`font-bold px-2 py-0.5 rounded-md ${
-                  chatMode === 'announcement' ? 'text-amber-400 bg-amber-500/10' : 'text-indigo-400 bg-indigo-500/10'
-                }`}>
-                  {chatMode === 'announcement' ? '📢 Announcement Creation' : '💬 Standard Chat'}
+      {/* ─── MAIN CHAT AREA ────────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#0d1117]">
+        {/* Top Chat Header */}
+        <div className="px-4 py-3 border-b border-slate-200/80 dark:border-white/[0.06] flex items-center justify-between gap-3 bg-white/80 dark:bg-[#0d1117]/80 backdrop-blur-sm shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {/* Mobile History Button */}
+            <button
+              onClick={() => setMobileHistoryOpen(true)}
+              className="md:hidden p-2 rounded-xl border border-slate-200 dark:border-white/[0.08] text-slate-600 dark:text-white/70 hover:bg-slate-50 dark:hover:bg-white/[0.04]"
+              title="Chat History"
+            >
+              <HiOutlineClock size={18} />
+            </button>
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-extrabold text-slate-900 dark:text-white truncate">
+                  Academix AI Intelligence
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-500/20 uppercase tracking-wider hidden sm:inline-block">
+                  {user?.role}
                 </span>
               </div>
-            )}
+              <p className="text-[11px] text-slate-400 dark:text-white/40 truncate">
+                {roleLabel[user?.role] || 'Institutional Assistant'}
+              </p>
+            </div>
+          </div>
 
-            <div className="flex gap-2">
-              <div className="flex-1 relative">
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                  placeholder={
-                    chatMode === 'announcement'
-                      ? 'Describe the situation (e.g. Tomorrow college will remain closed due to heavy rain...)'
-                      : user?.role === 'student'
-                      ? 'Ask about your study material...'
-                      : 'Type your message...'
-                  }
-                  rows={1}
-                  className="w-full px-4 py-3 bg-[#1a2230] border border-white/10 rounded-xl text-white/85 text-sm font-sans outline-none transition-all placeholder:text-white/30 focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.12)] resize-none overflow-hidden"
-                  style={{ minHeight: '46px', maxHeight: '120px' }}
-                  disabled={streaming || inputDisabled}
-                />
+          {/* New Chat Button (Mobile) */}
+          <div className="flex items-center gap-2 md:hidden">
+            <button
+              onClick={startNewChat}
+              className="p-2 rounded-xl bg-indigo-600 text-white shadow-sm"
+              title="New Chat"
+            >
+              <HiOutlinePlus size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* ─── 3-MODE SWITCHER TOOLBAR (ZERO EMOJIS) ────────────────────── */}
+        <div className="px-4 py-2 border-b border-slate-200/60 dark:border-white/[0.04] bg-slate-50/50 dark:bg-white/[0.01] flex items-center gap-2 overflow-x-auto scrollbar-none shrink-0">
+          {/* Mode 1: Standard Chat */}
+          <button
+            onClick={() => setChatMode('chat')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl transition ${
+              chatMode === 'chat'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-white/60 hover:bg-slate-200/70 dark:hover:bg-white/[0.04]'
+            }`}
+          >
+            <HiOutlineChatAlt2 size={15} />
+            <span>Standard Chat</span>
+          </button>
+
+          {/* Mode 2: Announcement Generator */}
+          {isAnnouncementAllowed && (
+            <button
+              onClick={() => setChatMode('announcement')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl transition ${
+                chatMode === 'announcement'
+                  ? 'bg-amber-500 text-slate-950 shadow-sm'
+                  : 'text-slate-600 dark:text-white/60 hover:bg-slate-200/70 dark:hover:bg-white/[0.04]'
+              }`}
+            >
+              <HiOutlineSpeakerphone size={15} />
+              <span>Announcement Generator</span>
+            </button>
+          )}
+
+          {/* Mode 3: PDF Report Generator (Super Admin Only) */}
+          {isReportAllowed && (
+            <button
+              onClick={() => setChatMode('report')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl transition ${
+                chatMode === 'report'
+                  ? 'bg-violet-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-white/60 hover:bg-slate-200/70 dark:hover:bg-white/[0.04]'
+              }`}
+            >
+              <HiOutlineDocumentText size={15} />
+              <span>PDF Report Generator</span>
+            </button>
+          )}
+        </div>
+
+        {/* ─── MESSAGE STREAM ───────────────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 scrollbar-thin">
+          {messages.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-3 py-12">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                {chatMode === 'report' ? (
+                  <HiOutlineDocumentText size={26} />
+                ) : chatMode === 'announcement' ? (
+                  <HiOutlineSpeakerphone size={26} />
+                ) : (
+                  <HiOutlineSparkles size={26} />
+                )}
               </div>
-              <button
-                onClick={() => sendMessage()}
-                disabled={streaming || inputDisabled || !input.trim()}
-                className={`px-4 py-3 text-white rounded-xl hover:opacity-90 transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0 ${
-                  chatMode === 'announcement'
-                    ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-bold'
-                    : 'bg-gradient-to-r from-indigo-500 to-violet-600'
-                }`}>
-                <HiOutlinePaperAirplane size={18} className="rotate-90" />
-              </button>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                {chatMode === 'report'
+                  ? 'AI-Powered PDF Report Generator'
+                  : chatMode === 'announcement'
+                  ? 'College Announcement Studio'
+                  : 'How can Academix AI assist you?'}
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-white/40 leading-relaxed">
+                {chatMode === 'report'
+                  ? 'Request executive platform reports, enrollment breakdowns, college comparison audits, and subscription metrics. Backend generates branded PDF reports with vector charts.'
+                  : chatMode === 'announcement'
+                  ? 'Describe an institutional event or situation. AI prepares a structured, publishable announcement draft for review.'
+                  : 'Ask administrative questions, inquire about platform analytics, or query operational procedures.'}
+              </p>
+            </div>
+          ) : (
+            messages.map((msg, idx) => (
+              <div
+                key={idx}
+                className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                {msg.role === 'assistant' && (
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shrink-0 mt-0.5">
+                    {msg.mode === 'report' ? (
+                      <HiOutlineDocumentText size={16} />
+                    ) : msg.mode === 'announcement' ? (
+                      <HiOutlineSpeakerphone size={16} />
+                    ) : (
+                      <HiOutlineSparkles size={16} />
+                    )}
+                  </div>
+                )}
+
+                <div
+                  className={`max-w-[92%] sm:max-w-[85%] ${
+                    msg.role === 'user'
+                      ? 'bg-indigo-600 text-white rounded-2xl rounded-br-md px-4 py-2.5 text-sm shadow-sm'
+                      : 'w-full space-y-2'
+                  }`}
+                >
+                  {msg.role === 'user' ? (
+                    <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                  ) : msg.mode === 'report' && msg.report ? (
+                    /* ─── AI GENERATED REPORT CARD ──────────────────────── */
+                    <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#161b22] border border-violet-500/30 shadow-md space-y-4">
+                      <div className="flex items-start gap-3.5">
+                        <div className="w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20 flex items-center justify-center text-violet-600 dark:text-violet-400 shrink-0">
+                          <HiOutlineDocumentText size={22} />
+                        </div>
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-500/20 uppercase tracking-wider">
+                              Executive PDF Report
+                            </span>
+                            <span className="text-[10px] text-slate-400 dark:text-white/40">
+                              {msg.report.generatedAt
+                                ? new Date(msg.report.generatedAt).toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })
+                                : ''}
+                            </span>
+                          </div>
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">
+                            {msg.report.title}
+                          </h4>
+                          <p className="text-xs text-slate-500 dark:text-white/60">
+                            {msg.report.subtitle}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Metadata Chips */}
+                      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-white/[0.04] text-xs">
+                        <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-white/60 font-medium">
+                          Sections: {msg.report.sectionsCount || 3}
+                        </span>
+                        <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-white/60 font-medium">
+                          Pages: {msg.report.pageCount || 1}
+                        </span>
+                        <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-white/60 font-mono text-[11px]">
+                          Token: {msg.report.token?.substring(0, 8)}...
+                        </span>
+                      </div>
+
+                      {/* Download & Preview Actions */}
+                      <div className="flex items-center gap-2.5 pt-2">
+                        <button
+                          onClick={() => window.open(msg.report.previewUrl, '_blank')}
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-slate-100 dark:bg-white/[0.04] hover:bg-slate-200 dark:hover:bg-white/[0.08] text-slate-800 dark:text-white border border-slate-200 dark:border-white/[0.06] transition"
+                        >
+                          <HiOutlineEye size={15} /> Preview PDF
+                        </button>
+
+                        <a
+                          href={msg.report.downloadUrl}
+                          download
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition"
+                        >
+                          <HiOutlineDownload size={15} /> Download PDF
+                        </a>
+                      </div>
+                    </div>
+                  ) : msg.mode === 'announcement' && msg.announcement ? (
+                    <AnnouncementCard
+                      announcement={msg.announcement}
+                      mode="preview"
+                      onPublish={handlePublishClick}
+                      onSaveDraft={handleSaveDraft}
+                      onSchedule={handleSchedule}
+                      onRefine={handleRefine}
+                      onEditChange={handleEditChange}
+                      authorName={user?.name || 'Administrator'}
+                    />
+                  ) : (
+                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#161b22] border border-slate-200/80 dark:border-white/[0.06] shadow-sm text-sm text-slate-800 dark:text-white/90">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                      <button
+                        onClick={() => copyText(msg.content)}
+                        className="mt-2 flex items-center gap-1 text-[11px] text-slate-400 hover:text-indigo-600 transition"
+                      >
+                        <HiOutlineClipboardCopy size={13} /> Copy response
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+
+          {/* Real-time Streaming Progress Banner */}
+          {streaming && streamStage && (
+            <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-indigo-50/80 dark:bg-indigo-500/10 border border-indigo-200/60 dark:border-indigo-500/20 animate-pulse max-w-md">
+              <div className="w-2.5 h-2.5 rounded-full bg-indigo-600 dark:bg-indigo-400 animate-ping shrink-0" />
+              <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 truncate">
+                {streamStage}
+              </p>
+            </div>
+          )}
+
+          {/* Live text streaming */}
+          {streaming && streamText && (
+            <div className="flex gap-3">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shrink-0">
+                <HiOutlineSparkles size={16} />
+              </div>
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#161b22] border border-slate-200/80 dark:border-white/[0.06] text-sm text-slate-800 dark:text-white/90 flex-1">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{streamText}</ReactMarkdown>
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* ─── INPUT AREA ──────────────────────────────────────────────── */}
+        <div className="p-3 sm:p-4 border-t border-slate-200/80 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#0d1117] shrink-0">
+          <div className="max-w-4xl mx-auto flex items-center gap-2">
+            <div className="relative flex-1">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+                placeholder={
+                  chatMode === 'report'
+                    ? 'Prompt the report you need (e.g. Generate audit report comparing all colleges by enrollment and plan)...'
+                    : chatMode === 'announcement'
+                    ? 'Describe the announcement scenario (e.g. Tomorrow campus will close early at 1 PM)...'
+                    : 'Ask anything or discuss operations...'
+                }
+                rows={1}
+                disabled={streaming || inputDisabled}
+                className="w-full pl-4 pr-10 py-3 text-sm rounded-xl bg-white dark:bg-[#161b22] border border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 shadow-sm resize-none"
+                style={{ minHeight: '44px', maxHeight: '120px' }}
+              />
             </div>
 
-            <p className="text-[10px] text-white/15 text-center">
-              AI responses use your personal Gemini API key. Announcements require explicit confirmation before publishing.
-            </p>
+            <button
+              onClick={() => sendMessage()}
+              disabled={streaming || inputDisabled || !input.trim()}
+              className={`p-3 rounded-xl text-white shadow-sm transition disabled:opacity-40 disabled:cursor-not-allowed shrink-0 ${
+                chatMode === 'report'
+                  ? 'bg-violet-600 hover:bg-violet-700'
+                  : chatMode === 'announcement'
+                  ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold'
+                  : 'bg-indigo-600 hover:bg-indigo-700'
+              }`}
+              title="Send Prompt"
+            >
+              <HiOutlinePaperAirplane size={18} className="rotate-90" />
+            </button>
           </div>
         </div>
       </div>

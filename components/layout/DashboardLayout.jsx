@@ -411,8 +411,11 @@ const ProfileDropdown = ({ open, onClose, user }) => {
     <div ref={dropRef} className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-[#0f1721] border border-gray-200 dark:border-white/10 rounded-xl shadow-2xl transition-colors duration-200 overflow-hidden z-50 animate-slide-up">
       <div className="px-4 py-3.5 border-b border-gray-100 dark:border-white/[0.06]">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
-            {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+          <div className="w-10 h-10 rounded-full overflow-hidden border border-indigo-500/20 shrink-0 flex items-center justify-center">
+            {user?.avatar
+              ? <img src={user.avatar} alt={user?.name || 'User'} className="w-full h-full object-cover" />
+              : <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm">{user?.name?.charAt(0)?.toUpperCase() || 'U'}</div>
+            }
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-gray-800 dark:text-white/90 truncate">{user?.name}</p>
@@ -539,8 +542,11 @@ const DashboardLayout = ({ children }) => {
 
             <div className="relative">
               <button onClick={() => { setProfileOpen(!profileOpen); setNotifOpen(false); }}
-                className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm ml-1 hover:opacity-90 transition cursor-pointer">
-                {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                className="w-8 h-8 rounded-full ml-1 overflow-hidden border-2 border-indigo-500/30 hover:opacity-90 transition cursor-pointer shrink-0 flex items-center justify-center">
+                {user?.avatar
+                  ? <img src={user.avatar} alt={user?.name || 'User'} className="w-full h-full object-cover" />
+                  : <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm">{user?.name?.charAt(0)?.toUpperCase() || 'U'}</div>
+                }
               </button>
               <ProfileDropdown open={profileOpen} onClose={() => setProfileOpen(false)} user={user} />
             </div>
