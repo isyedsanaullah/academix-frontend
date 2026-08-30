@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
-import { HiOutlinePlus, HiOutlinePrinter, HiOutlineSearch } from 'react-icons/hi';
+import { HiOutlinePlus, HiOutlinePrinter, HiOutlineSearch, HiOutlineCloudUpload } from 'react-icons/hi';
 
 const Results = () => {
   const navigate = useNavigate();
@@ -92,14 +92,24 @@ const Results = () => {
           <h1 className="text-2xl font-bold text-white">Results</h1>
           <p className="text-surface-400 text-sm mt-1">View student examination results</p>
         </div>
-        {user?.role === 'teacher' && (
-          <button 
-            onClick={() => navigate('/admin/results/entry')} 
-            className="btn-primary"
-          >
-            <HiOutlinePlus size={18} /> Enter Results
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {['admin', 'teacher'].includes(user?.role) && (
+            <>
+              <button 
+                onClick={() => navigate(user?.role === 'teacher' ? '/teacher/results/upload' : '/admin/results/upload')} 
+                className="btn-secondary flex items-center gap-1.5 text-xs py-2 px-3 font-semibold"
+              >
+                <HiOutlineCloudUpload size={16} /> Bulk Upload Marks
+              </button>
+              <button 
+                onClick={() => navigate('/admin/results/entry')} 
+                className="btn-primary flex items-center gap-1.5"
+              >
+                <HiOutlinePlus size={18} /> Enter Results
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Controls: Premium Select & Search Bar */}

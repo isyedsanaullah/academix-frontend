@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const Visitors = () => {
   const { user } = useAuth();
-  const isGuard = user?.role === 'employee';
+  const isGuard = user?.role === 'employee' || user?.role === 'admin';
 
   const [activeTab, setActiveTab] = useState('external'); // 'external' or 'internal'
   

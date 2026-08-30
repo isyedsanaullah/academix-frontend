@@ -18,7 +18,7 @@ import RecentActivityWidget from '../../components/activity/RecentActivityWidget
 const CustomChartTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white dark:bg-[#131920] p-3 rounded-xl border border-slate-200 dark:border-white/10 shadow-xl text-xs">
+      <div className="bg-white dark:bg-[#0f1721] p-3 rounded-xl border border-slate-200 dark:border-white/10 shadow-xl text-xs">
         <p className="font-semibold text-slate-600 dark:text-white/70 mb-1">{label}</p>
         <p className="font-bold text-indigo-600 dark:text-indigo-400">
           {payload[0].name}: {payload[0].value}
@@ -55,7 +55,7 @@ const SuperAdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[300px] w-full">
+      <div className="flex items-center justify-center min-h-[350px] w-full">
         <div className="w-9 h-9 border-3 border-indigo-500/20 border-t-indigo-600 rounded-full animate-spin" />
       </div>
     );
@@ -101,7 +101,7 @@ const SuperAdminDashboard = () => {
       bg: 'bg-rose-50 dark:bg-rose-500/12 border-rose-100 dark:border-rose-500/20' 
     },
     { 
-      label: 'Growth',          
+      label: 'Growth Rate',          
       value: '+12%',                  
       icon: HiOutlineTrendingUp,    
       color: 'text-purple-600 dark:text-purple-400', 
@@ -122,11 +122,17 @@ const SuperAdminDashboard = () => {
       {/* ── 1. Top Header ────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-            Super Admin
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-white/50 mt-1 font-medium">
-            Global platform overview across all colleges
+          <div className="flex items-center gap-2.5 flex-wrap mb-1">
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              Super Admin Overview
+            </h1>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Platform Healthy
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-white/50 font-medium">
+            Global operational overview across all registered colleges
           </p>
         </div>
 
@@ -146,7 +152,7 @@ const SuperAdminDashboard = () => {
           return (
             <div 
               key={i} 
-              className="glass-card p-4 sm:p-5 bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.06] rounded-2xl shadow-xs dark:shadow-none flex flex-col justify-between gap-3 hover:border-indigo-500/30 transition-all duration-200"
+              className="glass-card p-4 sm:p-5 bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.06] rounded-2xl shadow-xs dark:shadow-none flex flex-col justify-between gap-3 hover:border-indigo-500/30 hover:-translate-y-0.5 transition-all duration-200"
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-white/45 uppercase tracking-wider truncate">
@@ -176,7 +182,7 @@ const SuperAdminDashboard = () => {
             <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100 dark:border-white/[0.04]">
               <HiOutlineChartBar size={18} className="text-indigo-600 dark:text-indigo-400" />
               <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
-                Subscription Plans
+                Subscription Tier Distribution
               </h3>
             </div>
 
@@ -209,7 +215,7 @@ const SuperAdminDashboard = () => {
               <div className="flex items-center gap-2">
                 <HiOutlineOfficeBuilding size={18} className="text-indigo-600 dark:text-indigo-400" />
                 <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
-                  Recent Colleges
+                  Recently Onboarded Colleges
                 </h3>
               </div>
               <button 
@@ -316,3 +322,4 @@ const SuperAdminDashboard = () => {
 };
 
 export default SuperAdminDashboard;
+

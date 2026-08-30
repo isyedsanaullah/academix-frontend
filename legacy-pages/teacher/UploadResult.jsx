@@ -56,15 +56,17 @@ const UploadResult = () => {
   const [selectedSectionCode, setSelectedSectionCode] = useState('');
   const [assignedSubjects, setAssignedSubjects] = useState([]);
   
-  // Compute subjects that the teacher actually teaches in this exam campaign
+  // Compute subjects that the teacher actually teaches in this exam campaign (or all subjects if Admin)
   const teacherExamSubjects = selectedExam
-    ? selectedExam.subjects.filter(examSub => {
-        // Strict restriction for teachers
-        return assignedSubjects.some(assignedSub => 
-          assignedSub._id === examSub.subject_id || 
-          assignedSub.name?.toLowerCase() === examSub.name?.toLowerCase()
-        );
-      })
+    ? (user?.role === 'admin'
+        ? selectedExam.subjects
+        : selectedExam.subjects.filter(examSub => {
+            // Strict restriction for teachers
+            return assignedSubjects.some(assignedSub => 
+              assignedSub._id === examSub.subject_id || 
+              assignedSub.name?.toLowerCase() === examSub.name?.toLowerCase()
+            );
+          }))
     : [];
   
   // Workflow states

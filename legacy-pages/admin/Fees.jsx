@@ -22,6 +22,7 @@ const Fees = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAccountant = user?.role === 'accountant';
+  const canManageFees = user?.role === 'accountant' || user?.role === 'admin';
 
   const [fees, setFees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -142,7 +143,7 @@ const Fees = () => {
 
   // Open Create Fee Modal
   const openCreate = async () => {
-    if (!isAccountant) return;
+    if (!canManageFees) return;
     try {
       const { data } = await api.get('/students?limit=300');
       setStudents(data.data || []);
@@ -168,7 +169,7 @@ const Fees = () => {
   // Submit Create Fee Record
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!isAccountant) return;
+    if (!canManageFees) return;
     try {
       await api.post('/fees', form);
       toast.success('Fee record created successfully');
@@ -181,7 +182,7 @@ const Fees = () => {
 
   // Open Pay Modal
   const openPayModal = (fee) => {
-    if (!isAccountant) return;
+    if (!canManageFees) return;
     setSelectedFee(fee);
     const balance = fee.totalAmount - fee.paidAmount;
     setPayAmount(balance > 0 ? balance.toString() : '');
@@ -191,7 +192,7 @@ const Fees = () => {
   // Submit recorded payment to backend
   const handleRecordPayment = async (e) => {
     e.preventDefault();
-    if (!isAccountant || !selectedFee) return;
+    if (!canManageFees || !selectedFee) return;
 
     const amount = Number(payAmount);
     if (isNaN(amount) || amount <= 0) {
@@ -458,7 +459,7 @@ const Fees = () => {
         </div>
         
         <div className="flex flex-wrap items-center gap-2">
-          {isAccountant && (
+          {canManageFees && (
             <button 
               onClick={openCreate} 
               className="btn-primary cursor-pointer transition-all hover:opacity-95"
@@ -467,7 +468,7 @@ const Fees = () => {
             </button>
           )}
           <button 
-            onClick={() => navigate(isAccountant ? '/accountant/fees/defaulters' : '/admin/fees/defaulters')} 
+            onClick={() => navigate(user?.role === 'accountant' ? '/accountant/fees/defaulters' : '/admin/fees/defaulters')} 
             className="btn-secondary flex items-center gap-1.5 cursor-pointer text-xs py-2 px-3 font-semibold"
           >
             <HiOutlineExclamation size={16} className="text-red-400" /> Defaulters List
@@ -693,7 +694,7 @@ const Fees = () => {
                         </td>
                         <td>
                           <div className="flex items-center gap-1.5">
-                            {isAccountant && f.status !== 'paid' && (
+                            {canManageFees && f.status !== 'paid' && (
                               <button 
                                 onClick={() => openPayModal(f)} 
                                 className="btn-secondary text-[11px] font-bold py-1.5 px-3 hover:text-white flex items-center gap-1 cursor-pointer active:scale-95 transition-transform"
@@ -704,7 +705,7 @@ const Fees = () => {
                             {f.paidAmount > 0 && (
                               <button
                                 onClick={() => {
-                                  const rolePrefix = isAccountant ? '/accountant' : '/admin';
+                                  const rolePrefix = user?.role === 'accountant' ? '/accountant' : '/admin';
                                   navigate(`${rolePrefix}/fees/receipt/${f._id}`);
                                 }}
                                 className="p-2 rounded-xl bg-surface-800 border border-white/[0.05] hover:border-indigo-500 hover:text-indigo-400 transition cursor-pointer"
