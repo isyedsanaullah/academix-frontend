@@ -25,11 +25,12 @@
  * ─────────────────────────────────────────────────────────────────────
  */
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   HiOutlinePhotograph, HiOutlineLink, HiOutlineUpload, HiOutlineTrash,
   HiOutlineExclamationCircle, HiOutlineCheckCircle, HiOutlineRefresh
 } from 'react-icons/hi';
+import { uploadFileDirect, getFileDownloadUrl, parseR2Ref } from '@/services/fileUpload.service';
 
 const MAX_MB_DEFAULT = 5;
 const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
@@ -55,6 +56,29 @@ export default function ImageUploadField({
 
   // URL-tab live preview state
   const [urlError,      setUrlError]      = useState('');
+  const [resolvedUrl,   setResolvedUrl]   = useState('');
+
+  // ── Resolve r2: references if present ─────────────────────────────
+  useEffect(() => {
+    let active = true;
+    if (url && typeof url === 'string' && url.startsWith('r2:')) {
+      const fileId = parseR2Ref(url);
+      if (fileId) {
+        getFileDownloadUrl(fileId, true)
+          .then((res) => {
+            if (active && res?.url) setResolvedUrl(res.url);
+          })
+          .catch(() => {
+            if (active) setResolvedUrl('');
+          });
+      }
+    } else {
+      setResolvedUrl('');
+    }
+    return () => { active = false; };
+  }, [url]);
+
+  const displayUrl = resolvedUrl || url;
 
   // ── File validation ──────────────────────────────────────────────
   const validateFile = (file) => {
@@ -101,16 +125,25 @@ export default function ImageUploadField({
     if (inputRef.current) inputRef.current.value = '';
   };
 
-  // ── Upload to R2 (called when onUpload prop is provided) ─────────
+  // ── Upload to R2 (called via onUpload prop or default R2 uploader) ─
   const handleUpload = async () => {
-    if (!pendingFile || !onUpload) return;
+    if (!pendingFile) return;
     setUploading(true);
+    setFileError('');
     try {
-      const uploadedUrl = await onUpload(pendingFile);
-      setUrl(uploadedUrl);
+      let uploadedUrl;
+      if (onUpload) {
+        uploadedUrl = await onUpload(pendingFile);
+      } else {
+        const res = await uploadFileDirect(pendingFile, { category: 'images' });
+        uploadedUrl = res?.r2Ref || (res?.id ? `r2:${res.id}` : '');
+      }
+      if (uploadedUrl) {
+        setUrl(uploadedUrl);
+      }
       removeFile();
     } catch (err) {
-      setFileError(`Upload failed: ${err.message || 'Unknown error'}`);
+      setFileError(`Upload failed: ${err?.response?.data?.message || err?.message || 'Unknown error'}`);
     } finally {
       setUploading(false);
     }
@@ -118,7 +151,7 @@ export default function ImageUploadField({
 
   // ── URL preview: handle image load error ─────────────────────────
   const onUrlImageError = () => {
-    if (url) setUrlError('Could not load image from this URL. Check the link is publicly accessible.');
+    if (displayUrl) setUrlError('Could not load image from this URL. Check the link is publicly accessible.');
   };
   const onUrlImageLoad  = () => setUrlError('');
 
@@ -156,7 +189,7 @@ export default function ImageUploadField({
               <div className="relative w-full aspect-[3/1] rounded-xl overflow-hidden bg-white/[0.03] border border-white/[0.05]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={url} alt="Cover preview"
+                  src={displayUrl} alt="Cover preview"
                   className="w-full h-full object-cover"
                   onError={onUrlImageError} onLoad={onUrlImageLoad}
                 />
@@ -166,7 +199,7 @@ export default function ImageUploadField({
                 <div className="w-20 h-20 rounded-xl overflow-hidden bg-white/[0.03] border border-white/[0.05] flex-shrink-0">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={url} alt="Logo preview"
+                    src={displayUrl} alt="Logo preview"
                     className="w-full h-full object-cover"
                     onError={onUrlImageError} onLoad={onUrlImageLoad}
                   />
@@ -256,22 +289,16 @@ export default function ImageUploadField({
 
             {/* Action row */}
             <div className="flex items-center gap-2">
-              {onUpload ? (
-                <button
-                  type="button"
-                  onClick={handleUpload}
-                  disabled={uploading}
-                  className="btn-primary py-1.5 px-3 text-xs"
-                >
-                  {uploading
-                    ? <><span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Uploading…</>
-                    : <><HiOutlineUpload size={13} /> Upload to Cloud</>}
-                </button>
-              ) : (
-                <div className="flex-1 px-3 py-1.5 rounded-lg bg-amber-500/8 border border-amber-500/15 text-[10px] text-amber-400/80">
-                  ☁️ Cloud upload will be available after Cloudflare R2 setup
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={handleUpload}
+                disabled={uploading}
+                className="btn-primary py-1.5 px-3 text-xs"
+              >
+                {uploading
+                  ? <><span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Uploading…</>
+                  : <><HiOutlineUpload size={13} /> Upload to Cloud</>}
+              </button>
               <button
                 type="button" onClick={browse}
                 className="btn-secondary py-1.5 px-3 text-xs"
