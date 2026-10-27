@@ -14,6 +14,8 @@ const pages = [
   'app/principal/students/[id]/page.js',
   'app/register/invitation/[token]/page.js',
   'app/registrar/students/[id]/page.js',
+  'app/set-password/[token]/page.js',
+  'app/setup/[token]/page.js',
   'app/super-admin/colleges/[id]/page.js',
   'app/verify/[token]/page.js'
 ];

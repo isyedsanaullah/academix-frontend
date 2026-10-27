@@ -22,7 +22,7 @@ export default function DocumentVerificationPage() {
       setDisabledNotice(null);
 
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'https://academix-backend-8zcg.onrender.com/api').replace(/\/api\/?$/, '');
         const res = await fetch(`${apiUrl}/api/public/verify/${token}`, {
           cache: 'no-store'
         });
