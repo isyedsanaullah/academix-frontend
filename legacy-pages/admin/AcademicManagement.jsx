@@ -5,18 +5,24 @@ import Sessions from '@/legacy-pages/admin/Sessions';
 import ClassesAndSections from '@/legacy-pages/admin/ClassesAndSections';
 import Subjects from '@/legacy-pages/admin/Subjects';
 import TimetablePage from '@/legacy-pages/admin/TimetablePage';
+import GroupSubjects from '@/legacy-pages/admin/GroupSubjects';
+import Promotions from '@/legacy-pages/admin/Promotions';
 import {
   HiOutlineCalendar,
   HiOutlineCollection,
   HiOutlineBookOpen,
   HiOutlineClock,
+  HiOutlineSparkles,
+  HiOutlineAcademicCap,
 } from 'react-icons/hi';
 
 const TABS = [
-  { id: 'sessions',  label: 'Sessions',           icon: HiOutlineCalendar,    Component: Sessions },
-  { id: 'classes',   label: 'Classes & Sections',  icon: HiOutlineCollection,  Component: ClassesAndSections },
-  { id: 'subjects',  label: 'Subjects',            icon: HiOutlineBookOpen,    Component: Subjects },
-  { id: 'timetable', label: 'Timetable',           icon: HiOutlineClock,       Component: TimetablePage },
+  { id: 'sessions',       label: 'Sessions',             icon: HiOutlineCalendar,    Component: Sessions },
+  { id: 'classes',        label: 'Classes & Sections',    icon: HiOutlineCollection,  Component: ClassesAndSections },
+  { id: 'subjects',       label: 'Subjects',              icon: HiOutlineBookOpen,    Component: Subjects },
+  { id: 'group-subjects', label: 'Subject Combinations',  icon: HiOutlineSparkles,    Component: GroupSubjects },
+  { id: 'promotions',     label: 'Batches & Promotions',  icon: HiOutlineAcademicCap, Component: Promotions },
+  { id: 'timetable',      label: 'Timetable',             icon: HiOutlineClock,       Component: TimetablePage },
 ];
 
 const AcademicManagement = () => {

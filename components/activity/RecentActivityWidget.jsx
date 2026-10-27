@@ -33,61 +33,49 @@ export default function RecentActivityWidget({ role = 'student', limit = 5 }) {
   const historyPath = `/${role}/activity-log`;
 
   return (
-    <div className="glass-card p-4 sm:p-6 bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.06] rounded-2xl shadow-xs dark:shadow-none flex flex-col gap-4 w-full">
-      {/* Widget Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3 pb-2 border-b border-slate-100 dark:border-white/[0.04]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-500/12 border border-indigo-100 dark:border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-            <HiOutlineClock size={18} />
-          </div>
-          <div>
-            <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white m-0">
-              Recent Activity
-            </h3>
-            <p className="text-[11px] text-slate-500 dark:text-white/40 m-0">
-              Latest system audit trails and operational logs
-            </p>
+    <div className="card">
+      {/* Widget header */}
+      <div className="card-head">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="stat-icon">
+            <HiOutlineClock size={16} aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <h3 className="card-title truncate">Recent Activity</h3>
+            <p className="card-sub">Latest system audit trails and operational logs</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex shrink-0 items-center gap-1.5">
           <button
+            type="button"
             onClick={loadActivities}
             title="Refresh logs"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:text-white/40 dark:hover:text-white/80 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
+            aria-label="Refresh logs"
+            className="btn-ghost btn-sm btn-icon"
           >
-            <HiOutlineRefresh size={16} />
+            <HiOutlineRefresh size={16} aria-hidden="true" />
           </button>
-          <Link
-            href={historyPath}
-            className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-all"
-          >
+          <Link href={historyPath} className="btn-ghost btn-sm">
             <span>View All</span>
-            <HiOutlineArrowRight size={13} />
+            <HiOutlineArrowRight size={14} aria-hidden="true" />
           </Link>
         </div>
       </div>
 
-      {/* Content State */}
+      {/* Content state */}
       {loading ? (
-        <div className="flex flex-col gap-2.5 py-2 w-full">
+        <div className="flex flex-col gap-2" aria-busy="true">
           {[1, 2, 3].map((n) => (
-            <div
-              key={n}
-              className="h-16 rounded-xl bg-slate-100 dark:bg-white/[0.03] animate-pulse w-full"
-            />
+            <div key={n} className="skeleton h-16 w-full" />
           ))}
         </div>
       ) : error ? (
-        <div className="py-8 text-center text-slate-500 dark:text-white/40 text-xs w-full">
-          Unable to load recent activity logs.
-        </div>
+        <div className="empty">Unable to load recent activity logs.</div>
       ) : activities.length === 0 ? (
-        <div className="py-8 text-center text-slate-500 dark:text-white/40 text-xs w-full">
-          No recent activity reported.
-        </div>
+        <div className="empty">No recent activity reported.</div>
       ) : (
-        <div className="flex flex-col gap-2.5 w-full">
+        <div className="flex flex-col gap-2">
           {activities.map((act) => (
             <ActivityItem key={act.id} activity={act} isCompact={true} />
           ))}

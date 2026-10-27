@@ -3,7 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
-import { HiOutlinePlus, HiOutlineSearch } from 'react-icons/hi';
+import {
+  HiOutlinePlus,
+  HiOutlineSearch,
+  HiOutlineSwitchHorizontal,
+  HiOutlineBookOpen,
+  HiOutlineCheck,
+  HiOutlineX
+} from 'react-icons/hi';
 import Pagination from '../../components/common/Pagination';
 
 const Students = () => {
@@ -25,6 +32,20 @@ const Students = () => {
   const [classesList, setClassesList] = useState([]);
   const [groupsList, setGroupsList] = useState([]);
   const [sectionsList, setSectionsList] = useState([]);
+
+  // Subject combinations in registration modal
+  const [groupSubjects, setGroupSubjects] = useState([]);
+  const [selectedSubjects, setSelectedSubjects] = useState([]);
+  const [loadingGroupSubjects, setLoadingGroupSubjects] = useState(false);
+
+  // Move Group state & modal
+  const [movingStudent, setMovingStudent] = useState(null);
+  const [moveTargetGroupId, setMoveTargetGroupId] = useState('');
+  const [moveTargetSectionId, setMoveTargetSectionId] = useState('');
+  const [moveReason, setMoveReason] = useState('Academic Stream Transfer');
+  const [moveGroupSubjects, setMoveGroupSubjects] = useState([]);
+  const [moveSelectedSubjects, setMoveSelectedSubjects] = useState([]);
+  const [moveLoading, setMoveLoading] = useState(false);
   
   const [form, setForm] = useState({
     name: '', rollNumber: '', fatherName: '', gender: 'male',
@@ -90,6 +111,130 @@ const Students = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [search]);
 
+  // Fetch subjects configured for chosen group in register form
+  const fetchGroupSubjectsForForm = async (groupId) => {
+    if (!groupId) {
+      setGroupSubjects([]);
+      setSelectedSubjects([]);
+      return;
+    }
+    setLoadingGroupSubjects(true);
+    try {
+      const res = await api.get(`/groups/${groupId}/subjects`);
+      const subjects = res.data.data || [];
+      setGroupSubjects(subjects);
+      // Auto-select compulsory subjects
+      const compulsoryIds = subjects.filter(s => s.kind === 'compulsory').map(s => s.subject_id);
+      setSelectedSubjects(compulsoryIds);
+    } catch {
+      setGroupSubjects([]);
+      setSelectedSubjects([]);
+    } finally {
+      setLoadingGroupSubjects(false);
+    }
+  };
+
+  const handleToggleElective = (subjectId, electiveSet, maxChoices = 1) => {
+    const isSelected = selectedSubjects.includes(subjectId);
+    if (isSelected) {
+      setSelectedSubjects(selectedSubjects.filter(id => id !== subjectId));
+    } else {
+      if (electiveSet) {
+        const setSubjects = groupSubjects.filter(s => s.kind === 'elective' && s.electiveSet === electiveSet);
+        const alreadyChosenInSet = selectedSubjects.filter(id => setSubjects.some(s => s.subject_id === id));
+        if (alreadyChosenInSet.length >= maxChoices) {
+          toast.error(`Maximum ${maxChoices} choice(s) allowed for "${electiveSet}"`);
+          return;
+        }
+      }
+      setSelectedSubjects([...selectedSubjects, subjectId]);
+    }
+  };
+
+  // Move Group Handlers
+  const openMoveModal = (student) => {
+    setMovingStudent(student);
+    const matchedClass = classesList.find(c => c.name === student.class);
+    const classId = matchedClass?._id;
+    const candidateGroups = groupsList.filter(g => 
+      (!classId || g.class_id === classId) && g.name !== student.group
+    );
+    const initialTargetGroup = candidateGroups[0]?._id || (groupsList.find(g => g.name !== student.group)?._id || '');
+    setMoveTargetGroupId(initialTargetGroup);
+    setMoveTargetSectionId('');
+    setMoveReason('Academic Stream Transfer');
+    if (initialTargetGroup) {
+      fetchMoveGroupSubjects(initialTargetGroup);
+    } else {
+      setMoveGroupSubjects([]);
+      setMoveSelectedSubjects([]);
+    }
+  };
+
+  const fetchMoveGroupSubjects = async (groupId) => {
+    try {
+      const res = await api.get(`/groups/${groupId}/subjects`);
+      const subjects = res.data.data || [];
+      setMoveGroupSubjects(subjects);
+      const compulsoryIds = subjects.filter(s => s.kind === 'compulsory').map(s => s.subject_id);
+      setMoveSelectedSubjects(compulsoryIds);
+    } catch {
+      setMoveGroupSubjects([]);
+      setMoveSelectedSubjects([]);
+    }
+  };
+
+  const handleMoveTargetGroupChange = (groupId) => {
+    setMoveTargetGroupId(groupId);
+    setMoveTargetSectionId('');
+    if (groupId) {
+      fetchMoveGroupSubjects(groupId);
+    } else {
+      setMoveGroupSubjects([]);
+      setMoveSelectedSubjects([]);
+    }
+  };
+
+  const handleToggleMoveElective = (subjectId, electiveSet, maxChoices = 1) => {
+    const isSelected = moveSelectedSubjects.includes(subjectId);
+    if (isSelected) {
+      setMoveSelectedSubjects(moveSelectedSubjects.filter(id => id !== subjectId));
+    } else {
+      if (electiveSet) {
+        const setSubjects = moveGroupSubjects.filter(s => s.kind === 'elective' && s.electiveSet === electiveSet);
+        const alreadyChosenInSet = moveSelectedSubjects.filter(id => setSubjects.some(s => s.subject_id === id));
+        if (alreadyChosenInSet.length >= maxChoices) {
+          toast.error(`Maximum ${maxChoices} choice(s) allowed for "${electiveSet}"`);
+          return;
+        }
+      }
+      setMoveSelectedSubjects([...moveSelectedSubjects, subjectId]);
+    }
+  };
+
+  const handleMoveSubmit = async (e) => {
+    e.preventDefault();
+    if (!movingStudent) return;
+    if (!moveTargetGroupId) return toast.error('Please select a target group');
+
+    setMoveLoading(true);
+    try {
+      await api.post(`/students/${movingStudent._id || movingStudent.id}/move-group`, {
+        targetGroupId: moveTargetGroupId,
+        section_id: moveTargetSectionId || undefined,
+        reason: moveReason,
+        subjectIds: moveSelectedSubjects
+      });
+      toast.success(`Student ${movingStudent.name} successfully transferred!`);
+      setMovingStudent(null);
+      fetchStudents(page, activeSectionTab, search);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Transfer failed');
+    } finally {
+      setMoveLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.class_id) return toast.error('Class selection is required');
@@ -97,13 +242,25 @@ const Students = () => {
     if (!form.section_id) return toast.error('Section selection is required');
 
     try {
+      let studentId = editing;
       if (editing) {
         await api.put(`/students/${editing}`, form);
         toast.success('Student updated successfully');
       } else {
-        await api.post('/students', form);
+        const res = await api.post('/students', form);
+        studentId = res.data.data?._id || res.data.data?.id;
         toast.success('Student registered successfully');
       }
+
+      // Assign selected subjects if configured
+      if (studentId && selectedSubjects.length > 0) {
+        try {
+          await api.post(`/students/${studentId}/subjects`, { subjectIds: selectedSubjects });
+        } catch (subErr) {
+          console.warn('Subject assignment warning:', subErr.response?.data?.message);
+        }
+      }
+
       setShowModal(false);
       setEditing(null);
       fetchStudents(page, activeSectionTab, search);
@@ -123,6 +280,8 @@ const Students = () => {
       guardianName: '', guardianPhone: '', guardianRelation: '',
       createAccount: false, password: 'student123'
     });
+    setGroupSubjects([]);
+    setSelectedSubjects([]);
   };
 
   const handleTabChange = (tabId) => {
@@ -269,6 +428,7 @@ const Students = () => {
                   <th className="py-3 px-4 text-left">Roll Number</th>
                   <th className="py-3 px-4 text-left">Class & Dynamic Group</th>
                   <th className="py-3 px-4 text-left">Section</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -301,6 +461,22 @@ const Students = () => {
                         <span className="px-2.5 py-0.5 bg-slate-800 text-slate-300 text-xs font-bold rounded-lg border border-white/10">
                           {s.section}
                         </span>
+                      </td>
+                      <td className="py-3 px-4 text-right" onClick={e => e.stopPropagation()}>
+                        {!isReadOnly && (
+                          <button
+                            onClick={() => openMoveModal(s)}
+                            disabled={s.status !== 'active'}
+                            className={`px-2.5 py-1 text-xs font-semibold rounded-lg border inline-flex items-center gap-1.5 transition-colors ${
+                              s.status === 'active'
+                                ? 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border-indigo-500/25'
+                                : 'bg-white/5 text-white/30 border-white/5 cursor-not-allowed'
+                            }`}
+                            title={s.status === 'active' ? 'Transfer to another group' : 'Only active students can be moved'}
+                          >
+                            <HiOutlineSwitchHorizontal size={14} /> Move Group
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -361,7 +537,11 @@ const Students = () => {
                   <label className="block text-[10px] text-white/50 uppercase font-semibold mb-1">Academic Group / Stream *</label>
                   <select
                     value={form.group_id}
-                    onChange={e => setForm({ ...form, group_id: e.target.value, section_id: '' })}
+                    onChange={e => {
+                      const gid = e.target.value;
+                      setForm({ ...form, group_id: gid, section_id: '' });
+                      fetchGroupSubjectsForForm(gid);
+                    }}
                     className="input-field"
                     required
                     disabled={!form.class_id}
@@ -389,6 +569,106 @@ const Students = () => {
                     ))}
                   </select>
                 </div>
+
+                {/* Subject Combinations Configuration */}
+                {form.group_id && (
+                  <div className="md:col-span-2 border border-white/10 rounded-xl p-4 bg-slate-950/40 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <HiOutlineBookOpen className="text-indigo-400" size={18} />
+                        <span className="text-xs font-bold text-white uppercase tracking-wider">Subject Combination Rules</span>
+                      </div>
+                      <span className="text-[10px] text-white/40 font-mono">
+                        {selectedSubjects.length} subjects chosen
+                      </span>
+                    </div>
+
+                    {loadingGroupSubjects ? (
+                      <div className="flex justify-center py-4">
+                        <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    ) : groupSubjects.length === 0 ? (
+                      <p className="text-xs text-white/40 italic">
+                        No custom subject rules configured for this group. Standard syllabus will be used.
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {/* Compulsory subjects */}
+                        {groupSubjects.filter(gs => gs.kind === 'compulsory').length > 0 && (
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">
+                              Compulsory Subjects (Automatic)
+                            </span>
+                            <div className="flex flex-wrap gap-2">
+                              {groupSubjects.filter(gs => gs.kind === 'compulsory').map(gs => (
+                                <span
+                                  key={gs._id}
+                                  className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 flex items-center gap-1.5"
+                                >
+                                  <HiOutlineCheck size={14} className="text-emerald-400" />
+                                  {gs.subject?.name || 'Subject'}
+                                  {gs.subject?.code && <span className="text-[10px] text-emerald-400/60 font-mono">({gs.subject.code})</span>}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Elective subjects grouped by electiveSet */}
+                        {Object.entries(
+                          groupSubjects.filter(gs => gs.kind === 'elective').reduce((acc, gs) => {
+                            const setKey = gs.electiveSet || 'General Electives';
+                            if (!acc[setKey]) acc[setKey] = [];
+                            acc[setKey].push(gs);
+                            return acc;
+                          }, {})
+                        ).map(([setName, items]) => {
+                          const maxChoices = items[0]?.maxChoices || 1;
+                          const chosenInSet = selectedSubjects.filter(id => items.some(gs => gs.subject_id === id)).length;
+                          return (
+                            <div key={setName} className="border-t border-white/5 pt-2">
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
+                                  {setName} <span className="text-white/40 lowercase font-normal">(choose {maxChoices})</span>
+                                </span>
+                                <span className={`text-[10px] font-mono font-bold ${chosenInSet === maxChoices ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                  {chosenInSet} / {maxChoices} chosen
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {items.map(gs => {
+                                  const isSelected = selectedSubjects.includes(gs.subject_id);
+                                  return (
+                                    <label
+                                      key={gs._id}
+                                      onClick={() => handleToggleElective(gs.subject_id, gs.electiveSet, maxChoices)}
+                                      className={`flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer transition-all ${
+                                        isSelected
+                                          ? 'bg-indigo-500/15 border-indigo-500/40 text-white font-medium'
+                                          : 'bg-slate-900/40 border-white/5 text-slate-400 hover:text-white hover:bg-slate-900'
+                                      }`}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={() => {}}
+                                        className="rounded bg-slate-800 border-white/20 text-indigo-600 focus:ring-0"
+                                      />
+                                      <span className="truncate">{gs.subject?.name || 'Subject'}</span>
+                                      {gs.subject?.code && (
+                                        <span className="text-[10px] text-white/30 ml-auto font-mono">{gs.subject.code}</span>
+                                      )}
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-[10px] text-white/50 uppercase font-semibold mb-1">Phone Number</label>
@@ -439,6 +719,210 @@ const Students = () => {
               <div className="flex gap-3 pt-4 border-t border-white/5">
                 <button type="submit" className="btn-primary flex-1 justify-center py-2.5 font-bold shadow-lg">{editing ? 'Save Modifications' : 'Confirm Registration'}</button>
                 <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1 justify-center py-2.5">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Move Group Modal */}
+      {movingStudent && (
+        <div className="modal-overlay" onClick={() => !moveLoading && setMovingStudent(null)}>
+          <div className="modal-content max-w-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                  <HiOutlineSwitchHorizontal size={18} />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-white">Transfer Student Group</h2>
+                  <p className="text-xs text-white/40">Move student to another academic group and rewrite subject mappings</p>
+                </div>
+              </div>
+              <button
+                disabled={moveLoading}
+                onClick={() => setMovingStudent(null)}
+                className="text-white/40 hover:text-white"
+              >
+                <HiOutlineX size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleMoveSubmit} className="space-y-4">
+              {/* Student Summary Banner */}
+              <div className="bg-slate-950/60 border border-white/5 p-3.5 rounded-xl flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-white text-sm">{movingStudent.name}</p>
+                  <p className="text-xs text-white/50">Roll: <span className="text-indigo-400 font-mono font-semibold">{movingStudent.rollNumber}</span> • Class: {movingStudent.class}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Current Group</span>
+                  <span className="text-xs font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 inline-block mt-0.5">
+                    {movingStudent.group} ({movingStudent.section || 'No Sec'})
+                  </span>
+                </div>
+              </div>
+
+              {/* Target Group & Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] text-white/50 uppercase font-semibold mb-1">Target Group *</label>
+                  <select
+                    value={moveTargetGroupId}
+                    onChange={e => handleMoveTargetGroupChange(e.target.value)}
+                    className="input-field"
+                    required
+                  >
+                    <option value="">Select Target Group</option>
+                    {groupsList.filter(g => g.name !== movingStudent.group).map(g => (
+                      <option key={g._id} value={g._id}>
+                        {g.name} {g.seats ? `(Limit: ${g.seats})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-white/50 uppercase font-semibold mb-1">Target Section (Optional)</label>
+                  <select
+                    value={moveTargetSectionId}
+                    onChange={e => setMoveTargetSectionId(e.target.value)}
+                    className="input-field"
+                  >
+                    <option value="">Auto-assign / Keep Section</option>
+                    {sectionsList
+                      .filter(s => !moveTargetGroupId || s.group_id?._id === moveTargetGroupId || s.group_id === moveTargetGroupId)
+                      .map(s => (
+                        <option key={s._id} value={s._id}>
+                          {s.code} {s.name ? `(${s.name})` : ''}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-white/50 uppercase font-semibold mb-1">Transfer Reason *</label>
+                <select
+                  value={moveReason}
+                  onChange={e => setMoveReason(e.target.value)}
+                  className="input-field"
+                >
+                  <option value="Academic Stream Transfer">Academic Stream Transfer (e.g. Pre-Med to ICS)</option>
+                  <option value="Student Request">Student / Parent Formal Request</option>
+                  <option value="Administrative Reassignment">Administrative Reassignment</option>
+                  <option value="Seat Availability Adjustment">Seat Availability Adjustment</option>
+                </select>
+              </div>
+
+              {/* Target Group Subject Combinations */}
+              {moveTargetGroupId && (
+                <div className="border border-white/10 rounded-xl p-3.5 bg-slate-950/40 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <HiOutlineBookOpen className="text-indigo-400" size={16} />
+                      Target Group Subject Mapping
+                    </span>
+                    <span className="text-[10px] text-white/40 font-mono">
+                      {moveSelectedSubjects.length} subjects to be mapped
+                    </span>
+                  </div>
+
+                  {moveGroupSubjects.length === 0 ? (
+                    <p className="text-xs text-white/40 italic">
+                      No custom rules for target group. Compulsory syllabus will be automatically associated.
+                    </p>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {/* Compulsory */}
+                      {moveGroupSubjects.filter(gs => gs.kind === 'compulsory').length > 0 && (
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">
+                            Compulsory (Will be assigned)
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {moveGroupSubjects.filter(gs => gs.kind === 'compulsory').map(gs => (
+                              <span
+                                key={gs._id}
+                                className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 flex items-center gap-1"
+                              >
+                                <HiOutlineCheck size={12} className="text-emerald-400" />
+                                {gs.subject?.name || 'Subject'}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Electives */}
+                      {Object.entries(
+                        moveGroupSubjects.filter(gs => gs.kind === 'elective').reduce((acc, gs) => {
+                          const setKey = gs.electiveSet || 'General Electives';
+                          if (!acc[setKey]) acc[setKey] = [];
+                          acc[setKey].push(gs);
+                          return acc;
+                        }, {})
+                      ).map(([setName, items]) => {
+                        const maxChoices = items[0]?.maxChoices || 1;
+                        const chosenInSet = moveSelectedSubjects.filter(id => items.some(gs => gs.subject_id === id)).length;
+                        return (
+                          <div key={setName} className="border-t border-white/5 pt-2">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
+                                {setName} (choose {maxChoices})
+                              </span>
+                              <span className={`text-[10px] font-mono font-bold ${chosenInSet === maxChoices ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                {chosenInSet}/{maxChoices}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                              {items.map(gs => {
+                                const isSelected = moveSelectedSubjects.includes(gs.subject_id);
+                                return (
+                                  <label
+                                    key={gs._id}
+                                    onClick={() => handleToggleMoveElective(gs.subject_id, gs.electiveSet, maxChoices)}
+                                    className={`flex items-center gap-2 p-1.5 rounded-lg border text-xs cursor-pointer transition-all ${
+                                      isSelected
+                                        ? 'bg-indigo-500/15 border-indigo-500/40 text-white font-medium'
+                                        : 'bg-slate-900/40 border-white/5 text-slate-400 hover:text-white hover:bg-slate-900'
+                                    }`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={() => {}}
+                                      className="rounded bg-slate-800 border-white/20 text-indigo-600 focus:ring-0"
+                                    />
+                                    <span className="truncate">{gs.subject?.name || 'Subject'}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-3 border-t border-white/5">
+                <button
+                  type="submit"
+                  disabled={moveLoading}
+                  className="btn-primary flex-1 justify-center py-2.5 font-bold shadow-lg"
+                >
+                  {moveLoading ? 'Transferring Student...' : 'Confirm Transfer'}
+                </button>
+                <button
+                  type="button"
+                  disabled={moveLoading}
+                  onClick={() => setMovingStudent(null)}
+                  className="btn-secondary flex-1 justify-center py-2.5"
+                >
+                  Cancel
+                </button>
               </div>
             </form>
           </div>

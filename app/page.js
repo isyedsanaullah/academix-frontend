@@ -1,749 +1,695 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
-import LottieLoader from '@/components/common/LottieLoader';
+import BrandLogo from '@/components/common/BrandLogo';
 import PublicFooter from '@/components/common/PublicFooter';
+import { buildTenantUrl } from '@/lib/host';
 import {
-  HiOutlineSearch, HiOutlineLocationMarker, HiOutlineMail,
-  HiOutlineSpeakerphone, HiOutlineClipboardList, HiOutlineLogin,
-  HiOutlineX, HiChevronRight, HiOutlineAcademicCap, HiArrowRight,
-  HiOutlineCheckCircle, HiOutlineExclamationCircle,
-  HiOutlineRefresh, HiOutlineOfficeBuilding,
+  HiOutlineSearch, HiOutlineLocationMarker, HiOutlineSpeakerphone, HiOutlineClipboardList,
+  HiOutlineLogin, HiOutlineX, HiChevronRight, HiChevronDown, HiArrowRight, HiOutlineMenu,
+  HiOutlineExclamationCircle, HiOutlineRefresh, HiOutlineOfficeBuilding, HiOutlineViewGrid,
+  HiOutlineCheckCircle, HiOutlineAcademicCap, HiOutlineCash, HiOutlineChartBar,
+  HiOutlineDocumentText, HiOutlineUserGroup, HiOutlineShieldCheck,
+  HiOutlineBadgeCheck, HiOutlineBookOpen, HiOutlineBriefcase, HiOutlineKey,
+  HiOutlineIdentification, HiOutlinePhone, HiOutlineMail, HiOutlineSupport,
 } from 'react-icons/hi';
 import { HiOutlineSignal } from 'react-icons/hi2';
-import toast from 'react-hot-toast';
 
-// ─── Role → dashboard path ──────────────────────────────────────────────
+// Brand colours (from the logo): blue #0A4D94 · green #2A9B4A · navy #051d3a
+
 const ROLE_HOME = {
   superAdmin: '/super-admin', admin: '/admin', teacher: '/teacher',
   student: '/student', registrar: '/registrar', accountant: '/accountant',
   principal: '/principal', employee: '/employee',
 };
 
-// ─── Status colours ─────────────────────────────────────────────────────
 const STATUS_META = {
-  submitted:    { color: '#fbbf24', bg: 'rgba(251,191,36,0.10)',  label: 'Submitted' },
-  under_review: { color: '#38bdf8', bg: 'rgba(56,189,248,0.10)', label: 'Under Review' },
-  entry_test:   { color: '#a78bfa', bg: 'rgba(167,139,250,0.10)', label: 'Entry Test' },
-  interview:    { color: '#f472b6', bg: 'rgba(244,114,182,0.10)', label: 'Interview' },
-  approved:     { color: '#34d399', bg: 'rgba(52,211,153,0.10)',  label: 'Approved' },
-  rejected:     { color: '#f87171', bg: 'rgba(248,113,113,0.10)', label: 'Rejected' },
+  submitted:    { color: '#b45309', bg: '#fef3c7', label: 'Submitted' },
+  under_review: { color: '#0369a1', bg: '#e0f2fe', label: 'Under Review' },
+  entry_test:   { color: '#6d28d9', bg: '#ede9fe', label: 'Entry Test' },
+  interview:    { color: '#be185d', bg: '#fce7f3', label: 'Interview' },
+  approved:     { color: '#15803d', bg: '#dcfce7', label: 'Approved' },
+  rejected:     { color: '#b91c1c', bg: '#fee2e2', label: 'Rejected' },
 };
 
-const fadeUp = (delay = 0) => ({
-  initial: { opacity: 0, y: 16 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] },
-});
+const NAV = [
+  { label: 'Colleges', id: 'college-directory' },
+  { label: 'Features', id: 'features' },
+  { label: 'How it works', id: 'how-it-works' },
+  { label: 'Portals', id: 'portals' },
+  { label: 'FAQ', id: 'faq' },
+];
+
+const FEATURES = [
+  { icon: HiOutlineClipboardList, title: 'Admissions Management', text: 'Online applications, entry tests, interviews and merit decisions in one tracked pipeline.' },
+  { icon: HiOutlineAcademicCap, title: 'Academics & Timetables', text: 'Programs, courses, sections and class schedules organised for every semester.' },
+  { icon: HiOutlineCheckCircle, title: 'Attendance Tracking', text: 'Daily attendance marked by faculty and visible to students and administrators.' },
+  { icon: HiOutlineCash, title: 'Fees & Accounts', text: 'Fee structures, vouchers, payments and dues managed with a clear financial trail.' },
+  { icon: HiOutlineDocumentText, title: 'Certificates & Documents', text: 'Generate and verify official certificates and student documents quickly.' },
+  { icon: HiOutlineBookOpen, title: 'Exams & Results', text: 'Prepare exams, record marks and publish results securely to students.' },
+  { icon: HiOutlineSpeakerphone, title: 'Notices & Announcements', text: 'Reach students and staff instantly with public and role-specific updates.' },
+  { icon: HiOutlineChartBar, title: 'Reports & Insights', text: 'Clear dashboards that help principals and admins make informed decisions.' },
+];
+
+const STEPS = [
+  { n: '01', title: 'Request a subscription', text: 'Tell us about your college. Our team reviews your request and gets in touch.' },
+  { n: '02', title: 'We set up your workspace', text: 'Your college gets its own branded space with programs, staff roles and settings.' },
+  { n: '03', title: 'Go live', text: 'Students, faculty and staff log in to their portals and your public page goes online.' },
+];
+
+const PORTALS = [
+  { icon: HiOutlineAcademicCap, title: 'Student', text: 'Applications, attendance, fees, results.' },
+  { icon: HiOutlineUserGroup, title: 'Faculty', text: 'Classes, attendance, marks, notices.' },
+  { icon: HiOutlineIdentification, title: 'Registrar', text: 'Admissions, enrolment, records.' },
+  { icon: HiOutlineCash, title: 'Accountant', text: 'Fees, vouchers, collections.' },
+  { icon: HiOutlineBadgeCheck, title: 'Principal', text: 'Oversight, approvals, reports.' },
+  { icon: HiOutlineViewGrid, title: 'College Admin', text: 'Setup, users, settings.' },
+  { icon: HiOutlineBriefcase, title: 'Employee', text: 'Staff profile and duties.' },
+  { icon: HiOutlineKey, title: 'Super Admin', text: 'Platform-wide control of all colleges.' },
+];
+
+const WHY = [
+  { icon: HiOutlineShieldCheck, title: 'Separate data for every college', text: 'Multi-tenant by design: each institution works in its own workspace.' },
+  { icon: HiOutlineKey, title: 'Role-based access', text: 'People only see and do what their role allows, from student to super admin.' },
+  { icon: HiOutlineOfficeBuilding, title: 'Your own public page', text: 'Every college gets a public portal for admissions, notices and information.' },
+  { icon: HiOutlineSupport, title: 'Local support, 24/7', text: 'A dedicated helpline and email team based in Islamabad, Pakistan.' },
+];
+
+const FAQ = [
+  { q: 'How do I find my college?', a: 'Use the Colleges Directory on this page. Search by college name or code, or filter by city, then open the college’s public portal.' },
+  { q: 'How can I track my admission application?', a: 'Open the Track tab in the directory section, enter the tracking number you received when you applied, and see your current status instantly.' },
+  { q: 'My college is not listed. How can it join?', a: 'Choose “Register Your College” and submit a subscription request. Our team will contact you and help you get started.' },
+  { q: 'Is each college’s data kept separate?', a: 'Yes. Collegeshub is a multi-tenant platform, so every college operates in its own workspace with role-based access for its users.' },
+  { q: 'Who do I contact for help?', a: 'Call our 24/7 helpline at +92 313 5013303 or email support@collegeshub.org.' },
+];
+
+const fmtDate = (d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const go = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+const btnPrimary = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[#0A4D94] font-semibold text-white shadow-[0_10px_24px_-10px_rgba(10,77,148,0.7)] transition-all hover:-translate-y-0.5 hover:bg-[#083f7a] active:translate-y-0';
+const btnOutline = 'inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-700 transition-all hover:-translate-y-0.5 hover:border-[#0A4D94] hover:text-[#0A4D94] active:translate-y-0';
+const inputCls = 'w-full rounded-xl border border-slate-300 bg-white text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#0A4D94] focus:ring-4 focus:ring-[#0A4D94]/10';
+
+function Reveal({ children, delay = 0, className = '' }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-60px' }}
+      transition={{ duration: 0.55, delay, ease: [0.22, 1, 0.36, 1] }} className={className}>
+      {children}
+    </motion.div>
+  );
+}
+
+function SectionHead({ eyebrow, title, text, light = false }) {
+  return (
+    <Reveal className="mx-auto mb-12 max-w-2xl text-center">
+      <span className={`inline-block rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] ${light ? 'bg-white/10 text-emerald-300' : 'bg-[#2A9B4A]/10 text-[#23823e]'}`}>{eyebrow}</span>
+      <h2 className={`mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl ${light ? 'text-white' : 'text-slate-900'}`}>{title}</h2>
+      {text && <p className={`mt-3 text-base leading-relaxed ${light ? 'text-white/65' : 'text-slate-600'}`}>{text}</p>}
+    </Reveal>
+  );
+}
 
 export default function HomePage() {
   const router = useRouter();
   const { user } = useAuthStore();
 
-  // ── States ───────────────────────────────────────────────────────────
   const [colleges, setColleges] = useState([]);
-  const [cities, setCities] = useState([]);
-  const [loadingColleges, setLoadingColleges] = useState(true);
-
-  // Search & filter
+  const [loading, setLoading] = useState(true);
   const [searchName, setSearchName] = useState('');
   const [searchCity, setSearchCity] = useState('');
-
-  // NavPanel tab: announcements | admissions | track
   const [activeNav, setActiveNav] = useState('announcements');
-  const [announcements, setAnnouncements] = useState([]);
-  const [admissionInfo, setAdmissionInfo] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [faqOpen, setFaqOpen] = useState(0);
 
-  // Application tracker
   const [statusQuery, setStatusQuery] = useState('');
   const [statusResult, setStatusResult] = useState(null);
   const [statusLoading, setStatusLoading] = useState(false);
   const [statusError, setStatusError] = useState('');
 
-  // ── Load registered colleges ──────────────────────────────────────────
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const dashboardPath = mounted && user?.role ? ROLE_HOME[user.role] : null;
+
   useEffect(() => {
     fetch('/api/public/colleges')
       .then(r => r.json())
-      .then(d => {
-        if (d.success && Array.isArray(d.data)) {
-          setColleges(d.data);
-          const cityList = [...new Set(d.data.map(c => c.city).filter(Boolean))].sort();
-          setCities(cityList);
-        }
-      })
+      .then(d => { if (d.success && Array.isArray(d.data)) setColleges(d.data); })
       .catch(() => {})
-      .finally(() => setLoadingColleges(false));
+      .finally(() => setLoading(false));
   }, []);
 
-  // ── Filter colleges ───────────────────────────────────────────────────
-  const filtered = colleges.filter(c => {
-    const matchName = !searchName.trim() ||
-      c.name?.toLowerCase().includes(searchName.toLowerCase()) ||
-      c.code?.toLowerCase().includes(searchName.toLowerCase());
-    const matchCity = !searchCity.trim() ||
-      c.city?.toLowerCase() === searchCity.toLowerCase();
-    return matchName && matchCity;
-  });
+  const cities = useMemo(() => [...new Set(colleges.map(c => c.city).filter(Boolean))].sort(), [colleges]);
+  const filtered = useMemo(() => {
+    const q = searchName.trim().toLowerCase();
+    const city = searchCity.trim().toLowerCase();
+    return colleges.filter(c =>
+      (!q || c.name?.toLowerCase().includes(q) || c.code?.toLowerCase().includes(q)) &&
+      (!city || c.city?.toLowerCase() === city));
+  }, [colleges, searchName, searchCity]);
 
-  // ── Track application ─────────────────────────────────────────────────
   const checkStatus = async () => {
     if (!statusQuery.trim()) return;
-    setStatusLoading(true);
-    setStatusResult(null);
-    setStatusError('');
+    setStatusLoading(true); setStatusResult(null); setStatusError('');
     try {
       const res = await fetch(`/api/public/applications/track/${encodeURIComponent(statusQuery.trim())}`);
       const d = await res.json();
-      if (d.success) setStatusResult(d.data);
-      else setStatusError(d.message || 'Application not found');
-    } catch {
-      setStatusError('Could not verify status. Please try again.');
-    } finally {
-      setStatusLoading(false);
-    }
+      if (d.success) setStatusResult(d.data); else setStatusError(d.message || 'Application not found');
+    } catch { setStatusError('Could not verify status. Please try again.'); }
+    finally { setStatusLoading(false); }
   };
 
-  const clearFilters = () => {
-    setSearchName('');
-    setSearchCity('');
-  };
-
-  const scrollToDirectory = () => {
-    document.getElementById('college-directory')?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const navTo = (id) => { setMenuOpen(false); go(id); };
 
   return (
-    <div className="min-h-screen bg-[#04070d] text-white/85 flex flex-col font-sans selection:bg-indigo-500/30 selection:text-indigo-200">
+    <div className="flex min-h-screen flex-col bg-white font-sans text-slate-600 selection:bg-[#0A4D94]/15 selection:text-[#0A4D94]">
 
-      {/* ── FULLSCREEN LOADER ───────────────────────────────────── */}
-      {loadingColleges && <LottieLoader fullScreen text="Loading Colleges..." />}
-
-      {/* ── STICKY HEADER ───────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-[#04070d]/85 backdrop-blur-xl shadow-[0_1px_0_rgba(255,255,255,0.05)]">
-        <div className="max-w-[1440px] mx-auto px-3.5 sm:px-6 lg:px-10 h-16 sm:h-[68px] flex items-center justify-between gap-3 sm:gap-4">
-
-          {/* Logo */}
-          <div className="flex items-center gap-2.5 sm:gap-3.5 cursor-pointer shrink-0 min-w-0" onClick={scrollToDirectory}>
-            <div className="w-10 h-10 sm:w-11 sm:h-11 shrink-0 relative">
-              <Image src="/logo.svg" alt="Academix" fill className="object-contain" priority />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-base sm:text-[17px] font-extrabold text-white leading-none tracking-tight">Academix</h1>
-              <p className="text-[9px] sm:text-[10px] text-white/40 font-semibold uppercase tracking-wider sm:tracking-widest mt-1 leading-none truncate">
-                College Directory
-              </p>
-            </div>
+      {/* ── TOP BAR ───────────────────────────────────────────── */}
+      <div className="hidden bg-[#051d3a] text-[12px] text-white/75 sm:block">
+        <div className="mx-auto flex h-9 max-w-[1440px] items-center justify-between px-6 lg:px-10">
+          <span className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Smart campus management for colleges across Pakistan</span>
+          <div className="flex items-center gap-5">
+            <a href="tel:+923135013303" className="flex items-center gap-1.5 hover:text-white"><HiOutlinePhone size={13} /> +92 313 5013303</a>
+            <a href="mailto:support@collegeshub.org" className="flex items-center gap-1.5 hover:text-white"><HiOutlineMail size={13} /> support@collegeshub.org</a>
           </div>
+        </div>
+      </div>
 
-          {/* Navigation */}
-          <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-white/60">
-            <button onClick={scrollToDirectory} className="hover:text-white transition-colors">Colleges</button>
-            <a href="/join" className="hover:text-white transition-colors">Join Academix</a>
-            <a href="/join#contact" className="hover:text-white transition-colors">Contact</a>
+      {/* ── HEADER ────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur-lg">
+        <div className="mx-auto flex h-[68px] max-w-[1440px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-10">
+          <Link href="/" aria-label="Collegeshub home" className="shrink-0">
+            <span className="hidden sm:block"><BrandLogo variant="horizontal" height={40} priority /></span>
+            <span className="sm:hidden"><BrandLogo variant="mark" height={40} priority /></span>
+          </Link>
+
+          <nav className="hidden items-center gap-1 lg:flex">
+            {NAV.map(n => (
+              <button key={n.id} onClick={() => navTo(n.id)} className="rounded-lg px-3.5 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#0A4D94]">{n.label}</button>
+            ))}
+            <button onClick={() => navTo('contact')} className="rounded-lg px-3.5 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#0A4D94]">Contact</button>
           </nav>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <button
-              onClick={scrollToDirectory}
-              className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs font-semibold text-indigo-300 hover:text-white bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/25 hover:border-indigo-500/40 rounded-xl transition-all shadow-sm active:scale-95"
-            >
-              <HiOutlineSearch className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-              <span className="hidden xs:inline">Find College</span>
-              <span className="xs:hidden">Find</span>
-            </button>
-            <button
-              onClick={() => router.push('/login')}
-              className="inline-flex items-center gap-1.5 px-3.5 sm:px-4.5 py-2 text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 rounded-xl transition-all shadow-[0_2px_10px_rgba(99,102,241,0.28)] hover:shadow-[0_4px_14px_rgba(99,102,241,0.4)] active:scale-95"
-            >
-              <HiOutlineLogin className="w-3.5 h-3.5 text-white/90 shrink-0" />
-              <span>Login</span>
+          <div className="flex items-center gap-2">
+            <Link href="/join" className={`${btnOutline} hidden px-4 py-2.5 text-sm md:inline-flex`}>For Colleges</Link>
+            {dashboardPath ? (
+              <Link href={dashboardPath} className={`${btnPrimary} px-5 py-2.5 text-sm`}><HiOutlineViewGrid size={16} /> Dashboard</Link>
+            ) : (
+              <button onClick={() => router.push('/login')} className={`${btnPrimary} px-5 py-2.5 text-sm`}><HiOutlineLogin size={16} /> Login</button>
+            )}
+            <button onClick={() => setMenuOpen(o => !o)} aria-label="Menu" aria-expanded={menuOpen}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-700 lg:hidden">
+              {menuOpen ? <HiOutlineX size={20} /> : <HiOutlineMenu size={20} />}
             </button>
           </div>
         </div>
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.nav initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden border-t border-slate-100 bg-white lg:hidden">
+              <div className="space-y-1 px-4 py-3">
+                {[...NAV, { label: 'Contact', id: 'contact' }].map(n => (
+                  <button key={n.id} onClick={() => navTo(n.id)} className="block w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50">{n.label}</button>
+                ))}
+                <Link href="/join" className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-[#0A4D94]">For Colleges →</Link>
+              </div>
+            </motion.nav>
+          )}
+        </AnimatePresence>
       </header>
 
-      {/* ── HERO ─────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden pt-14 pb-12 sm:pt-16 sm:pb-14 border-b border-white/[0.04]">
-        {/* Subtle glows */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] rounded-full bg-indigo-600/[0.04] blur-3xl pointer-events-none" />
-        <div className="pointer-events-none absolute inset-0 opacity-[0.015]"
-          style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+      {/* ── HERO ──────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#EEF4FB] via-white to-white pb-24 pt-14 sm:pt-20">
+        <div className="pointer-events-none absolute -right-32 -top-32 h-[480px] w-[480px] rounded-full bg-[#0A4D94]/10 blur-[110px]" />
+        <div className="pointer-events-none absolute -left-24 top-40 h-[320px] w-[320px] rounded-full bg-[#2A9B4A]/10 blur-[100px]" />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.5] [mask-image:radial-gradient(ellipse_at_top,black,transparent_70%)]"
+          style={{ backgroundImage: 'linear-gradient(#dbe5f1 1px, transparent 1px), linear-gradient(90deg, #dbe5f1 1px, transparent 1px)', backgroundSize: '44px 44px' }} />
 
-        <div className="max-w-[860px] mx-auto px-4 sm:px-6 text-center space-y-5 relative z-10">
-          <motion.h2 {...fadeUp(0.0)} className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-[1.15]">
-            Find Your College on Academix
-          </motion.h2>
+        <div className="relative mx-auto grid max-w-[1280px] items-center gap-14 px-4 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:px-10">
+          <div>
+            <Reveal>
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#2A9B4A]/25 bg-white px-3.5 py-1.5 text-xs font-semibold text-[#23823e] shadow-sm">
+                <BrandLogo variant="mark" height={16} /> Multi-tenant campus platform for colleges
+              </span>
+            </Reveal>
+            <Reveal delay={0.07}>
+              <h1 className="mt-6 text-4xl font-black leading-[1.08] tracking-tight text-slate-900 sm:text-[56px]">
+                Run your entire college on <span className="text-[#0A4D94]">one smart</span> <span className="text-[#2A9B4A]">platform</span>
+              </h1>
+            </Reveal>
+            <Reveal delay={0.14}>
+              <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
+                Collegeshub brings admissions, academics, attendance, fees and certificates together, so students, faculty and administrators all work from the same trusted place.
+              </p>
+            </Reveal>
+            <Reveal delay={0.2} className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <button onClick={() => go('college-directory')} className={`${btnPrimary} px-7 py-3.5 text-[15px]`}>
+                <HiOutlineSearch size={18} /> Search Colleges
+              </button>
+              <Link href="/join" className={`${btnOutline} px-7 py-3.5 text-[15px]`}>
+                Register Your College <HiArrowRight size={16} />
+              </Link>
+            </Reveal>
+            <Reveal delay={0.26} className="mt-8 flex flex-wrap gap-x-6 gap-y-2.5 text-sm font-medium text-slate-600">
+              {['Admissions to results', 'Role-based portals', 'Separate data per college'].map(t => (
+                <span key={t} className="flex items-center gap-2"><HiOutlineCheckCircle size={18} className="text-[#2A9B4A]" /> {t}</span>
+              ))}
+            </Reveal>
+          </div>
 
-          <motion.p {...fadeUp(0.1)} className="text-sm sm:text-base text-white/50 max-w-xl mx-auto leading-relaxed">
-            Search registered colleges and access their public Academix workspace.
-          </motion.p>
-
-          {/* Hero Search */}
-          <motion.div {...fadeUp(0.2)} className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 max-w-xl mx-auto pt-2 w-full">
-            <div className="relative flex-1 w-full">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-white/35">
-                <HiOutlineSearch size={16} />
-              </div>
-              <input
-                value={searchName}
-                onChange={e => setSearchName(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && scrollToDirectory()}
-                placeholder="Search by college name or code…"
-                className="w-full pl-11 pr-10 py-3 rounded-xl bg-[#0f1723] border border-white/10 text-white placeholder:text-white/35 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all shadow-inner"
-              />
-              {searchName && (
-                <button onClick={() => setSearchName('')} className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-white/30 hover:text-white/70 transition-colors">
-                  <HiOutlineX size={14} />
-                </button>
-              )}
-            </div>
-            <button
-              onClick={scrollToDirectory}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-3 px-6 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white text-xs sm:text-sm font-bold shadow-[0_4px_14px_rgba(99,102,241,0.35)] transition-all shrink-0 active:scale-98"
-            >
-              <span>Search</span>
-              <HiArrowRight size={15} className="shrink-0" />
-            </button>
-          </motion.div>
-
-          {/* Quick stats (real data) */}
-          {!loadingColleges && colleges.length > 0 && (
-            <motion.div {...fadeUp(0.3)} className="flex items-center justify-center gap-6 pt-2 text-[11px] text-white/35 font-semibold">
-              <span><span className="text-white/70 font-black">{colleges.length}</span> college{colleges.length !== 1 ? 's' : ''} registered</span>
-              {cities.length > 0 && (
-                <span><span className="text-white/70 font-black">{cities.length}</span> cit{cities.length !== 1 ? 'ies' : 'y'} covered</span>
-              )}
-            </motion.div>
-          )}
+          <Reveal delay={0.15}><HeroPreview /></Reveal>
         </div>
       </section>
 
-      {/* ── COLLEGE DIRECTORY ────────────────────────────────────── */}
-      <section id="college-directory" className="py-10 flex-1 bg-[#080c12]/40">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
+      {/* ── STATS ─────────────────────────────────────────────── */}
+      <section className="relative z-10 -mt-12 px-4 sm:px-6">
+        <div className="mx-auto grid max-w-[1100px] grid-cols-2 divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_50px_-20px_rgba(5,29,58,0.25)] md:grid-cols-4 md:divide-x">
+          {[
+            { n: loading ? '–' : colleges.length, l: 'Colleges registered' },
+            { n: loading ? '–' : cities.length, l: 'Cities covered' },
+            { n: PORTALS.length, l: 'Role-based portals' },
+            { n: '24/7', l: 'Helpline support' },
+          ].map((s, i) => (
+            <div key={s.l} className={`px-4 py-6 text-center ${i > 1 ? 'border-t border-slate-200 md:border-t-0' : ''} ${i % 2 ? 'border-l border-slate-200 md:border-l-0' : ''}`}>
+              <p className="text-3xl font-black tracking-tight text-[#0A4D94]">{s.n}</p>
+              <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-500">{s.l}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-          <div className="flex flex-col lg:flex-row gap-8 items-start">
-
-            {/* Nav Panel (sidebar) */}
-            <aside className="w-full lg:w-[290px] xl:w-[310px] shrink-0 lg:sticky lg:top-24">
-              <NavPanel
-                active={activeNav}
-                onChange={setActiveNav}
-                announcements={announcements}
-                setAnnouncements={setAnnouncements}
-                admissionInfo={admissionInfo}
-                setAdmissionInfo={setAdmissionInfo}
-                statusQuery={statusQuery}
-                setStatusQuery={setStatusQuery}
-                statusResult={statusResult}
-                statusLoading={statusLoading}
-                statusError={statusError}
-                onCheckStatus={checkStatus}
-              />
+      {/* ── DIRECTORY ─────────────────────────────────────────── */}
+      <section id="college-directory" className="scroll-mt-20 bg-white py-20">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-10">
+          <SectionHead eyebrow="Colleges Directory" title="Find your college" text="Search every college on Collegeshub, check open admissions and enter its public portal." />
+          <div className="flex flex-col items-start gap-8 lg:flex-row">
+            <aside className="w-full shrink-0 lg:sticky lg:top-24 lg:w-[320px]">
+              <NavPanel active={activeNav} onChange={setActiveNav} colleges={colleges}
+                statusQuery={statusQuery} setStatusQuery={setStatusQuery} statusResult={statusResult}
+                statusLoading={statusLoading} statusError={statusError} onCheckStatus={checkStatus} />
             </aside>
-
-            {/* Main directory */}
-            <main className="flex-1 min-w-0 w-full space-y-5">
-
-              {/* Search / filter bar */}
-              <SearchBar
-                searchName={searchName}
-                setSearchName={setSearchName}
-                searchCity={searchCity}
-                setSearchCity={setSearchCity}
-                cities={cities}
-                onClear={clearFilters}
-                total={colleges.length}
-                shown={filtered.length}
-              />
-
-              {/* Colleges grid */}
-              <CollegesGrid
-                colleges={filtered}
-                loading={loadingColleges}
-                onSelect={c => router.push(`/college/${c.slug || c.code?.toLowerCase()}`)}
-              />
-
-              {/* Empty state — join CTA */}
-              {!loadingColleges && filtered.length === 0 && colleges.length > 0 && (
-                <div className="text-center pt-6">
-                  <p className="text-xs text-white/30">
-                    Can't find your college?{' '}
-                    <a href="/join" className="text-indigo-400 hover:text-indigo-300 transition-colors font-semibold">
-                      Join Academix
-                    </a>
-                  </p>
-                </div>
+            <main className="w-full min-w-0 flex-1 space-y-5">
+              <FilterBar searchName={searchName} setSearchName={setSearchName} searchCity={searchCity} setSearchCity={setSearchCity}
+                cities={cities} onClear={() => { setSearchName(''); setSearchCity(''); }} total={colleges.length} shown={filtered.length} />
+              <CollegesGrid colleges={filtered} loading={loading} onSelect={c => router.push(`/college/${c.slug || c.code?.toLowerCase()}`)} />
+              {!loading && filtered.length === 0 && colleges.length > 0 && (
+                <p className="pt-2 text-center text-sm text-slate-500">Can’t find your college?{' '}
+                  <Link href="/join" className="font-semibold text-[#0A4D94] hover:underline">Register it on Collegeshub</Link></p>
               )}
             </main>
           </div>
         </div>
       </section>
 
-      {/* ── JOIN ACADEMIX CTA ─────────────────────────────────────── */}
-      <section className="py-16 border-t border-white/[0.04] relative overflow-hidden bg-gradient-to-b from-transparent via-indigo-950/[0.08] to-transparent">
-        <div className="max-w-[680px] mx-auto px-4 sm:px-6 text-center space-y-6 relative z-10">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 relative mx-auto drop-shadow-[0_8px_24px_rgba(99,102,241,0.25)]">
-            <Image src="/logo.svg" alt="Academix" fill className="object-contain" />
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            Is your college not on Academix?
-          </h2>
-          <p className="text-xs sm:text-sm text-white/50 max-w-lg mx-auto leading-relaxed">
-            Bring your college operations online. Manage admissions, academics, attendance, fees, certificates, and more — all in one platform.
-          </p>
-          <div>
-            <a href="/join" className="inline-flex items-center gap-2 py-3 px-7 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white text-xs sm:text-sm font-bold shadow-[0_4px_16px_rgba(99,102,241,0.35)] transition-all active:scale-98">
-              Join Academix <HiArrowRight size={15} />
-            </a>
+      {/* ── FEATURES ──────────────────────────────────────────── */}
+      <section id="features" className="scroll-mt-20 bg-[#F3F7FC] py-20">
+        <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-10">
+          <SectionHead eyebrow="Platform Features" title="Everything your college needs, in one place" text="Replace scattered spreadsheets and paperwork with a single, organised system." />
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {FEATURES.map((f, i) => (
+              <Reveal key={f.title} delay={(i % 4) * 0.06}>
+                <div className="group h-full rounded-2xl border border-slate-200 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:border-[#0A4D94]/30 hover:shadow-[0_20px_40px_-20px_rgba(10,77,148,0.35)]">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#0A4D94]/[0.08] text-[#0A4D94] transition-colors group-hover:bg-[#0A4D94] group-hover:text-white"><f.icon size={24} /></div>
+                  <h3 className="mt-5 text-base font-bold text-slate-900">{f.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{f.text}</p>
+                </div>
+              </Reveal>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ── FOOTER ───────────────────────────────────────────────── */}
+      {/* ── HOW IT WORKS ──────────────────────────────────────── */}
+      <section id="how-it-works" className="scroll-mt-20 bg-white py-20">
+        <div className="mx-auto max-w-[1100px] px-4 sm:px-6 lg:px-10">
+          <SectionHead eyebrow="How it works" title="Get your college online in three steps" text="A simple, guided onboarding with our team beside you." />
+          <div className="relative grid gap-6 md:grid-cols-3">
+            <div className="absolute left-[16%] right-[16%] top-8 hidden border-t-2 border-dashed border-[#0A4D94]/20 md:block" />
+            {STEPS.map((s, i) => (
+              <Reveal key={s.n} delay={i * 0.1} className="relative text-center">
+                <div className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0A4D94] text-xl font-black text-white shadow-[0_12px_24px_-10px_rgba(10,77,148,0.7)] ring-8 ring-white">{s.n}</div>
+                <h3 className="mt-5 text-lg font-bold text-slate-900">{s.title}</h3>
+                <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-slate-600">{s.text}</p>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── PORTALS ───────────────────────────────────────────── */}
+      <section id="portals" className="scroll-mt-20 bg-[#F3F7FC] py-20">
+        <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-10">
+          <SectionHead eyebrow="Role-based portals" title="A dedicated workspace for every role" text="Each person signs in once and lands in a portal built for their responsibilities." />
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {PORTALS.map((p, i) => (
+              <Reveal key={p.title} delay={(i % 4) * 0.05}>
+                <Link href="/login" className="group flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-[#2A9B4A]/40 hover:shadow-lg">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#2A9B4A]/10 text-[#23823e]"><p.icon size={22} /></span>
+                  <h3 className="mt-4 text-[15px] font-bold text-slate-900">{p.title}</h3>
+                  <p className="mt-1 flex-1 text-[13px] leading-relaxed text-slate-500">{p.text}</p>
+                  <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#0A4D94] opacity-0 transition-opacity group-hover:opacity-100">Sign in <HiChevronRight size={13} /></span>
+                </Link>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── WHY ───────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden bg-[#051d3a] py-20">
+        <div className="pointer-events-none absolute -left-20 top-0 h-80 w-80 rounded-full bg-[#0A4D94]/40 blur-[110px]" />
+        <div className="pointer-events-none absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-[#2A9B4A]/20 blur-[110px]" />
+        <div className="relative mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-10">
+          <SectionHead light eyebrow="Why Collegeshub" title="Built for trust, designed for education" text="Institutions choose a platform they can rely on every day." />
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {WHY.map((w, i) => (
+              <Reveal key={w.title} delay={i * 0.07}>
+                <div className="h-full rounded-2xl border border-white/10 bg-white/[0.04] p-6 backdrop-blur transition-colors hover:bg-white/[0.07]">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-400/15 text-emerald-300"><w.icon size={24} /></span>
+                  <h3 className="mt-5 text-base font-bold text-white">{w.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-white/60">{w.text}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FAQ ───────────────────────────────────────────────── */}
+      <section id="faq" className="scroll-mt-20 bg-white py-20">
+        <div className="mx-auto max-w-[820px] px-4 sm:px-6">
+          <SectionHead eyebrow="FAQ" title="Frequently asked questions" />
+          <div className="space-y-3">
+            {FAQ.map((f, i) => {
+              const open = faqOpen === i;
+              return (
+                <div key={f.q} className={`overflow-hidden rounded-2xl border transition-colors ${open ? 'border-[#0A4D94]/30 bg-[#F3F7FC]' : 'border-slate-200 bg-white'}`}>
+                  <button onClick={() => setFaqOpen(open ? -1 : i)} aria-expanded={open} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left">
+                    <span className="text-[15px] font-bold text-slate-900">{f.q}</span>
+                    <HiChevronDown size={20} className={`shrink-0 text-[#0A4D94] transition-transform ${open ? 'rotate-180' : ''}`} />
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {open && (
+                      <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+                        <p className="px-5 pb-5 text-sm leading-relaxed text-slate-600">{f.a}</p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA ───────────────────────────────────────────────── */}
+      <section className="px-4 pb-20 sm:px-6">
+        <div className="relative mx-auto max-w-[1100px] overflow-hidden rounded-3xl bg-gradient-to-br from-[#0A4D94] via-[#083f7a] to-[#051d3a] px-6 py-14 text-center sm:px-12">
+          <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-[#2A9B4A]/30 blur-[90px]" />
+          <div className="relative mx-auto max-w-xl space-y-5">
+            <BrandLogo variant="stacked" height={96} dark className="mx-auto" />
+            <h2 className="text-2xl font-black tracking-tight text-white sm:text-4xl">Is your college not on Collegeshub yet?</h2>
+            <p className="text-base leading-relaxed text-white/75">Bring admissions, academics, attendance, fees and certificates online from a single platform.</p>
+            <div className="flex flex-col items-center justify-center gap-3 pt-2 sm:flex-row">
+              <Link href="/join" className="inline-flex items-center gap-2 rounded-xl bg-[#2A9B4A] px-7 py-3.5 text-[15px] font-semibold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:bg-[#238240]">Join Collegeshub <HiArrowRight size={16} /></Link>
+              <Link href="/request-subscription" className="inline-flex items-center rounded-xl border border-white/30 px-7 py-3.5 text-[15px] font-semibold text-white transition-all hover:bg-white/10">Request Subscription</Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <PublicFooter />
     </div>
   );
 }
 
 // ══════════════════════════════════════════════════════════════════════
-//  COLLEGE DIRECTORY COMPONENTS
+//  HERO PREVIEW (static, illustrative sample data)
 // ══════════════════════════════════════════════════════════════════════
-
-// ── Panel: Announcements ───────────────────────────────────────────────
-function AnnouncementsPanel({ announcements }) {
-  if (!announcements) {
-    return (
-      <div className="space-y-2.5">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-14 rounded-xl bg-white/[0.04] animate-pulse" />
-        ))}
-      </div>
-    );
-  }
-  if (!announcements.length) {
-    return (
-      <div className="flex flex-col items-center justify-center py-8 text-center animate-fade-in">
-        <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-3">
-          <HiOutlineSpeakerphone size={18} className="text-indigo-400/60" />
-        </div>
-        <p className="text-xs font-semibold text-white/40">No announcements available</p>
-        <p className="text-[10px] text-white/25 mt-1">Check back later for updates</p>
-      </div>
-    );
-  }
+function HeroPreview() {
+  const bars = [38, 56, 44, 70, 52, 84, 64];
+  const rows = [
+    { n: 'Ayesha Khan', p: 'BS Computer Science', s: 'Approved', c: 'bg-emerald-100 text-emerald-700' },
+    { n: 'Hamza Ali', p: 'BS Business Admin', s: 'Interview', c: 'bg-pink-100 text-pink-700' },
+    { n: 'Sara Ahmed', p: 'BS Physics', s: 'Under Review', c: 'bg-sky-100 text-sky-700' },
+  ];
   return (
-    <div className="space-y-2 animate-fade-in">
-      <p className="text-[10px] font-bold text-white/35 uppercase tracking-wider mb-3">Latest Announcements</p>
-      {announcements.slice(0, 4).map((a, i) => (
-        <div key={i} className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.04] hover:bg-white/[0.05] transition-colors">
-          <p className="text-[12px] font-semibold text-white/85 leading-tight truncate">{a.title}</p>
-          <p className="text-[10px] text-white/40 mt-1 line-clamp-2 leading-relaxed">{a.content}</p>
-          <p className="text-[9px] text-white/25 mt-1.5">{new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+    <div className="relative mx-auto w-full max-w-[560px]">
+      <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-tr from-[#0A4D94]/15 to-[#2A9B4A]/15 blur-2xl" />
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_30px_70px_-25px_rgba(5,29,58,0.4)]">
+        <div className="flex items-center gap-3 border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+          <BrandLogo variant="mark" height={26} />
+          <span className="text-sm font-bold text-slate-800">College Dashboard</span>
+          <span className="ml-auto flex gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-slate-300" /><i className="h-2.5 w-2.5 rounded-full bg-slate-300" /><i className="h-2.5 w-2.5 rounded-full bg-slate-300" /></span>
         </div>
-      ))}
-    </div>
-  );
-}
-
-// ── Panel: Admissions ──────────────────────────────────────────────────
-function AdmissionsPanel({ admissionInfo }) {
-  if (admissionInfo === null) {
-    return (
-      <div className="space-y-2.5">
-        {[...Array(2)].map((_, i) => (
-          <div key={i} className="h-16 rounded-xl bg-white/[0.04] animate-pulse" />
-        ))}
-      </div>
-    );
-  }
-  if (!admissionInfo.length) {
-    return (
-      <div className="flex flex-col items-center justify-center py-8 text-center animate-fade-in">
-        <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-3">
-          <HiOutlineClipboardList size={18} className="text-emerald-400/60" />
-        </div>
-        <p className="text-xs font-semibold text-white/40">No open admissions</p>
-        <p className="text-[10px] text-white/25 mt-1">Admissions are currently closed</p>
-      </div>
-    );
-  }
-  return (
-    <div className="space-y-2 animate-fade-in">
-      <p className="text-[10px] font-bold text-white/35 uppercase tracking-wider mb-3">Open Admissions</p>
-      {admissionInfo.map((item, i) => (
-        <div key={i} className="p-3 rounded-xl bg-emerald-500/[0.04] border border-emerald-500/[0.12]">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <p className="text-[12px] font-bold text-white/85 truncate">{item.college.name}</p>
+        <div className="space-y-4 p-5">
+          <div className="grid grid-cols-3 gap-3">
+            {[['Students', '2,480', '#0A4D94'], ['Attendance', '94%', '#2A9B4A'], ['Fees Collected', '87%', '#0A4D94']].map(([l, v, c]) => (
+              <div key={l} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{l}</p>
+                <p className="mt-1 text-xl font-black" style={{ color: c }}>{v}</p>
+              </div>
+            ))}
           </div>
-          <p className="text-[11px] text-emerald-400/75 font-semibold">{item.season.title}</p>
-          <p className="text-[10px] text-white/35 mt-1">
-            Deadline: {new Date(item.season.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-          </p>
+          <div className="rounded-xl border border-slate-100 p-4">
+            <p className="text-xs font-bold text-slate-700">Weekly attendance</p>
+            <div className="mt-3 flex h-24 items-end gap-2">
+              {bars.map((h, i) => <div key={i} className="flex-1 rounded-t-md bg-gradient-to-t from-[#0A4D94] to-[#4C94E8]" style={{ height: `${h}%`, opacity: i === 5 ? 1 : 0.55 }} />)}
+            </div>
+          </div>
+          <div className="space-y-2">
+            {rows.map(r => (
+              <div key={r.n} className="flex items-center gap-3 rounded-xl border border-slate-100 px-3 py-2.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0A4D94]/10 text-xs font-bold text-[#0A4D94]">{r.n[0]}</span>
+                <div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-slate-800">{r.n}</p><p className="truncate text-[11px] text-slate-400">{r.p}</p></div>
+                <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${r.c}`}>{r.s}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="absolute -right-3 -top-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-3.5 py-2 text-xs font-bold text-emerald-700 shadow-lg sm:-right-6">
+        <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" /> Admissions Open
+      </div>
+      <div className="absolute -bottom-5 -left-3 flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 shadow-lg sm:-left-6">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#2A9B4A]/10 text-[#2A9B4A]"><HiOutlineBadgeCheck size={18} /></span>
+        <div><p className="text-xs font-bold text-slate-800">Result published</p><p className="text-[10px] text-slate-400">Sample preview</p></div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  SIDEBAR PANEL
+// ══════════════════════════════════════════════════════════════════════
+const NAV_ITEMS = [
+  { id: 'announcements', label: 'Notices', icon: HiOutlineSpeakerphone },
+  { id: 'admissions', label: 'Admissions', icon: HiOutlineClipboardList },
+  { id: 'track', label: 'Track', icon: HiOutlineSignal },
+];
+
+function useCollegeDetails(colleges) {
+  const [details, setDetails] = useState(null);
+  useEffect(() => {
+    if (!colleges.length) return;
+    let cancelled = false;
+    Promise.all(colleges.slice(0, 3).map(c =>
+      fetch(`/api/public/college/${c.slug || c.code}`).then(r => r.json())
+        .then(d => (d.success ? { college: c, ...d.data } : null)).catch(() => null)
+    )).then(list => { if (!cancelled) setDetails(list.filter(Boolean)); });
+    return () => { cancelled = true; };
+  }, [colleges]);
+  return details;
+}
+
+function EmptyState({ icon: Icon, title, text }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-8 text-center">
+      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0A4D94]/[0.07] text-[#0A4D94]"><Icon size={22} /></div>
+      <p className="text-sm font-semibold text-slate-700">{title}</p>
+      <p className="mt-1 text-xs text-slate-400">{text}</p>
+    </div>
+  );
+}
+const Skeleton = ({ n, h }) => <div className="space-y-2.5">{[...Array(n)].map((_, i) => <div key={i} className={`${h} animate-pulse rounded-xl bg-slate-100`} />)}</div>;
+
+function AnnouncementsPanel({ details }) {
+  if (details === null) return <Skeleton n={3} h="h-16" />;
+  const items = details.flatMap(d => (d.announcements || []).map(a => ({ ...a, collegeName: d.college.name })))
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 4);
+  if (!items.length) return <EmptyState icon={HiOutlineSpeakerphone} title="No announcements yet" text="Check back later for updates" />;
+  return (
+    <div className="space-y-2.5">
+      {items.map((a, i) => (
+        <div key={i} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 transition-colors hover:bg-slate-50">
+          <p className="truncate text-[10px] font-bold uppercase tracking-wider text-[#0A4D94]">{a.collegeName}</p>
+          <p className="mt-1 truncate text-sm font-bold text-slate-900">{a.title}</p>
+          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">{a.content}</p>
+          <p className="mt-2 text-[10px] text-slate-400">{fmtDate(a.createdAt)}</p>
         </div>
       ))}
     </div>
   );
 }
 
-// ── Panel: Track Application ───────────────────────────────────────────
+function AdmissionsPanel({ colleges, details }) {
+  if (details === null && colleges.length) return <Skeleton n={2} h="h-20" />;
+  const open = (details || []).map(d => ({ college: d.college, season: d.admissionSeason || d.college.admissionSeason })).filter(x => x.season?.status === 'open');
+  if (!open.length) return <EmptyState icon={HiOutlineClipboardList} title="No open admissions" text="Admissions are currently closed" />;
+  return (
+    <div className="space-y-2.5">
+      {open.map((x, i) => (
+        <div key={i} className="rounded-xl border border-emerald-200 bg-emerald-50 p-3.5">
+          <div className="mb-1 flex items-center gap-2"><span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-emerald-500" /><p className="truncate text-sm font-bold text-slate-900">{x.college.name}</p></div>
+          <p className="text-xs font-semibold text-emerald-700">{x.season.title}</p>
+          <p className="mt-1 text-[11px] text-slate-500">Deadline: {fmtDate(x.season.endDate)}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function TrackPanel({ query, setQuery, result, loading, error, onCheck }) {
   const meta = result ? STATUS_META[result.status] : null;
   return (
-    <div className="space-y-3 animate-fade-in">
-      <p className="text-[10px] font-bold text-white/35 uppercase tracking-wider">Application Tracking</p>
+    <div className="space-y-3">
+      <p className="text-xs leading-relaxed text-slate-500">Enter your tracking number to see where your application stands.</p>
       <div className="flex gap-2">
-        <input
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && onCheck()}
-          placeholder="e.g. APP-2026-00001"
-          className="flex-1 px-3 py-2 rounded-xl bg-[#1a2230] border border-white/10 text-white placeholder:text-white/35 text-xs outline-none focus:border-indigo-500 transition-all"
-        />
-        <button
-          onClick={onCheck}
-          disabled={loading}
-          className="inline-flex items-center justify-center px-3 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white text-xs font-bold transition-all disabled:opacity-50"
-        >
-          {loading ? <HiOutlineRefresh size={13} className="animate-spin" /> : <HiOutlineSignal size={13} />}
+        <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && onCheck()}
+          placeholder="e.g. APP-2026-00001" aria-label="Application tracking number" className={`${inputCls} flex-1 px-3 py-2.5`} />
+        <button onClick={onCheck} disabled={loading} aria-label="Check status" className={`${btnPrimary} px-3.5 disabled:opacity-50`}>
+          {loading ? <HiOutlineRefresh size={16} className="animate-spin" /> : <HiOutlineSignal size={16} />}
         </button>
       </div>
-
       <AnimatePresence>
         {error && (
           <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="flex items-center gap-2 p-2.5 rounded-xl bg-red-500/[0.08] border border-red-500/20 text-[11px] text-red-400">
-            <HiOutlineExclamationCircle size={12} /> {error}
+            className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+            <HiOutlineExclamationCircle size={15} className="shrink-0" /> {error}
           </motion.div>
         )}
         {result && meta && (
-          <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-            className="p-3 rounded-xl border"
-            style={{ background: meta.bg, borderColor: `${meta.color}30` }}>
-            <p className="text-[12px] font-bold text-white/80">{result.name}</p>
-            <p className="text-[10px] text-white/35 mt-0.5">#{result.applicationNumber}</p>
-            <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold"
-              style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.color}40` }}>
-              {meta.label}
-            </span>
-            {result.rejectionReason && (
-              <p className="text-[10px] text-red-400 mt-1.5 font-medium">Reason: {result.rejectionReason}</p>
-            )}
+          <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border p-3.5" style={{ background: meta.bg, borderColor: `${meta.color}30` }}>
+            <p className="text-sm font-bold text-slate-900">{result.name}</p>
+            <p className="mt-0.5 text-xs text-slate-500">#{result.applicationNumber}</p>
+            <span className="mt-2.5 inline-block rounded-full bg-white px-2.5 py-0.5 text-[11px] font-bold" style={{ color: meta.color, border: `1px solid ${meta.color}40` }}>{meta.label}</span>
+            {result.rejectionReason && <p className="mt-2 text-xs font-medium text-red-700">Reason: {result.rejectionReason}</p>}
           </motion.div>
         )}
       </AnimatePresence>
-
-      {!result && !error && !loading && (
-        <div className="flex flex-col items-center justify-center py-4 text-center">
-          <HiOutlineSignal size={22} className="text-amber-400/40 mb-2" />
-          <p className="text-[10px] text-white/30">Enter your application tracking number above</p>
-        </div>
-      )}
     </div>
   );
 }
 
-// ── NavPanel Sidebar ───────────────────────────────────────────────────
-const NAV_ITEMS = [
-  {
-    id: 'announcements',
-    label: 'Notices',
-    desc: 'Latest public updates',
-    icon: HiOutlineSpeakerphone,
-    color: 'from-indigo-500/20 to-violet-500/10',
-    iconColor: 'text-indigo-400',
-    border: 'border-indigo-500/25',
-  },
-  {
-    id: 'admissions',
-    label: 'Admissions',
-    desc: 'Check open seasons',
-    icon: HiOutlineClipboardList,
-    color: 'from-emerald-500/20 to-teal-500/10',
-    iconColor: 'text-emerald-400',
-    border: 'border-emerald-500/25',
-  },
-  {
-    id: 'track',
-    label: 'Track',
-    desc: 'Verify submission status',
-    icon: HiOutlineSignal,
-    color: 'from-amber-500/20 to-orange-500/10',
-    iconColor: 'text-amber-400',
-    border: 'border-amber-500/25',
-  },
-];
-
-function NavPanel({
-  active, onChange,
-  announcements, setAnnouncements,
-  admissionInfo, setAdmissionInfo,
-  statusQuery, setStatusQuery,
-  statusResult, statusLoading, statusError, onCheckStatus,
-}) {
-  useEffect(() => {
-    if (active !== 'announcements') return;
-    if (announcements.length) return;
-    fetch('/api/public/colleges')
-      .then(r => r.json())
-      .then(async d => {
-        if (!d.success || !d.data?.length) return;
-        const first = d.data[0];
-        const r2 = await fetch(`/api/public/college/${first.slug || first.code}`);
-        const d2 = await r2.json();
-        if (d2.success) setAnnouncements(d2.data?.announcements || []);
-      })
-      .catch(() => {});
-  }, [active]);
-
-  useEffect(() => {
-    if (active !== 'admissions') return;
-    if (admissionInfo !== null) return;
-    fetch('/api/public/colleges')
-      .then(r => r.json())
-      .then(async d => {
-        if (!d.success || !d.data?.length) return;
-        const open = [];
-        for (const c of d.data.slice(0, 3)) {
-          const r2 = await fetch(`/api/public/college/${c.slug || c.code}`);
-          const d2 = await r2.json();
-          if (d2.success && d2.data?.admissionSeason?.status === 'open') {
-            open.push({ college: c, season: d2.data.admissionSeason });
-          }
-        }
-        setAdmissionInfo(open);
-      })
-      .catch(() => setAdmissionInfo([]));
-  }, [active]);
-
+function NavPanel({ active, onChange, colleges, statusQuery, setStatusQuery, statusResult, statusLoading, statusError, onCheckStatus }) {
+  const details = useCollegeDetails(colleges);
+  const d = colleges.length ? details : [];
   return (
-    <div className="space-y-3">
-      {/* Quick Action Navigation Buttons */}
-      <div className="grid grid-cols-3 lg:flex lg:flex-col gap-2">
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const isActive = active === item.id;
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_10px_30px_-18px_rgba(5,29,58,0.3)]">
+      <div role="tablist" className="grid grid-cols-3 gap-1 border-b border-slate-200 bg-slate-50 p-1.5">
+        {NAV_ITEMS.map(item => {
+          const on = active === item.id;
           return (
-            <button
-              key={item.id}
-              onClick={() => onChange(item.id)}
-              className={`
-                w-full text-left p-2.5 sm:p-3.5 rounded-2xl border transition-all duration-200 group flex flex-col lg:flex-row items-center lg:items-center gap-2 lg:gap-3.5
-                ${isActive
-                  ? `bg-gradient-to-br ${item.color} ${item.border} shadow-lg shadow-black/20`
-                  : 'bg-[#0d1117]/80 border-white/[0.05] hover:border-white/10 hover:bg-[#131920]'}
-              `}
-            >
-              <div className={`
-                w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 transition-all
-                ${isActive ? 'bg-white/15' : 'bg-white/[0.04] group-hover:bg-white/[0.08]'}
-              `}>
-                <Icon size={18} className={isActive ? item.iconColor : 'text-white/40 group-hover:text-white/70'} />
-              </div>
-              <div className="min-w-0 flex-1 text-center lg:text-left w-full">
-                <p className={`text-[11px] sm:text-xs font-bold leading-tight truncate ${isActive ? 'text-white' : 'text-white/70'}`}>
-                  {item.label}
-                </p>
-                <p className="text-[9px] text-white/35 truncate mt-0.5 hidden sm:block">{item.desc}</p>
-              </div>
-              {isActive && (
-                <HiChevronRight size={14} className={`${item.iconColor} shrink-0 hidden lg:block`} />
-              )}
+            <button key={item.id} role="tab" aria-selected={on} onClick={() => onChange(item.id)}
+              className={`flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-xs font-bold transition-all ${on ? 'bg-white text-[#0A4D94] shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-800'}`}>
+              <item.icon size={15} /> {item.label}
             </button>
           );
         })}
       </div>
-
-      <div className="glass-card p-4 min-h-[180px] bg-[#0d1117] border border-white/[0.06] rounded-2xl">
-        {active === 'announcements' && (
-          <AnnouncementsPanel announcements={announcements} />
-        )}
-        {active === 'admissions' && (
-          <AdmissionsPanel admissionInfo={admissionInfo} />
-        )}
-        {active === 'track' && (
-          <TrackPanel
-            query={statusQuery}
-            setQuery={setStatusQuery}
-            result={statusResult}
-            loading={statusLoading}
-            error={statusError}
-            onCheck={onCheckStatus}
-          />
-        )}
+      <div className="min-h-[230px] p-4">
+        {active === 'announcements' && <AnnouncementsPanel details={d} />}
+        {active === 'admissions' && <AdmissionsPanel colleges={colleges} details={d} />}
+        {active === 'track' && <TrackPanel query={statusQuery} setQuery={setStatusQuery} result={statusResult} loading={statusLoading} error={statusError} onCheck={onCheckStatus} />}
       </div>
     </div>
   );
 }
 
-// ── SearchBar ──────────────────────────────────────────────────────────
-function SearchBar({ searchName, setSearchName, searchCity, setSearchCity, cities, onClear, total, shown }) {
+// ══════════════════════════════════════════════════════════════════════
+//  DIRECTORY COMPONENTS
+// ══════════════════════════════════════════════════════════════════════
+function FilterBar({ searchName, setSearchName, searchCity, setSearchCity, cities, onClear, total, shown }) {
   const hasFilters = searchName || searchCity;
   return (
     <div className="space-y-3">
-      <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
-        <div className="relative flex-1 w-full">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-white/35">
-            <HiOutlineSearch size={15} />
-          </div>
-          <input
-            value={searchName}
-            onChange={e => setSearchName(e.target.value)}
-            placeholder="Search by college name or code…"
-            className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-[#0d1117] border border-white/10 text-white placeholder:text-white/35 text-xs sm:text-sm outline-none focus:border-indigo-500 transition-all"
-          />
-          {searchName && (
-            <button onClick={() => setSearchName('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-white/30 hover:text-white/70 transition-colors">
-              <HiOutlineX size={14} />
-            </button>
-          )}
+      <div className="flex flex-col gap-2.5 sm:flex-row">
+        <div className="relative flex-1">
+          <HiOutlineSearch size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={searchName} onChange={e => setSearchName(e.target.value)} placeholder="Search by college name or code…" aria-label="Search colleges" className={`${inputCls} py-3 pl-11 pr-9`} />
+          {searchName && <button onClick={() => setSearchName('')} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"><HiOutlineX size={15} /></button>}
         </div>
-        <div className="relative sm:w-56 w-full">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-white/35">
-            <HiOutlineLocationMarker size={15} />
-          </div>
-          <input
-            list="city-list"
-            value={searchCity}
-            onChange={e => setSearchCity(e.target.value)}
-            placeholder="Filter by city…"
-            className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-[#0d1117] border border-white/10 text-white placeholder:text-white/35 text-xs sm:text-sm outline-none focus:border-indigo-500 transition-all"
-          />
-          <datalist id="city-list">
-            {cities.map(c => <option key={c} value={c} />)}
-          </datalist>
-          {searchCity && (
-            <button onClick={() => setSearchCity('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-white/30 hover:text-white/70 transition-colors">
-              <HiOutlineX size={14} />
-            </button>
-          )}
+        <div className="relative sm:w-56">
+          <HiOutlineLocationMarker size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input list="city-list" value={searchCity} onChange={e => setSearchCity(e.target.value)} placeholder="Filter by city…" aria-label="Filter by city" className={`${inputCls} py-3 pl-11 pr-9`} />
+          <datalist id="city-list">{cities.map(c => <option key={c} value={c} />)}</datalist>
+          {searchCity && <button onClick={() => setSearchCity('')} aria-label="Clear city" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"><HiOutlineX size={15} /></button>}
         </div>
         {hasFilters && (
-          <button onClick={onClear} className="inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-xs font-semibold text-white/70 hover:text-white transition-all shrink-0">
-            <HiOutlineRefresh size={13} />
-            <span>Reset</span>
-          </button>
+          <button onClick={onClear} className={`${btnOutline} shrink-0 px-4 py-3 text-xs`}><HiOutlineRefresh size={14} /> Reset</button>
         )}
       </div>
-      <div className="flex items-center gap-2">
-        <p className="text-[10px] text-white/35 font-semibold">
-          {hasFilters
-            ? `Found ${shown} of ${total} colleges`
-            : `Showing ${total} registered college${total !== 1 ? 's' : ''}`}
-        </p>
-        {hasFilters && shown === 0 && (
-          <span className="badge badge-warning">No records found</span>
-        )}
-      </div>
+      <p className="text-xs font-semibold text-slate-500">{hasFilters ? `Found ${shown} of ${total} colleges` : `Showing ${total} registered college${total !== 1 ? 's' : ''}`}</p>
     </div>
   );
 }
 
-// ── CollegesGrid ───────────────────────────────────────────────────────
 function CollegesGrid({ colleges, loading, onSelect }) {
   if (loading) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-56 rounded-2xl bg-white/[0.03] border border-white/[0.05] animate-pulse" />
-        ))}
-      </div>
-    );
+    return <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">{[...Array(6)].map((_, i) => <div key={i} className="h-60 animate-pulse rounded-2xl bg-slate-100" />)}</div>;
   }
-
   if (!colleges.length) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center glass-card">
-        <div className="w-14 h-14 rounded-2xl bg-white/[0.04] flex items-center justify-center mb-4 text-white/30">
-          <HiOutlineOfficeBuilding size={26} />
-        </div>
-        <h3 className="text-base font-bold text-white mb-1">No Colleges Found</h3>
-        <p className="text-xs text-white/40 max-w-sm">
-          No colleges match your current search criteria. Try clearing the filter or searching by city.
-        </p>
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 py-20 text-center">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-slate-400 shadow-sm"><HiOutlineOfficeBuilding size={26} /></div>
+        <h3 className="mb-1 text-base font-bold text-slate-900">No colleges found</h3>
+        <p className="max-w-sm text-sm text-slate-500">No colleges match your search. Try clearing the filters or searching by city.</p>
       </div>
     );
   }
-
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-      {colleges.map((c) => (
-        <CollegeCard key={c.id || c.code} college={c} onSelect={() => onSelect(c)} />
-      ))}
-    </div>
-  );
+  return <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">{colleges.map(c => <CollegeCard key={c.id || c.code} college={c} onSelect={() => onSelect(c)} />)}</div>;
 }
 
-// ── CollegeCard ────────────────────────────────────────────────────────
-function CollegeCard({ college, onSelect }) {
+function CollegeCard({ college }) {
   const settings = college.settings || {};
-  const isAdmissionsOpen = college.admissionSeason?.status === 'open';
-
+  const isOpen = college.admissionSeason?.status === 'open';
+  const slug = (college.slug || college.code || '').toLowerCase();
+  const tenantUrl = buildTenantUrl(slug);
   return (
-    <div
-      onClick={onSelect}
-      className="group relative rounded-2xl border border-white/[0.06] bg-[#0d1117] hover:border-indigo-500/40 hover:bg-[#101724] transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between hover:shadow-[0_8px_30px_rgba(0,0,0,0.5)] hover:-translate-y-0.5"
-    >
-      {/* Cover / Header Gradient */}
-      <div className="h-24 w-full bg-gradient-to-r from-indigo-950/40 via-violet-950/30 to-surface-900 relative overflow-hidden">
+    <a href={tenantUrl} className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left transition-all duration-300 hover:-translate-y-1 hover:border-[#0A4D94]/30 hover:shadow-[0_24px_48px_-24px_rgba(10,77,148,0.45)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0A4D94]">
+      <div className="relative h-24 w-full overflow-hidden bg-gradient-to-br from-[#0A4D94] via-[#1a6bb8] to-[#2A9B4A]">
         {settings.coverPhoto && (
-          <img src={settings.coverPhoto} alt="" className="w-full h-full object-cover opacity-30 group-hover:scale-105 transition-transform duration-500" />
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={settings.coverPhoto} alt="" className="h-full w-full object-cover opacity-60 transition-transform duration-500 group-hover:scale-105" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0d1117] via-transparent to-transparent" />
-        
-        {/* Status badges */}
-        <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
-          {isAdmissionsOpen && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
-              <span className="w-1 h-1 rounded-full bg-emerald-400 animate-ping" />
-              Admissions Open
-            </span>
-          )}
-        </div>
+        {isOpen && (
+          <span className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-emerald-700 shadow">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Admissions Open
+          </span>
+        )}
       </div>
-
-      {/* Content */}
-      <div className="p-4 pt-0 space-y-3 flex-1 flex flex-col justify-between relative">
-        {/* Logo Avatar */}
+      <div className="flex flex-1 flex-col gap-3 p-5 pt-0">
         <div className="-mt-7 flex items-end justify-between">
-          <div className="w-12 h-12 rounded-xl bg-[#131920] border-2 border-[#0d1117] flex items-center justify-center text-indigo-400 font-black text-lg overflow-hidden shadow-lg shrink-0">
-            {college.logo ? (
-              <img src={college.logo} alt={college.name} className="w-full h-full object-cover" />
-            ) : (
-              <span>{college.name?.charAt(0) || 'C'}</span>
-            )}
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border-4 border-white bg-[#EEF4FB] text-lg font-black text-[#0A4D94] shadow-md">
+            {college.logo
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={college.logo} alt={college.name} className="h-full w-full object-cover" />
+              : <span>{college.name?.charAt(0) || 'C'}</span>}
           </div>
-          <span className="font-mono text-[9px] text-white/30 font-bold uppercase tracking-wider bg-white/[0.04] px-2 py-0.5 rounded-md border border-white/[0.04]">
-            {college.code}
-          </span>
+          <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-slate-500">{college.code}</span>
         </div>
-
-        <div>
-          <h3 className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors leading-snug line-clamp-1">
-            {college.name}
-          </h3>
-          <p className="text-[11px] text-white/40 line-clamp-2 mt-1 leading-relaxed">
-            {college.tagline || settings.bio || 'Public digital workspace on Academix.'}
-          </p>
+        <div className="flex-1">
+          <h3 className="line-clamp-1 text-base font-bold text-slate-900 transition-colors group-hover:text-[#0A4D94]">{college.name}</h3>
+          <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-slate-500">{college.tagline || settings.bio || 'Public digital workspace on Collegeshub.'}</p>
         </div>
-
-        {/* Location & Details */}
-        <div className="pt-2 border-t border-white/[0.04] flex items-center justify-between text-[10px] text-white/35">
-          <div className="flex items-center gap-1 truncate">
-            <HiOutlineLocationMarker size={12} className="shrink-0 text-white/30" />
-            <span className="truncate">{college.city || 'Pakistan'}</span>
-          </div>
-          <span className="inline-flex items-center gap-0.5 font-semibold text-indigo-400 group-hover:translate-x-0.5 transition-transform shrink-0">
-            View Portal <HiChevronRight size={12} />
-          </span>
+        <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
+          <span className="flex min-w-0 items-center gap-1"><HiOutlineLocationMarker size={14} className="shrink-0" /><span className="truncate">{college.city || 'Pakistan'}</span></span>
+          <span className="inline-flex shrink-0 items-center gap-0.5 font-semibold text-[#0A4D94] transition-transform group-hover:translate-x-0.5">View Portal <HiChevronRight size={14} /></span>
         </div>
       </div>
-    </div>
+    </a>
   );
 }

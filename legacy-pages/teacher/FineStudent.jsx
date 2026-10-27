@@ -20,6 +20,7 @@ const FineStudent = () => {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ student_id: '', amount: '', reason: '', category: 'discipline' });
   const [search, setSearch] = useState('');
+  const [scanAvailable, setScanAvailable] = useState(true);
 
   useEffect(() => { fetchData(); }, []);
 
@@ -78,26 +79,38 @@ const FineStudent = () => {
         <form onSubmit={handleSubmit} className="glass-card" style={{ padding: 24 }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>⚠️ Impose Fine on Student</p>
           {/* QR Scanner */}
-          <div style={{ marginBottom: 14, padding: 14, background: 'rgba(99,102,241,0.06)', borderRadius: 10, border: '1px solid rgba(99,102,241,0.1)' }}>
-            <label style={{ fontSize: 11, fontWeight: 600, color: '#818cf8', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}><HiOutlineQrcode size={14} /> Scan Student Card QR</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input placeholder="Scan QR code from student card..." className="form-input" style={{ flex: 1 }}
-                onKeyDown={async (e) => {
-                  if (e.key === 'Enter' && e.target.value.trim()) {
-                    e.preventDefault();
-                    try {
-                      const { data } = await api.get('/gate/lookup', { params: { qrCode: e.target.value.trim() } });
-                      if (data.data?.id) {
-                        setForm(f => ({...f, student_id: data.data.id}));
-                        toast.success(`Found: ${data.data.name}`);
+          {scanAvailable && (
+            <div style={{ marginBottom: 14, padding: 14, background: 'rgba(99,102,241,0.06)', borderRadius: 10, border: '1px solid rgba(99,102,241,0.1)' }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#818cf8', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}><HiOutlineQrcode size={14} /> Scan Student Card QR</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input placeholder="Scan QR code from student card..." className="form-input" style={{ flex: 1 }}
+                  onKeyDown={async (e) => {
+                    if (e.key === 'Enter' && e.target.value.trim()) {
+                      e.preventDefault();
+                      try {
+                        const { data } = await api.post('/students/identify', { qrCode: e.target.value.trim() });
+                        const student = data.students?.[0];
+                        if (student?.id) {
+                          setForm(f => ({...f, student_id: student.id}));
+                          toast.success(`Found: ${student.name}`);
+                        } else {
+                          toast.error('Student not found for this QR');
+                        }
+                      } catch (err) {
+                        if (err.response?.status === 409 && err.response?.data?.errorCode === 'METHOD_UNAVAILABLE') {
+                          setScanAvailable(false);
+                          toast.error(err.response?.data?.message || 'QR scanning is unavailable for your college. Use search instead.');
+                        } else {
+                          toast.error('Student not found for this QR');
+                        }
                       }
-                    } catch { toast.error('Student not found for this QR'); }
-                    e.target.value = '';
-                  }
-                }} />
-              <span style={{ fontSize: 10, color: 'var(--text-tertiary)', alignSelf: 'center' }}>Press Enter after scan</span>
+                      e.target.value = '';
+                    }
+                  }} />
+                <span style={{ fontSize: 10, color: 'var(--text-tertiary)', alignSelf: 'center' }}>Press Enter after scan</span>
+              </div>
             </div>
-          </div>
+          )}
           <div style={{ marginBottom: 14 }}>
             <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Or Search Student</label>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or roll number..." className="form-input" />

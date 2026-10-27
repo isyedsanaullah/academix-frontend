@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { HiOutlineQrcode, HiOutlineUserGroup, HiOutlineRefresh, HiOutlineCamera } from 'react-icons/hi';
+import { HiOutlineQrcode, HiOutlineUserGroup, HiOutlineRefresh, HiOutlineCamera, HiOutlineSearch } from 'react-icons/hi';
 
 const GuardDashboard = () => {
   const [logs, setLogs] = useState([]);
@@ -12,6 +12,10 @@ const GuardDashboard = () => {
   const [lastScan, setLastScan] = useState(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState(null);
+  const [gateMethod, setGateMethod] = useState('qr');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
   const inputRef = useRef(null);
   const html5QrcodeRef = useRef(null);
 
@@ -19,12 +23,69 @@ const GuardDashboard = () => {
 
   useEffect(() => {
     fetchLogs();
-    initScanner();
+    checkGateCapability();
 
     return () => {
       stopCamera();
     };
   }, []);
+
+  const checkGateCapability = async () => {
+    try {
+      const { data } = await api.get('/me/capabilities');
+      const gateCap = data.capabilities?.['gate.log'];
+      const method = gateCap?.method || 'qr';
+      setGateMethod(method);
+      if (method === 'qr' && gateCap?.available) {
+        initScanner();
+      } else {
+        stopCamera();
+      }
+    } catch {
+      initScanner();
+    }
+  };
+
+  const handleStudentSearch = async (q) => {
+    setSearchQuery(q);
+    if (!q || q.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    setSearching(true);
+    try {
+      const { data } = await api.post('/students/identify', { query: q.trim() });
+      setSearchResults(data.students || []);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Search failed');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleManualGate = async (student) => {
+    if (!student?.id || scanning) return;
+    setScanning(true);
+    try {
+      const { data } = await api.post('/gate/manual', { studentId: student.id });
+      setLastScan(data);
+      toast.success(data.message || `Gate entry logged for ${student.name}`);
+      fetchLogs();
+      setSearchQuery('');
+      setSearchResults([]);
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Gate logging failed';
+      toast.error(msg);
+      setLastScan({
+        success: false,
+        message: msg,
+        person: err.response?.data?.person,
+        requiresApproval: err.response?.data?.requiresApproval
+      });
+    } finally {
+      setTimeout(() => setScanning(false), 2000);
+    }
+  };
 
   const stopCamera = async () => {
     if (html5QrcodeRef.current) {
@@ -172,79 +233,137 @@ const GuardDashboard = () => {
 
       {/* Camera & Scanner Container */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
-        {/* QR Scanner Feed */}
-        <div className="glass-card" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <HiOutlineCamera size={18} /> Camera Scanner
-            </span>
-            <span style={{ 
-              fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 12,
-              background: cameraActive ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
-              color: cameraActive ? '#4ade80' : '#f87171' 
-            }}>
-              {cameraActive ? '● Scanner Active' : '○ Camera Offline'}
-            </span>
-          </div>
+        {/* QR Scanner or Manual Gate Entry depending on capability */}
+        {gateMethod === 'manual' ? (
+          <div className="glass-card" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                📝 Manual Gate Entry (Plan B)
+              </span>
+              <span style={{ 
+                fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 12,
+                background: 'rgba(234,179,8,0.12)', color: '#fbbf24' 
+              }}>
+                Manual Mode
+              </span>
+            </div>
 
-          <div style={{ 
-            width: '100%', minHeight: '260px', background: 'rgba(0,0,0,0.2)', 
-            borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-color)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative'
-          }}>
-            {/* The html5-qrcode reader div */}
-            <style>{`
-              #qr-reader {
-                width: 100% !important;
-                height: 100% !important;
-                position: relative !important;
-                overflow: hidden !important;
-                border: none !important;
-              }
-              #qr-reader video {
-                width: 100% !important;
-                height: 100% !important;
-                object-fit: cover !important;
-                border-radius: 12px;
-              }
-              #qr-reader canvas {
-                display: none !important;
-              }
-              #qr-reader__scan_region {
-                width: 100% !important;
-                height: 100% !important;
-              }
-              #qr-reader__dashboard {
-                display: none !important;
-              }
-            `}</style>
-            <div id="qr-reader" style={{ width: '100%', height: '100%' }}></div>
-            
-            {!cameraActive && (
-              <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: 20, textAlign: 'center' }}>
-                <span style={{ fontSize: 32 }}>📷</span>
-                <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{cameraError || 'Camera is not running'}</p>
-                <button onClick={retryCamera} className="btn-secondary" style={{ fontSize: 11, padding: '6px 12px' }}>
-                  Try Accessing Camera
-                </button>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+              Type student roll number, name, or CNIC to log gate entry/exit.
+            </p>
+
+            <div style={{ position: 'relative' }}>
+              <HiOutlineSearch size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+              <input
+                value={searchQuery}
+                onChange={e => handleStudentSearch(e.target.value)}
+                placeholder="Search student by roll number or name..."
+                className="form-input"
+                style={{ paddingLeft: 38, fontSize: 14, padding: '12px 12px 12px 38px' }}
+              />
+            </div>
+
+            {searching && <p style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Searching students...</p>}
+
+            {searchResults.length > 0 && (
+              <div style={{ maxHeight: 240, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {searchResults.map(s => (
+                  <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid var(--border-color)' }}>
+                    <div>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{s.name}</p>
+                      <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{s.rollNumber} • {s.class} {s.section}</p>
+                    </div>
+                    <button
+                      onClick={() => handleManualGate(s)}
+                      disabled={scanning}
+                      className="btn-primary"
+                      style={{ fontSize: 12, padding: '6px 14px', border: 'none', cursor: 'pointer' }}
+                    >
+                      {scanning ? '...' : 'Log Gate'}
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
-          </div>
 
-          {/* Manual Input Fallback */}
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 8 }}>
-            <div style={{ flex: 1, position: 'relative' }}>
-              <HiOutlineQrcode size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
-              <input ref={inputRef} value={qrInput} onChange={e => setQrInput(e.target.value)} onKeyDown={handleKeyDown}
-                placeholder="Scan QR code or type ID..." autoFocus disabled={scanning}
-                className="form-input" style={{ paddingLeft: 38, fontSize: 14, padding: '12px 12px 12px 38px' }} />
-            </div>
-            <button onClick={() => handleScan(qrInput.trim())} disabled={scanning || !qrInput.trim()} className="btn-primary" style={{ padding: '12px 20px', fontSize: 13, border: 'none', cursor: 'pointer', opacity: scanning ? 0.6 : 1 }}>
-              {scanning ? '...' : 'SCAN'}
-            </button>
+            {searchQuery.trim().length >= 2 && !searching && searchResults.length === 0 && (
+              <p style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>No active students found matching "{searchQuery}"</p>
+            )}
           </div>
-          <p style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>💡 Auto-detects QR codes in stream. Point the camera at a card or enter ID manually.</p>
-        </div>
+        ) : (
+          <div className="glass-card" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <HiOutlineCamera size={18} /> Camera Scanner
+              </span>
+              <span style={{ 
+                fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 12,
+                background: cameraActive ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
+                color: cameraActive ? '#4ade80' : '#f87171' 
+              }}>
+                {cameraActive ? '● Scanner Active' : '○ Camera Offline'}
+              </span>
+            </div>
+
+            <div style={{ 
+              width: '100%', minHeight: '260px', background: 'rgba(0,0,0,0.2)', 
+              borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-color)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative'
+            }}>
+              {/* The html5-qrcode reader div */}
+              <style>{`
+                #qr-reader {
+                  width: 100% !important;
+                  height: 100% !important;
+                  position: relative !important;
+                  overflow: hidden !important;
+                  border: none !important;
+                }
+                #qr-reader video {
+                  width: 100% !important;
+                  height: 100% !important;
+                  object-fit: cover !important;
+                  border-radius: 12px;
+                }
+                #qr-reader canvas {
+                  display: none !important;
+                }
+                #qr-reader__scan_region {
+                  width: 100% !important;
+                  height: 100% !important;
+                }
+                #qr-reader__dashboard {
+                  display: none !important;
+                }
+              `}</style>
+              <div id="qr-reader" style={{ width: '100%', height: '100%' }}></div>
+              
+              {!cameraActive && (
+                <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: 20, textAlign: 'center' }}>
+                  <span style={{ fontSize: 32 }}>📷</span>
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{cameraError || 'Camera is not running'}</p>
+                  <button onClick={retryCamera} className="btn-secondary" style={{ fontSize: 11, padding: '6px 12px' }}>
+                    Try Accessing Camera
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Manual Input Fallback */}
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 8 }}>
+              <div style={{ flex: 1, position: 'relative' }}>
+                <HiOutlineQrcode size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+                <input ref={inputRef} value={qrInput} onChange={e => setQrInput(e.target.value)} onKeyDown={handleKeyDown}
+                  placeholder="Scan QR code or type ID..." autoFocus disabled={scanning}
+                  className="form-input" style={{ paddingLeft: 38, fontSize: 14, padding: '12px 12px 12px 38px' }} />
+              </div>
+              <button onClick={() => handleScan(qrInput.trim())} disabled={scanning || !qrInput.trim()} className="btn-primary" style={{ padding: '12px 20px', fontSize: 13, border: 'none', cursor: 'pointer', opacity: scanning ? 0.6 : 1 }}>
+                {scanning ? '...' : 'SCAN'}
+              </button>
+            </div>
+            <p style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>💡 Auto-detects QR codes in stream. Point the camera at a card or enter ID manually.</p>
+          </div>
+        )}
 
         {/* Scan Status & Details */}
         <div className="glass-card" style={{ padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '360px' }}>

@@ -9,8 +9,9 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "Academix - Smart Campus Management System",
-  description: "Multi-Tenant Smart Campus Management System for Colleges and Universities",
+  title: "Collegeshub - Smart Campus Management System",
+  description: "Collegeshub is a multi-tenant campus management platform for colleges and universities: admissions, academics, attendance, fees and more.",
+  icons: { icon: "/logo-mark.svg" },
 };
 
 export default function RootLayout({ children }) {
@@ -19,17 +20,17 @@ export default function RootLayout({ children }) {
       <body className={`${inter.className} min-h-full flex flex-col bg-surface-900 text-white/85`}>
         <QueryProvider>
           <ClientInitializer />
-          <Toaster 
-            position="top-right" 
-            toastOptions={{ 
-              style: { 
-                background: '#1a2230', 
-                color: '#e2e8f0', 
-                border: '1px solid rgba(255,255,255,0.08)', 
-                borderRadius: '12px', 
-                fontSize: '13px' 
-              } 
-            }} 
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: '#1a2230',
+                color: '#e2e8f0',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '12px',
+                fontSize: '13px'
+              }
+            }}
           />
           {children}
         </QueryProvider>

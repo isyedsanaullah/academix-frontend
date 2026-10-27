@@ -11,6 +11,7 @@ import {
 } from 'react-icons/hi';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../lib/api';
+import SubscriptionExpiryBanner from '../common/SubscriptionExpiryBanner';
 
 // --- Theme Context (light/dark) ---
 const getInitialTheme = () => {
@@ -157,12 +158,11 @@ const getPageTitle = (pathname) => {
   if (pathname.match(/\/(admin|registrar|principal)\/students\/.+/)) return 'Student Profile';
   if (pathname.match(/\/(admin|accountant)\/fees\/receipt\/.+/)) return 'Fee Receipt';
   if (pathname.startsWith('/admin/results/card/')) return 'Result Card';
-  return map[pathname] || 'Academix';
+  return map[pathname] || 'Collegeshub';
 };
 
 /* ── Build searchable nav items (unchanged) ── */
 const buildSearchItems = (role) => {
-  const items = [];
   const map = {
     admin: [
       { to: '/admin', label: 'Dashboard' },
@@ -278,7 +278,7 @@ const buildSearchItems = (role) => {
   return map[role] || [];
 };
 
-/* ── Spotlight Search Modal (theme-aware) ── */
+/* ── Spotlight Search Modal ── */
 const SpotlightSearch = ({ open, onClose, role }) => {
   const [query, setQuery] = useState('');
   const router = useRouter();
@@ -304,34 +304,50 @@ const SpotlightSearch = ({ open, onClose, role }) => {
   const handleSelect = (to) => { router.push(to); onClose(); };
 
   return (
-    <div className="fixed inset-0 z-[999] flex items-start justify-center pt-[15vh]" onClick={onClose}>
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
-      <div onClick={e => e.stopPropagation()}
-        className="relative w-full max-w-lg bg-white dark:bg-[#0f1721] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl transition-colors duration-200 overflow-hidden animate-slide-up">
-        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-100 dark:border-white/[0.06]">
-          <HiOutlineSearch size={18} className="text-gray-400 dark:text-white/30 shrink-0" />
-          <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)}
+    <div
+      className="fixed inset-0 z-[999] flex items-start justify-center px-3 pt-[10vh] sm:pt-[15vh]"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Search pages"
+    >
+      <div className="fixed inset-0 bg-app/75 backdrop-blur-sm" />
+      <div
+        onClick={e => e.stopPropagation()}
+        className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-line bg-card shadow-2xl animate-slide-up"
+      >
+        <div className="flex items-center gap-3 border-b border-line px-4 py-3">
+          <HiOutlineSearch size={18} className="shrink-0 text-fg-faint" aria-hidden="true" />
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={e => setQuery(e.target.value)}
             placeholder="Search pages, features..."
-            className="flex-1 bg-transparent text-gray-800 dark:text-white/85 text-sm outline-none placeholder:text-gray-400 dark:placeholder:text-white/25" />
-          <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/[0.06] text-[10px] text-gray-500 dark:text-white/20 font-mono">ESC</kbd>
+            aria-label="Search pages and features"
+            className="min-w-0 flex-1 bg-transparent text-base text-fg outline-none placeholder:text-fg-faint sm:text-sm"
+          />
+          <kbd className="hidden shrink-0 items-center rounded bg-card-2 px-1.5 py-0.5 font-mono text-[10px] text-fg-muted sm:inline-flex">ESC</kbd>
         </div>
 
-        <div className="max-h-72 overflow-y-auto py-1">
+        <div className="max-h-[60vh] overflow-y-auto py-1 sm:max-h-72">
           {filtered.length === 0 ? (
-            <p className="text-center text-gray-400 dark:text-white/20 text-sm py-6">No results found</p>
+            <p className="py-6 text-center text-sm text-fg-faint">No results found</p>
           ) : (
             filtered.map((item) => (
-              <button key={item.to} onClick={() => handleSelect(item.to)}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-white/[0.04] transition group">
-                <HiOutlineChevronRight size={12} className="text-gray-400 dark:text-white/15 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition" />
-                <span className="text-sm text-gray-600 dark:text-white/60 group-hover:text-gray-900 dark:group-hover:text-white/90 transition">{item.label}</span>
-                <span className="ml-auto text-[10px] text-gray-400 dark:text-white/15 font-mono truncate max-w-32">{item.to}</span>
+              <button
+                key={item.to}
+                onClick={() => handleSelect(item.to)}
+                className="group flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-card-2 focus-visible:bg-card-2 focus-visible:outline-none"
+              >
+                <HiOutlineChevronRight size={12} className="shrink-0 text-fg-faint transition group-hover:text-accent" aria-hidden="true" />
+                <span className="min-w-0 truncate text-sm text-fg-muted transition group-hover:text-fg">{item.label}</span>
+                <span className="ml-auto hidden max-w-32 truncate font-mono text-[10px] text-fg-faint sm:inline">{item.to}</span>
               </button>
             ))
           )}
         </div>
 
-        <div className="flex items-center gap-4 px-4 py-2 border-t border-gray-100 dark:border-white/[0.06] text-[10px] text-gray-400 dark:text-white/15">
+        <div className="hidden items-center gap-4 border-t border-line px-4 py-2 text-[10px] text-fg-faint sm:flex">
           <span>↑↓ Navigate</span>
           <span>↵ Select</span>
           <span>ESC Close</span>
@@ -341,7 +357,7 @@ const SpotlightSearch = ({ open, onClose, role }) => {
   );
 };
 
-/* ── Notifications Dropdown (theme-aware) ── */
+/* ── Notifications Dropdown ── */
 const NotificationsDropdown = ({ open, onClose }) => {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -366,35 +382,42 @@ const NotificationsDropdown = ({ open, onClose }) => {
   if (!open) return null;
 
   return (
-    <div ref={dropRef} className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-[#0f1721] border border-gray-200 dark:border-white/10 rounded-xl shadow-2xl transition-colors duration-200 overflow-hidden z-50 animate-slide-up">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/[0.06]">
+    <div
+      ref={dropRef}
+      className="absolute right-0 top-full z-50 mt-2 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-line bg-card shadow-2xl animate-slide-up"
+    >
+      <div className="flex items-center justify-between border-b border-line px-4 py-3">
         <div className="flex items-center gap-2">
-          <HiOutlineBell size={15} className="text-indigo-500 dark:text-indigo-400" />
-          <h4 className="text-xs font-bold text-gray-800 dark:text-white/80">Notifications</h4>
+          <HiOutlineBell size={16} className="text-accent" aria-hidden="true" />
+          <h4 className="text-xs font-bold text-fg">Notifications</h4>
         </div>
-        <button onClick={onClose} className="text-gray-400 dark:text-white/20 hover:text-gray-600 dark:hover:text-white/50 transition">
-          <HiOutlineX size={14} />
+        <button
+          onClick={onClose}
+          aria-label="Close notifications"
+          className="rounded-md p-1 text-fg-faint transition hover:bg-card-2 hover:text-fg"
+        >
+          <HiOutlineX size={16} />
         </button>
       </div>
 
       <div className="max-h-72 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
           </div>
         ) : announcements.length === 0 ? (
-          <div className="text-center py-8">
-            <HiOutlineSpeakerphone size={24} className="mx-auto text-gray-300 dark:text-white/10 mb-2" />
-            <p className="text-xs text-gray-400 dark:text-white/25">No recent announcements</p>
+          <div className="py-8 text-center">
+            <HiOutlineSpeakerphone size={24} className="mx-auto mb-2 text-fg-faint" aria-hidden="true" />
+            <p className="text-xs text-fg-muted">No recent announcements</p>
           </div>
         ) : (
           announcements.map((a, i) => (
-            <div key={a._id || i} className="px-4 py-3 border-b border-gray-50 dark:border-white/[0.04] hover:bg-gray-50 dark:hover:bg-white/[0.02] transition">
-              <p className="text-xs font-semibold text-gray-800 dark:text-white/70 truncate">{a.title}</p>
-              <p className="text-[11px] text-gray-500 dark:text-white/30 mt-0.5 line-clamp-2">
-                {(a.message || a.content || '').replace(/<p[^>]*>/gi,'').replace(/<\/p>/gi,' ').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]*>/g,'').trim()}
+            <div key={a._id || i} className="border-b border-line px-4 py-3 transition last:border-b-0 hover:bg-card-2">
+              <p className="truncate text-xs font-semibold text-fg">{a.title}</p>
+              <p className="mt-0.5 line-clamp-2 text-[11px] text-fg-muted">
+                {(a.message || a.content || '').replace(/<p[^>]*>/gi, '').replace(/<\/p>/gi, ' ').replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>/g, '').trim()}
               </p>
-              <p className="text-[10px] text-gray-400 dark:text-white/15 mt-1">
+              <p className="mt-1 text-[10px] tabular-nums text-fg-faint">
                 {a.createdAt ? new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
               </p>
             </div>
@@ -405,23 +428,23 @@ const NotificationsDropdown = ({ open, onClose }) => {
   );
 };
 
-/* ── User Profile Dropdown (theme-aware) ── */
+/* ── User Profile Dropdown ── */
 const ProfileDropdown = ({ open, onClose, user }) => {
   const { logout } = useAuthStore();
   const router = useRouter();
   const dropRef = useRef(null);
 
-  const roleMeta = {
-    superAdmin: { label: 'Super Admin', color: 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-400' },
-    admin: { label: 'Admin', color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-400' },
-    registrar: { label: 'Registrar', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400' },
-    accountant: { label: 'Accountant', color: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400' },
-    principal: { label: 'Principal', color: 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-400' },
-    teacher: { label: 'Teacher', color: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400' },
-    student: { label: 'Student', color: 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-400' },
-    employee: { label: 'Employee', color: 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-400' },
+  const roleLabels = {
+    superAdmin: 'Super Admin',
+    admin: 'Admin',
+    registrar: 'Registrar',
+    accountant: 'Accountant',
+    principal: 'Principal',
+    teacher: 'Teacher',
+    student: 'Student',
+    employee: 'Employee',
   };
-  const rm = roleMeta[user?.role] || { label: 'User', color: 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-white/50' };
+  const roleLabel = roleLabels[user?.role] || 'User';
 
   useEffect(() => {
     if (!open) return;
@@ -430,10 +453,10 @@ const ProfileDropdown = ({ open, onClose, user }) => {
     return () => document.removeEventListener('mousedown', handler);
   }, [open, onClose]);
 
-  const handleLogout = () => { 
-    logout(); 
-    router.push('/login'); 
-    onClose(); 
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+    onClose();
   };
 
   const settingsPath = user?.role === 'superAdmin' ? null :
@@ -442,38 +465,43 @@ const ProfileDropdown = ({ open, onClose, user }) => {
   if (!open) return null;
 
   return (
-    <div ref={dropRef} className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-[#0f1721] border border-gray-200 dark:border-white/10 rounded-xl shadow-2xl transition-colors duration-200 overflow-hidden z-50 animate-slide-up">
-      <div className="px-4 py-3.5 border-b border-gray-100 dark:border-white/[0.06]">
+    <div
+      ref={dropRef}
+      className="absolute right-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-line bg-card shadow-2xl animate-slide-up"
+    >
+      <div className="border-b border-line px-4 py-3.5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full overflow-hidden border border-indigo-500/20 shrink-0 flex items-center justify-center">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line">
             {user?.avatar
-              ? <img src={user.avatar} alt={user?.name || 'User'} className="w-full h-full object-cover" />
-              : <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm">{user?.name?.charAt(0)?.toUpperCase() || 'U'}</div>
+              ? <img src={user.avatar} alt={user?.name || 'User'} className="h-full w-full object-cover" />
+              : <div className="flex h-full w-full items-center justify-center bg-accent text-sm font-bold text-accent-fg">{user?.name?.charAt(0)?.toUpperCase() || 'U'}</div>
             }
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-gray-800 dark:text-white/90 truncate">{user?.name}</p>
-            <p className="text-[11px] text-gray-500 dark:text-white/30 truncate">{user?.email}</p>
+            <p className="truncate text-sm font-semibold text-fg" title={user?.name}>{user?.name}</p>
+            <p className="truncate text-[11px] text-fg-muted" title={user?.email}>{user?.email}</p>
           </div>
         </div>
-        <span className={`inline-flex items-center mt-2 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${rm.color}`}>
-          {rm.label}
-        </span>
+        <span className="badge badge-primary mt-2 uppercase tracking-wider">{roleLabel}</span>
         {user?.college && (
-          <p className="text-[11px] text-gray-400 dark:text-white/20 mt-1 truncate">{user.college.name}</p>
+          <p className="mt-1 truncate text-[11px] text-fg-faint" title={user.college.name}>{user.college.name}</p>
         )}
       </div>
 
       <div className="py-1">
         {settingsPath && (
-          <button onClick={() => { router.push(settingsPath); onClose(); }}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-gray-500 dark:text-white/40 hover:text-gray-800 dark:hover:text-white/80 hover:bg-gray-50 dark:hover:bg-white/[0.04] transition text-sm">
-            <HiOutlineCog size={16} /> Settings
+          <button
+            onClick={() => { router.push(settingsPath); onClose(); }}
+            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-fg-muted transition hover:bg-card-2 hover:text-fg"
+          >
+            <HiOutlineCog size={16} aria-hidden="true" /> Settings
           </button>
         )}
-        <button onClick={handleLogout}
-          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-gray-500 dark:text-white/40 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/[0.06] transition text-sm">
-          <HiOutlineLogout size={16} /> Sign Out
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-fg-muted transition hover:bg-bad/10 hover:text-bad"
+        >
+          <HiOutlineLogout size={16} aria-hidden="true" /> Sign Out
         </button>
       </div>
     </div>
@@ -515,71 +543,99 @@ const DashboardLayout = ({ children }) => {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
+  const pathSegment = pathname?.split('/')[1] || '';
+  const roleFromPath = pathSegment === 'super-admin' ? 'superAdmin' : pathSegment;
+  const activeRole = user?.role || roleFromPath || 'admin';
+
+  const iconBtn =
+    'flex h-10 w-10 items-center justify-center rounded-lg text-fg-muted transition hover:bg-card-2 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent';
+
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-[#080c12] transition-colors duration-200 overflow-hidden">
+    <div data-role={activeRole} className="flex h-screen overflow-hidden bg-app transition-colors duration-200">
       <div className="hidden lg:flex lg:shrink-0">
-        <Sidebar mobileOpen={false} onClose={() => { }} />
+        <Sidebar mobileOpen={false} onClose={() => { }} role={activeRole} />
       </div>
 
       {sidebarOpen && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
+          <div className="fixed inset-0 z-40 bg-app/75 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
           <div className="fixed inset-y-0 left-0 z-50 flex lg:hidden animate-slide-right">
             <Sidebar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
           </div>
         </>
       )}
 
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <header className="flex items-center gap-4 px-5 py-3.5 border-b border-gray-200 dark:border-white/[0.06] bg-white/80 dark:bg-[#0d1117]/80 backdrop-blur-md shrink-0 transition-colors duration-200">
-          {/* Mobile: logo + hamburger; Desktop: page title */}
-          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-500 dark:text-white/40 hover:text-gray-800 dark:hover:text-white/80 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition lg:hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="flex shrink-0 items-center gap-2 border-b border-line bg-card/90 px-3 py-2 backdrop-blur-md transition-colors duration-200 sm:gap-3 sm:px-4 lg:px-6">
+          {/* Mobile: hamburger + logo */}
+          <button
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open navigation menu"
+            className={`${iconBtn} lg:hidden`}
+          >
             <HiOutlineMenu size={20} />
           </button>
-          {/* Mobile logo (visible only when sidebar is hidden) */}
-          <div className="flex items-center gap-2 lg:hidden shrink-0">
-            <div className="w-6 h-6 relative">
-              <Image src="/logo.svg" alt="Academix" fill className="object-contain" priority />
+          <div className="flex shrink-0 items-center gap-2 lg:hidden">
+            <div className="relative h-6 w-6">
+              <Image src="/logo.svg" alt="Collegeshub" fill className="object-contain" priority />
             </div>
-            <span className="text-sm font-extrabold text-gray-900 dark:text-white tracking-tight">Academix</span>
+            <span className="hidden text-sm font-extrabold tracking-tight text-fg min-[420px]:inline">Collegeshub</span>
           </div>
-          <div className="flex-1 min-w-0 hidden lg:block">
-            <h2 className="text-sm font-semibold text-gray-800 dark:text-white/80 truncate">{pageTitle}</h2>
-            {user?.college && <p className="text-[11px] text-gray-500 dark:text-white/30 truncate">{user.college.name}</p>}
+
+          {/* Desktop page title */}
+          <div className="hidden min-w-0 flex-1 lg:block">
+            <h2 className="truncate text-sm font-semibold text-fg">{pageTitle}</h2>
+            {user?.college && <p className="truncate text-[11px] text-fg-muted">{user.college.name}</p>}
           </div>
-          {/* Desktop page title only on mobile as well */}
-          <div className="flex-1 min-w-0 lg:hidden text-right">
-            <h2 className="text-xs font-semibold text-gray-600 dark:text-white/50 truncate">{pageTitle}</h2>
+
+          {/* Mobile page title */}
+          <div className="min-w-0 flex-1 text-right lg:hidden">
+            <h2 className="truncate text-xs font-semibold text-fg-muted">{pageTitle}</h2>
           </div>
-          <div className="flex items-center gap-1.5">
+
+          <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5">
             {/* Theme Toggle Button */}
-            <button onClick={toggleTheme}
-              className="p-2 rounded-lg text-gray-500 dark:text-white/30 hover:text-gray-800 dark:hover:text-white/70 hover:bg-gray-100 dark:hover:bg-white/[0.05] transition border border-transparent">
+            <button
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              className={iconBtn}
+            >
               {theme === 'dark' ? <HiOutlineSun size={18} /> : <HiOutlineMoon size={18} />}
             </button>
 
-            <button onClick={() => setSearchOpen(true)}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-500 dark:text-white/25 hover:text-gray-800 dark:hover:text-white/60 hover:bg-gray-100 dark:hover:bg-white/[0.05] transition border border-gray-200 dark:border-white/[0.06] text-xs">
-              <HiOutlineSearch size={15} />
-              <span className="hidden sm:inline text-gray-500 dark:text-white/20">Search</span>
-              <kbd className="hidden sm:inline-flex items-center px-1 py-0.5 rounded bg-gray-100 dark:bg-white/[0.04] text-[9px] text-gray-500 dark:text-white/15 font-mono ml-1">Ctrl+K</kbd>
+            <button
+              onClick={() => setSearchOpen(true)}
+              aria-label="Search"
+              className="flex h-10 items-center justify-center gap-2 rounded-lg border border-transparent px-2.5 text-xs text-fg-muted transition hover:bg-card-2 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:border-line"
+            >
+              <HiOutlineSearch size={16} aria-hidden="true" />
+              <span className="hidden sm:inline">Search</span>
+              <kbd className="ml-1 hidden items-center rounded bg-card-2 px-1 py-0.5 font-mono text-[9px] text-fg-faint sm:inline-flex">Ctrl+K</kbd>
             </button>
 
             <div className="relative">
-              <button onClick={() => { setNotifOpen(!notifOpen); setProfileOpen(false); }}
-                className="relative p-2 rounded-lg text-gray-500 dark:text-white/30 hover:text-gray-800 dark:hover:text-white/70 hover:bg-gray-100 dark:hover:bg-white/[0.05] transition">
+              <button
+                onClick={() => { setNotifOpen(!notifOpen); setProfileOpen(false); }}
+                aria-label="Notifications"
+                aria-expanded={notifOpen}
+                className={`${iconBtn} relative`}
+              >
                 <HiOutlineBell size={18} />
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
               </button>
               <NotificationsDropdown open={notifOpen} onClose={() => setNotifOpen(false)} />
             </div>
 
             <div className="relative">
-              <button onClick={() => { setProfileOpen(!profileOpen); setNotifOpen(false); }}
-                className="w-8 h-8 rounded-full ml-1 overflow-hidden border-2 border-indigo-500/30 hover:opacity-90 transition cursor-pointer shrink-0 flex items-center justify-center">
+              <button
+                onClick={() => { setProfileOpen(!profileOpen); setNotifOpen(false); }}
+                aria-label="Open profile menu"
+                aria-expanded={profileOpen}
+                className="ml-1 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-accent/40 transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
                 {user?.avatar
-                  ? <img src={user.avatar} alt={user?.name || 'User'} className="w-full h-full object-cover" />
-                  : <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm">{user?.name?.charAt(0)?.toUpperCase() || 'U'}</div>
+                  ? <img src={user.avatar} alt={user?.name || 'User'} className="h-full w-full object-cover" />
+                  : <div className="flex h-full w-full items-center justify-center bg-accent text-sm font-bold text-accent-fg">{user?.name?.charAt(0)?.toUpperCase() || 'U'}</div>
                 }
               </button>
               <ProfileDropdown open={profileOpen} onClose={() => setProfileOpen(false)} user={user} />
@@ -587,8 +643,10 @@ const DashboardLayout = ({ children }) => {
           </div>
         </header>
 
+        <SubscriptionExpiryBanner />
+
         <main className="flex-1 overflow-y-auto">
-          <div className="p-4 sm:p-6 max-w-[1400px] mx-auto w-full min-w-0">
+          <div className="mx-auto w-full min-w-0 px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
             {children}
           </div>
         </main>

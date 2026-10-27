@@ -1,7 +1,14 @@
-'use client';
+// Server component wrapper — required for Next.js static export.
+// generateStaticParams returns [] so no pages are pre-rendered;
+// the .htaccess SPA fallback handles all dynamic routes client-side.
+export const dynamic = 'force-static';
+export const dynamicParams = false;
+import ClientPage from './_client';
 
-import PublicCollegePage from '@/legacy-pages/public/PublicCollegePage';
+export function generateStaticParams() {
+  return [{"code":"_"}];
+}
 
-export default function ApplyPage() {
-  return <PublicCollegePage />;
+export default function Page(props) {
+  return <ClientPage {...props} />;
 }

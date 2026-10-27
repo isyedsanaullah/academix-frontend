@@ -18,31 +18,42 @@ import {
   HiOutlineRefresh
 } from 'react-icons/hi';
 
-const CHART_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6', '#f97316', '#14b8a6'];
+// Token-based palette (role accent first, then brand blue / green, then status colours)
+const CHART_COLORS = [
+  'var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)',
+  'var(--chart-5)', 'var(--chart-6)', 'var(--info)', 'var(--fg-muted)'
+];
 
 const PLAN_COLORS = {
-  basic: '#94a3b8',
-  standard: '#3b82f6',
-  premium: '#8b5cf6',
-  enterprise: '#f59e0b'
+  basic: 'var(--fg-faint)',
+  standard: 'var(--chart-2)',
+  premium: 'var(--chart-5)',
+  enterprise: 'var(--chart-4)'
 };
+
+const AXIS_TICK = { fontSize: 10, fill: 'currentColor' };
+const GRID_PROPS = { strokeDasharray: '3 3', stroke: 'currentColor', strokeOpacity: 0.2 };
+const BAR_CURSOR = { fill: 'currentColor', fillOpacity: 0.08 };
+const shortName = (v) => (typeof v === 'string' && v.length > 14 ? `${v.slice(0, 13)}…` : v);
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white dark:bg-[#131920] border border-slate-200 dark:border-white/10 rounded-xl p-3 shadow-xl text-xs space-y-1.5 min-w-[140px]">
+    <div className="min-w-[140px] space-y-1.5 rounded-xl border border-line bg-card p-2.5 text-xs shadow-lg">
       {label && (
-        <p className="font-bold text-slate-800 dark:text-white/90 border-b border-slate-100 dark:border-white/[0.06] pb-1 mb-1">
-          {label}
-        </p>
+        <p className="mb-1 border-b border-line pb-1 font-bold text-fg">{label}</p>
       )}
       {payload.map((p, i) => (
         <div key={i} className="flex items-center justify-between gap-3">
-          <span className="flex items-center gap-1.5 font-semibold text-slate-600 dark:text-white/70">
-            <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ backgroundColor: p.color || p.fill }} />
-            {p.name || p.dataKey}:
+          <span className="flex min-w-0 items-center gap-1.5 font-semibold text-fg-muted">
+            <span
+              className="inline-block h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: p.color || p.fill || p.payload?.fill }}
+              aria-hidden="true"
+            />
+            <span className="truncate">{p.name || p.dataKey}:</span>
           </span>
-          <span className="font-extrabold text-slate-900 dark:text-white font-mono">
+          <span className="font-bold tabular-nums text-fg">
             {typeof p.value === 'number' ? p.value.toLocaleString() : p.value}
           </span>
         </div>
@@ -52,19 +63,15 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 const ChartHeader = ({ icon: Icon, title, subtitle }) => (
-  <div className="flex items-start gap-3 mb-4">
-    <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center justify-center shrink-0">
-      {Icon ? <Icon size={18} /> : <HiOutlineChartBar size={18} />}
-    </div>
-    <div className="min-w-0">
-      <h3 className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight truncate">
-        {title}
-      </h3>
-      {subtitle && (
-        <p className="text-[11px] text-slate-500 dark:text-white/40 font-medium mt-0.5 truncate">
-          {subtitle}
-        </p>
-      )}
+  <div className="card-head">
+    <div className="flex min-w-0 items-center gap-2.5">
+      <span className="stat-icon">
+        {Icon ? <Icon size={16} aria-hidden="true" /> : <HiOutlineChartBar size={16} aria-hidden="true" />}
+      </span>
+      <div className="min-w-0">
+        <h3 className="card-title truncate" title={title}>{title}</h3>
+        {subtitle && <p className="card-sub">{subtitle}</p>}
+      </div>
     </div>
   </div>
 );
@@ -100,9 +107,27 @@ const SAAnalytics = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[360px] text-slate-400 dark:text-white/40">
-        <div className="w-10 h-10 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mb-3" />
-        <p className="text-xs font-medium">Aggregating platform telemetry and metrics...</p>
+      <div className="page" aria-busy="true">
+        <div className="page-head">
+          <div className="min-w-0 flex-1">
+            <div className="skeleton h-7 w-64 max-w-full" />
+            <div className="skeleton mt-2 h-4 w-80 max-w-full" />
+          </div>
+          <div className="skeleton h-10 w-36" />
+        </div>
+        <div className="grid grid-cols-2 gap-[var(--gap)] lg:grid-cols-5">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="skeleton h-[88px] last:col-span-2 lg:last:col-span-1" />
+          ))}
+        </div>
+        <div className="skeleton h-11 w-full" />
+        <div className="split split-even">
+          <div className="skeleton h-[300px]" />
+          <div className="skeleton h-[300px]" />
+        </div>
+        <p className="text-center text-xs font-medium text-fg-muted">
+          Aggregating platform telemetry and metrics...
+        </p>
       </div>
     );
   }
@@ -113,145 +138,146 @@ const SAAnalytics = () => {
     { id: 'logins', label: 'Login Trends & Activity', icon: HiOutlineKey },
   ];
 
-  return (
-    <div className="animate-fade-in space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-[#0d1117] p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-white/[0.06] shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center justify-center font-bold shrink-0">
-            <HiOutlineChartBar size={22} />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Platform Analytics & Insights
-            </h1>
-            <p className="text-slate-500 dark:text-white/40 text-xs sm:text-sm mt-0.5">
-              Real-time intelligence on college adoption, user growth, and active usage
-            </p>
-          </div>
-        </div>
+  const statCards = [
+    { label: 'Total Colleges', value: overview?.totals?.colleges, icon: HiOutlineOfficeBuilding, tone: '' },
+    { label: 'Active Colleges', value: overview?.totals?.activeColleges, icon: HiOutlineCheckCircle, tone: 'text-ok' },
+    { label: 'Total Users', value: overview?.totals?.users, icon: HiOutlineUserGroup, tone: '' },
+    { label: 'Students', value: overview?.totals?.students, icon: HiOutlineAcademicCap, tone: '' },
+    { label: 'Teachers', value: overview?.totals?.teachers, icon: HiOutlineBookOpen, tone: '' },
+  ];
 
-        <button
-          onClick={fetchAnalyticsData}
-          className="btn-secondary self-start sm:self-center py-2 px-3.5 text-xs inline-flex items-center gap-1.5"
-          title="Refresh analytics data"
-        >
-          <HiOutlineRefresh size={15} />
-          <span>Refresh Data</span>
-        </button>
+  const compareHeight = Math.max(300, colleges.length * 60);
+
+  return (
+    <div className="page">
+      {/* ── 1. Page header ── */}
+      <div className="page-head">
+        <div className="min-w-0">
+          <h1 className="page-title">Platform Analytics & Insights</h1>
+          <p className="page-sub">
+            Real-time intelligence on college adoption, user growth, and active usage
+          </p>
+        </div>
+        <div className="page-actions">
+          <button
+            type="button"
+            onClick={fetchAnalyticsData}
+            className="btn-secondary"
+            title="Refresh analytics data"
+          >
+            <HiOutlineRefresh size={16} aria-hidden="true" />
+            <span>Refresh Data</span>
+          </button>
+        </div>
       </div>
 
-      {/* Top Metric Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-        {[
-          { label: 'Total Colleges', value: overview?.totals?.colleges, color: 'text-indigo-600 dark:text-indigo-400', icon: HiOutlineOfficeBuilding, bg: 'bg-indigo-500/10 border-indigo-500/15' },
-          { label: 'Active Colleges', value: overview?.totals?.activeColleges, color: 'text-emerald-600 dark:text-emerald-400', icon: HiOutlineCheckCircle, bg: 'bg-emerald-500/10 border-emerald-500/15' },
-          { label: 'Total Users', value: overview?.totals?.users, color: 'text-sky-600 dark:text-sky-400', icon: HiOutlineUserGroup, bg: 'bg-sky-500/10 border-sky-500/15' },
-          { label: 'Students', value: overview?.totals?.students, color: 'text-violet-600 dark:text-violet-400', icon: HiOutlineAcademicCap, bg: 'bg-violet-500/10 border-violet-500/15' },
-          { label: 'Teachers', value: overview?.totals?.teachers, color: 'text-amber-600 dark:text-amber-400', icon: HiOutlineBookOpen, bg: 'bg-amber-500/10 border-amber-500/15' },
-        ].map(s => {
+      {/* ── 2. KPI strip ── */}
+      <div className="grid grid-cols-2 gap-[var(--gap)] lg:grid-cols-5">
+        {statCards.map((s) => {
           const Icon = s.icon;
           return (
-            <div key={s.label} className="glass-card p-4 flex items-center justify-between">
-              <div>
-                <p className="text-[11px] font-semibold text-slate-500 dark:text-white/40 uppercase tracking-wider">
-                  {s.label}
-                </p>
-                <p className={`text-2xl font-black mt-1 ${s.color}`}>
-                  {s.value != null ? s.value.toLocaleString() : '—'}
-                </p>
+            <div key={s.label} className="stat-card last:col-span-2 lg:last:col-span-1">
+              <div className="stat-top">
+                <span className="stat-label">{s.label}</span>
+                <span className="stat-icon">
+                  <Icon size={16} aria-hidden="true" />
+                </span>
               </div>
-              <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${s.bg} ${s.color}`}>
-                <Icon size={20} />
+              <div className={`stat-value ${s.tone}`}>
+                {s.value != null ? s.value.toLocaleString() : '—'}
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Visually Polished Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-white/[0.08] pb-3 overflow-x-auto">
-        {tabs.map(t => {
+      {/* ── 3. Tabs ── */}
+      <div className="tabs" role="tablist" aria-label="Analytics sections">
+        {tabs.map((t) => {
           const TabIcon = t.icon;
           return (
             <button
               key={t.id}
+              type="button"
+              role="tab"
+              id={`analytics-tab-${t.id}`}
+              aria-selected={tab === t.id}
+              aria-controls={`analytics-panel-${t.id}`}
               onClick={() => setTab(t.id)}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap cursor-pointer ${
-                tab === t.id
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
-                  : 'text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.04]'
-              }`}
+              className="tab inline-flex items-center gap-2"
             >
-              <TabIcon size={16} className="shrink-0" />
+              <TabIcon size={16} className="shrink-0" aria-hidden="true" />
               <span>{t.label}</span>
             </button>
           );
         })}
       </div>
 
-      {/* TAB 1: OVERVIEW */}
+      {/* ── TAB 1: OVERVIEW ── */}
       {tab === 'overview' && (
-        <div className="space-y-5">
-          {/* Row 1: Registrations Trends */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {/* User Registrations Area Chart */}
-            <div className="glass-card p-5">
+        <div
+          className="page"
+          role="tabpanel"
+          id="analytics-panel-overview"
+          aria-labelledby="analytics-tab-overview"
+        >
+          <div className="split split-even">
+            {/* User registrations */}
+            <div className="card">
               <ChartHeader
                 icon={HiOutlineTrendingUp}
                 title="User Registrations"
                 subtitle="Monthly user onboarding trend (last 12 months)"
               />
-              <div className="w-full h-[260px] sm:h-[290px]">
+              <div className="h-[240px] w-full min-w-0 text-fg-faint sm:h-[280px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={overview?.monthlyRegistrations || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <AreaChart data={overview?.monthlyRegistrations || []} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="gradUsers" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#6366f1" stopOpacity={0.35} />
-                        <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                        <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.35} />
+                        <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-white/[0.06]" />
-                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <CartesianGrid {...GRID_PROPS} vertical={false} />
+                    <XAxis dataKey="label" tick={AXIS_TICK} axisLine={false} tickLine={false} minTickGap={16} />
+                    <YAxis width={32} tick={AXIS_TICK} axisLine={false} tickLine={false} />
                     <Tooltip content={<CustomTooltip />} />
-                    <Area type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={2.5} fill="url(#gradUsers)" name="Registered Users" />
+                    <Area type="monotone" dataKey="count" stroke="var(--chart-1)" strokeWidth={2.5} fill="url(#gradUsers)" name="Registered Users" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* College Registrations Bar Chart */}
-            <div className="glass-card p-5">
+            {/* College registrations */}
+            <div className="card">
               <ChartHeader
                 icon={HiOutlineOfficeBuilding}
                 title="College Registrations"
                 subtitle="Monthly workspace onboardings"
               />
-              <div className="w-full h-[260px] sm:h-[290px]">
+              <div className="h-[240px] w-full min-w-0 text-fg-faint sm:h-[280px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={overview?.monthlyColleges || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-white/[0.06]" />
-                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="count" fill="#10b981" radius={[6, 6, 0, 0]} name="Colleges" />
+                  <BarChart data={overview?.monthlyColleges || []} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                    <CartesianGrid {...GRID_PROPS} vertical={false} />
+                    <XAxis dataKey="label" tick={AXIS_TICK} axisLine={false} tickLine={false} minTickGap={16} />
+                    <YAxis width={32} tick={AXIS_TICK} axisLine={false} tickLine={false} />
+                    <Tooltip content={<CustomTooltip />} cursor={BAR_CURSOR} />
+                    <Bar dataKey="count" fill="var(--chart-3)" radius={[4, 4, 0, 0]} name="Colleges" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
           </div>
 
-          {/* Row 2: Distribution Pie Charts & Active Users */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {/* Role Breakdown Pie Chart */}
-            <div className="glass-card p-5">
+          <div className="grid grid-cols-1 gap-[var(--gap)] md:grid-cols-2 xl:grid-cols-3">
+            {/* Users by role */}
+            <div className="card">
               <ChartHeader
                 icon={HiOutlineUserGroup}
                 title="Users by Role"
                 subtitle="Platform-wide distribution"
               />
-              <div className="w-full h-[220px]">
+              <div className="h-[200px] w-full min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -263,6 +289,7 @@ const SAAnalytics = () => {
                       outerRadius={75}
                       innerRadius={45}
                       paddingAngle={3}
+                      stroke="var(--card)"
                     >
                       {(overview?.roleBreakdown || []).map((_, i) => (
                         <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
@@ -274,23 +301,23 @@ const SAAnalytics = () => {
               </div>
               <div className="mt-2 grid grid-cols-2 gap-1.5 text-[11px]">
                 {(overview?.roleBreakdown || []).map((item, i) => (
-                  <div key={item.role} className="flex items-center gap-1.5 truncate">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
-                    <span className="capitalize text-slate-600 dark:text-white/70 truncate">{item.role}:</span>
-                    <span className="font-extrabold text-slate-900 dark:text-white">{item.count}</span>
+                  <div key={item.role} className="flex min-w-0 items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} aria-hidden="true" />
+                    <span className="truncate capitalize text-fg-muted">{item.role}:</span>
+                    <span className="font-bold tabular-nums text-fg">{item.count}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Subscription Plans Breakdown Pie Chart */}
-            <div className="glass-card p-5">
+            {/* Subscription plans */}
+            <div className="card">
               <ChartHeader
                 icon={HiOutlineSparkles}
                 title="Subscription Plans"
                 subtitle="College subscription tiers"
               />
-              <div className="w-full h-[220px]">
+              <div className="h-[200px] w-full min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -302,9 +329,10 @@ const SAAnalytics = () => {
                       outerRadius={75}
                       innerRadius={45}
                       paddingAngle={3}
+                      stroke="var(--card)"
                     >
                       {(overview?.planBreakdown || []).map((entry, i) => (
-                        <Cell key={i} fill={PLAN_COLORS[entry.plan?.toLowerCase()] || CHART_COLORS[i]} />
+                        <Cell key={i} fill={PLAN_COLORS[entry.plan?.toLowerCase()] || CHART_COLORS[i % CHART_COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip content={<CustomTooltip />} />
@@ -313,36 +341,36 @@ const SAAnalytics = () => {
               </div>
               <div className="mt-2 grid grid-cols-2 gap-1.5 text-[11px]">
                 {(overview?.planBreakdown || []).map((entry, i) => (
-                  <div key={entry.plan} className="flex items-center gap-1.5 truncate">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PLAN_COLORS[entry.plan?.toLowerCase()] || CHART_COLORS[i] }} />
-                    <span className="capitalize text-slate-600 dark:text-white/70 truncate">{entry.plan}:</span>
-                    <span className="font-extrabold text-slate-900 dark:text-white">{entry.count}</span>
+                  <div key={entry.plan} className="flex min-w-0 items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: PLAN_COLORS[entry.plan?.toLowerCase()] || CHART_COLORS[i % CHART_COLORS.length] }} aria-hidden="true" />
+                    <span className="truncate capitalize text-fg-muted">{entry.plan}:</span>
+                    <span className="font-bold tabular-nums text-fg">{entry.count}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Daily Active Logins */}
-            <div className="glass-card p-5">
+            {/* Daily active users */}
+            <div className="card md:col-span-2 xl:col-span-1">
               <ChartHeader
                 icon={HiOutlineKey}
                 title="Daily Active Users"
                 subtitle="Last 30 days login activity"
               />
-              <div className="w-full h-[220px]">
+              <div className="h-[200px] w-full min-w-0 text-fg-faint md:h-[240px] xl:h-[200px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={overview?.dailyLogins || []} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                  <AreaChart data={overview?.dailyLogins || []} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="gradLogins" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.35} />
-                        <stop offset="100%" stopColor="#06b6d4" stopOpacity={0} />
+                        <stop offset="0%" stopColor="var(--chart-2)" stopOpacity={0.35} />
+                        <stop offset="100%" stopColor="var(--chart-2)" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-white/[0.06]" />
-                    <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <CartesianGrid {...GRID_PROPS} vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 9, fill: 'currentColor' }} axisLine={false} tickLine={false} minTickGap={16} />
+                    <YAxis width={32} tick={AXIS_TICK} axisLine={false} tickLine={false} />
                     <Tooltip content={<CustomTooltip />} />
-                    <Area type="monotone" dataKey="count" stroke="#06b6d4" strokeWidth={2.5} fill="url(#gradLogins)" name="Active Logins" />
+                    <Area type="monotone" dataKey="count" stroke="var(--chart-2)" strokeWidth={2.5} fill="url(#gradLogins)" name="Active Logins" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -351,69 +379,72 @@ const SAAnalytics = () => {
         </div>
       )}
 
-      {/* TAB 2: COLLEGE-WISE COMPARISON */}
+      {/* ── TAB 2: COLLEGE-WISE COMPARISON ── */}
       {tab === 'colleges' && (
-        <div className="space-y-5">
-          {/* Comparison Bar Chart */}
-          <div className="glass-card p-5">
+        <div
+          className="page"
+          role="tabpanel"
+          id="analytics-panel-colleges"
+          aria-labelledby="analytics-tab-colleges"
+        >
+          <div className="card">
             <ChartHeader
               icon={HiOutlineChartBar}
               title="College Comparison Matrix"
               subtitle="Comparison of total users, students, teachers, and active 30-day members"
             />
-            <div className="w-full h-[320px] sm:h-[360px]">
+            <div className="w-full min-w-0 text-fg-faint" style={{ height: compareHeight }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={colleges} layout="vertical" margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-white/[0.06]" />
-                  <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} width={130} axisLine={false} tickLine={false} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
-                  <Bar dataKey="students" fill="#6366f1" name="Students" radius={[0, 4, 4, 0]} />
-                  <Bar dataKey="teachers" fill="#10b981" name="Teachers" radius={[0, 4, 4, 0]} />
-                  <Bar dataKey="activeUsers" fill="#f59e0b" name="Active (30d)" radius={[0, 4, 4, 0]} />
+                <BarChart data={colleges} layout="vertical" margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
+                  <CartesianGrid {...GRID_PROPS} horizontal={false} />
+                  <XAxis type="number" tick={AXIS_TICK} axisLine={false} tickLine={false} />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    tick={{ fontSize: 11, fill: 'currentColor' }}
+                    width={96}
+                    tickFormatter={shortName}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip content={<CustomTooltip />} cursor={BAR_CURSOR} />
+                  <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8, color: 'var(--fg-muted)' }} />
+                  <Bar dataKey="students" fill="var(--chart-1)" name="Students" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="teachers" fill="var(--chart-3)" name="Teachers" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="activeUsers" fill="var(--chart-4)" name="Active (30d)" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Individual College Breakdown Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {colleges.map(c => (
-              <div key={c._id} className="glass-card p-5 space-y-4">
-                <div className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-white/[0.06] pb-3">
+          <div className="grid-cards">
+            {colleges.map((c) => (
+              <div key={c._id} className="card flex flex-col gap-3">
+                <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="font-extrabold text-slate-900 dark:text-white text-base truncate">
-                      {c.name}
-                    </p>
-                    <span className="font-mono text-[11px] text-indigo-600 dark:text-indigo-400 font-bold">
-                      {c.code}
-                    </span>
+                    <p className="truncate text-sm font-bold text-fg" title={c.name}>{c.name}</p>
+                    <span className="font-mono text-[11px] font-semibold text-accent">{c.code}</span>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                      c.isActive
-                        ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
-                        : 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/20'
-                    }`}>
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                    <span className={`badge ${c.isActive ? 'badge-success' : 'badge-danger'}`}>
                       {c.isActive ? 'Active' : 'Inactive'}
                     </span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/20">
-                      {c.plan}
-                    </span>
+                    <span className="badge badge-primary uppercase">{c.plan}</span>
                   </div>
                 </div>
 
+                <hr className="divider" />
+
                 <div className="grid grid-cols-4 gap-2 text-center">
                   {[
-                    { label: 'Users', val: c.users, color: 'text-indigo-600 dark:text-indigo-400' },
-                    { label: 'Students', val: c.students, color: 'text-violet-600 dark:text-violet-400' },
-                    { label: 'Teachers', val: c.teachers, color: 'text-emerald-600 dark:text-emerald-400' },
-                    { label: 'Active', val: c.activeUsers, color: 'text-amber-600 dark:text-amber-400' },
-                  ].map(s => (
-                    <div key={s.label} className="p-2 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.04]">
-                      <p className={`text-base font-extrabold ${s.color}`}>{s.val}</p>
-                      <p className="text-[10px] text-slate-500 dark:text-white/40 font-medium">{s.label}</p>
+                    { label: 'Users', val: c.users },
+                    { label: 'Students', val: c.students },
+                    { label: 'Teachers', val: c.teachers },
+                    { label: 'Active', val: c.activeUsers },
+                  ].map((s) => (
+                    <div key={s.label} className="min-w-0 rounded-xl bg-card-2 p-2">
+                      <p className="text-base font-bold tabular-nums text-fg">{s.val}</p>
+                      <p className="truncate text-[10px] font-medium text-fg-muted">{s.label}</p>
                     </div>
                   ))}
                 </div>
@@ -423,33 +454,39 @@ const SAAnalytics = () => {
         </div>
       )}
 
-      {/* TAB 3: LOGIN TRENDS */}
+      {/* ── TAB 3: LOGIN TRENDS ── */}
       {tab === 'logins' && logins && (
-        <div className="space-y-5">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {/* Top Active Colleges */}
-            <div className="glass-card p-5">
+        <div
+          className="page"
+          role="tabpanel"
+          id="analytics-panel-logins"
+          aria-labelledby="analytics-tab-logins"
+        >
+          <div className="split split-even">
+            {/* Most active colleges */}
+            <div className="card">
               <ChartHeader
                 icon={HiOutlineStar}
                 title="Most Active Colleges"
                 subtitle="Ranked by total login volume (last 30 days)"
               />
-              <div className="w-full h-[280px] sm:h-[320px]">
+              <div className="h-[280px] w-full min-w-0 text-fg-faint sm:h-[320px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={logins.topColleges || []} margin={{ top: 10, right: 10, left: -20, bottom: 40 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-white/[0.06]" />
+                  <BarChart data={logins.topColleges || []} margin={{ top: 4, right: 4, left: 0, bottom: 40 }}>
+                    <CartesianGrid {...GRID_PROPS} vertical={false} />
                     <XAxis
                       dataKey="name"
-                      tick={{ fontSize: 10, fill: '#94a3b8' }}
+                      tick={AXIS_TICK}
+                      tickFormatter={shortName}
                       axisLine={false}
                       tickLine={false}
                       angle={-25}
                       textAnchor="end"
                       interval={0}
                     />
-                    <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="logins" radius={[6, 6, 0, 0]} name="Logins">
+                    <YAxis width={32} tick={AXIS_TICK} axisLine={false} tickLine={false} />
+                    <Tooltip content={<CustomTooltip />} cursor={BAR_CURSOR} />
+                    <Bar dataKey="logins" radius={[4, 4, 0, 0]} name="Logins">
                       {(logins.topColleges || []).map((_, i) => (
                         <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                       ))}
@@ -459,8 +496,8 @@ const SAAnalytics = () => {
               </div>
             </div>
 
-            {/* Logins by Role Breakdown */}
-            <div className="glass-card p-5">
+            {/* Logins by role */}
+            <div className="card">
               <ChartHeader
                 icon={HiOutlineUserGroup}
                 title="Logins by User Role"
@@ -469,22 +506,22 @@ const SAAnalytics = () => {
               {(() => {
                 // Group loginsByRole into day objects
                 const dayMap = {};
-                (logins.loginsByRole || []).forEach(e => {
+                (logins.loginsByRole || []).forEach((e) => {
                   if (!dayMap[e._id.day]) dayMap[e._id.day] = { day: e._id.day };
                   dayMap[e._id.day][e._id.role] = e.count;
                 });
                 const chartData = Object.values(dayMap).sort((a, b) => a.day.localeCompare(b.day));
-                const roles = [...new Set((logins.loginsByRole || []).map(e => e._id.role))];
+                const roles = [...new Set((logins.loginsByRole || []).map((e) => e._id.role))];
 
                 return (
-                  <div className="w-full h-[280px] sm:h-[320px]">
+                  <div className="h-[280px] w-full min-w-0 text-fg-faint sm:h-[320px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-white/[0.06]" />
-                        <XAxis dataKey="day" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Legend wrapperStyle={{ fontSize: 11, paddingTop: 5 }} />
+                      <BarChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                        <CartesianGrid {...GRID_PROPS} vertical={false} />
+                        <XAxis dataKey="day" tick={AXIS_TICK} axisLine={false} tickLine={false} minTickGap={16} />
+                        <YAxis width={32} tick={AXIS_TICK} axisLine={false} tickLine={false} />
+                        <Tooltip content={<CustomTooltip />} cursor={BAR_CURSOR} />
+                        <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4, color: 'var(--fg-muted)' }} />
                         {roles.map((r, i) => (
                           <Bar key={r} dataKey={r} stackId="a" fill={CHART_COLORS[i % CHART_COLORS.length]} name={r} />
                         ))}

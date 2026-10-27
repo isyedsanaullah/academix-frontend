@@ -1,169 +1,98 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import PublicFooter from '@/components/common/PublicFooter';
+import LegalLayout, { P, H3, UL, Note } from '@/components/common/LegalLayout';
+
+const PLAN_ROWS = [
+  ['Starter', '7,999', '79,990', '300', '20', '5 GB'],
+  ['Standard', '19,999', '199,990', '1,000', '60', '20 GB'],
+  ['Premium', '44,999', '449,990', '2,500', '150', '75 GB'],
+  ['Enterprise', '119,999', '1,199,990', '5,000', '400', '300 GB'],
+];
+
+const SECTIONS = [
+  { id: 'agreement', title: 'Agreement to these terms', content: (<>
+    <P>By requesting a subscription, registering or using CollegesHub, a college and its administrators, teachers, staff and students agree to these Terms & Conditions. If you do not agree, do not use the platform.</P>
+  </>) },
+  { id: 'platform-use', title: 'Using the platform', content: (<>
+    <P>CollegesHub is a digital college management platform. Each college has its own workspace, and what it can use depends on its subscription plan. Use the platform only for lawful purposes connected to running your college.</P>
+  </>) },
+  { id: 'accounts', title: 'Accounts and responsibilities', content: (<>
+    <P>Each college’s administrator manages access in its workspace: inviting staff and students, maintaining accounts and keeping sign-in details secure. The college is responsible for all activity in its workspace.</P>
+  </>) },
+  { id: 'plans', title: 'Plans, prices and billing', content: (<>
+    <P>Prices are in Pakistani rupees (PKR) and exclude sales tax, which is confirmed before invoicing. Yearly billing charges 10 months for 12.</P>
+    <div className="mt-5 overflow-x-auto rounded-xl border border-[#DDE6F0]">
+      <table className="w-full min-w-[560px] border-collapse text-left text-sm">
+        <caption className="sr-only">CollegesHub plans and prices</caption>
+        <thead className="bg-[#F4F7FB] text-[#52657C]">
+          <tr>{['Plan', 'Per month (PKR)', 'Per year (PKR)', 'Students', 'Staff accounts', 'Storage'].map((h) => <th key={h} scope="col" className="px-4 py-3 font-semibold">{h}</th>)}</tr>
+        </thead>
+        <tbody>
+          {PLAN_ROWS.map((r) => (
+            <tr key={r[0]} className="border-t border-[#EEF2F7]">
+              <th scope="row" className="px-4 py-3 font-semibold text-[#0E2238]">{r[0]}</th>
+              {r.slice(1).map((c, i) => <td key={i} className="px-4 py-3">{c}</td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <H3>Extras</H3>
+    <UL items={[
+      'Extra students: PKR 18 (Standard), PKR 14 (Premium) or PKR 12 (Enterprise) per student per month above the included number. Starter does not sell extra students.',
+      'Extra storage on any plan: PKR 150 per 10 GB per month, rounded up to the next 10 GB.',
+      'Enterprise only: extra AI tokens at PKR 450 per 1 million tokens after the shared 100M tokens a month are used, and PKR 15,000 per month for each campus beyond 3.',
+      'SMS and WhatsApp alerts use prepaid credits at the provider’s rate plus a margin. Online payment gateway fees are passed to the college. Both are separate from the plan price.',
+      'Custom plans start from a platform fee of PKR 5,999 plus one pack per chosen service, and never below PKR 7,999. Ask us for a quote.',
+    ]} />
+    <P>Payment is due at the start of each billing period. We may change prices with reasonable advance notice.</P>
+  </>) },
+  { id: 'limits', title: 'Limits and upgrades', content: (<>
+    <P>Each plan has limits for students, staff accounts, storage, online admission applications, audit log history and campuses. A college with more than 300 students needs Standard or higher. A college can move to a higher plan at any time.</P>
+    <P>Please contact the developer to discuss your capacity before choosing a plan.</P>
+  </>) },
+  { id: 'service-status', title: 'What is ready and what is coming', content: (<>
+    <P>Every service in our plans is marked as available now, being completed or coming soon. Most Standard, Premium and Enterprise services are still being built. Services that are coming soon or in development are listed so you can see our direction. They are not promised for any particular date.</P>
+    <P>When a service is released, it appears automatically for colleges on a plan that includes it. No migration is needed.</P>
+    <Note>Choose a plan based on the services marked “Available now”. Starter is the plan we recommend today.</Note>
+  </>) },
+  { id: 'plan-changes', title: 'Changing plans and your data', content: (<>
+    <P>Changing plans never deletes your existing data. After a downgrade, services above your new plan become read-only for 30 days, and your data is kept for 90 days.</P>
+  </>) },
+  { id: 'late-payment', title: 'Late payment and suspension', content: (<>
+    <P>If a payment is late, you keep full access for 7 days, then read-only access for 14 days. After that, the workspace is suspended.</P>
+    <P>We may also restrict or end access if the platform is used against these terms, or if the college asks us to deactivate its workspace. Data may be kept afterward as described in our Privacy Policy.</P>
+  </>) },
+  { id: 'acceptable-use', title: 'Acceptable use', content: (<>
+    <P>You must not use CollegesHub for unlawful activity, upload harmful or illegal content, try to break the security of any workspace, or disrupt the service for other colleges.</P>
+  </>) },
+  { id: 'content', title: 'Uploaded content', content: (<>
+    <P>Documents, images, student records and other files remain the responsibility of the college that uploads them. CollegesHub does not claim ownership of your data. Colleges must make sure what they upload follows the law.</P>
+  </>) },
+  { id: 'availability', title: 'Service availability', content: (<>
+    <P>CollegesHub runs on a best-effort basis, and we do not guarantee a specific uptime percentage. Maintenance and unexpected technical problems can cause short outages. We will announce planned maintenance where we can.</P>
+  </>) },
+  { id: 'changes', title: 'Changes to features and pricing', content: (<>
+    <P>We may change features, limits or pricing with reasonable advance notice. If you keep using the platform after that notice, you accept the updated terms.</P>
+  </>) },
+  { id: 'contact', title: 'Contact us', content: (<>
+    <P>For questions about these terms or your subscription:</P>
+    <UL items={['Email: syyedsanaullah@gmail.com', 'Phone: +92 313 5013303']} />
+  </>) },
+];
 
 export default function TermsPage() {
-  const router = useRouter();
-
   return (
-    <div className="min-h-screen bg-[#04070d] text-white/85 flex flex-col font-sans">
-      {/* HEADER */}
-      <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-[#04070d]/85 backdrop-blur-xl shadow-[0_1px_0_rgba(255,255,255,0.05)]">
-        <div className="max-w-[1440px] mx-auto px-3.5 sm:px-6 lg:px-10 h-16 sm:h-[68px] flex items-center justify-between gap-3 sm:gap-4">
-          <div className="flex items-center gap-2.5 sm:gap-3.5 cursor-pointer shrink-0 min-w-0" onClick={() => router.push('/')}>
-            <div className="w-10 h-10 sm:w-11 sm:h-11 shrink-0 relative">
-              <Image src="/logo.svg" alt="Academix" fill className="object-contain" priority />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-base sm:text-[17px] font-extrabold text-white leading-none tracking-tight">Academix</h1>
-              <p className="text-[9px] sm:text-[10px] text-white/40 font-semibold uppercase tracking-wider sm:tracking-widest mt-1 leading-none truncate">Terms & Conditions</p>
-            </div>
-          </div>
-          <button onClick={() => router.push('/')} className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs font-semibold text-white/70 hover:text-white bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 rounded-xl transition-all shadow-sm shrink-0">
-            Back to Home
-          </button>
-        </div>
-      </header>
-
-      {/* CONTAINER */}
-      <div className="flex-1 max-w-[800px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-[#0d1117] border border-white/[0.06] rounded-2xl p-6 sm:p-10 space-y-6">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Terms &amp; Conditions
-            </h1>
-            <p className="text-xs text-white/40 mt-2">Last Updated: August 2026</p>
-          </div>
-
-          <hr className="border-white/[0.06]" />
-
-          <div className="space-y-7 text-sm text-white/70 leading-relaxed font-normal">
-
-            <section className="space-y-2">
-              <h2 className="text-base font-bold text-white tracking-tight">1. Agreement to Terms</h2>
-              <p>
-                By requesting a subscription, registering, or accessing the Academix platform, educational institutions, administrators, teachers, and students agree to be bound by these Terms &amp; Conditions. If you do not agree to these terms, do not use the platform.
-              </p>
-            </section>
-
-            <section className="space-y-2">
-              <h2 className="text-base font-bold text-white tracking-tight">2. Platform Usage</h2>
-              <p>
-                Academix is a digital college management platform. Access is granted based on the subscription plan associated with the college's workspace. Each college has a separate workspace. Users must only use the platform for lawful purposes related to their college operations.
-              </p>
-            </section>
-
-            <section className="space-y-2">
-              <h2 className="text-base font-bold text-white tracking-tight">3. Account Responsibilities</h2>
-              <p>
-                Each college's designated administrator is responsible for managing access within their workspace. This includes inviting staff and students, maintaining user accounts, and ensuring that credentials are kept secure. Any activity carried out under a college workspace is the responsibility of that institution.
-              </p>
-            </section>
-
-            <section className="space-y-2">
-              <h2 className="text-base font-bold text-white tracking-tight">4. Subscription Plans &amp; Payments</h2>
-              <p>
-                Academix currently offers the following monthly subscription plans:
-              </p>
-              <ul className="list-disc list-inside space-y-1 pl-2 text-white/60">
-                <li><strong className="text-white/80">Standard Plan</strong> — PKR 12,000 per month. Maximum 300 users, 20 GB storage, 100 online applications, 5 years of historical records.</li>
-                <li><strong className="text-white/80">Professional Plan</strong> — PKR 13,500 per month. Maximum 600 users, 30 GB storage, 150 online applications, 5 years of historical records.</li>
-                <li><strong className="text-white/80">Premium Plan</strong> — PKR 15,000 per month. Includes 50 GB storage, 10 years of historical records, AI features, digitally verifiable certificates, transport management, and the full attendance system (fingerprint/biometric, QR-code scanning, and manual attendance as a backup method).</li>
-              </ul>
-              <p className="mt-2">
-                Monthly payments are due at the start of each billing period. Failure to clear dues may result in restricted or suspended access to the platform. Plan pricing is subject to change with reasonable advance notice.
-              </p>
-            </section>
-
-            <section className="space-y-2">
-              <h2 className="text-base font-bold text-white tracking-tight">5. Developer Onboarding Charges</h2>
-              <p>
-                Developer onboarding and initial system setup is included at no additional cost for Premium plan subscribers. For Standard and Professional plan subscribers, developer onboarding charges apply separately and will be communicated prior to setup.
-              </p>
-            </section>
-
-            <section className="space-y-2">
-              <h2 className="text-base font-bold text-white tracking-tight">6. Feature &amp; Usage Limits</h2>
-              <p>
-                Each subscription plan has associated limits for users, storage, and online applications as described above. Exceeding these limits may require an upgrade to a higher plan. The developer team should be contacted to discuss capacity requirements before a plan is selected.
-              </p>
-            </section>
-
-            <section className="space-y-2">
-              <h2 className="text-base font-bold text-white tracking-tight">7. Full System Ownership Option</h2>
-              <p>
-                As an alternative to the monthly subscription model, colleges and institutions may choose the Full System Ownership option for a one-time payment of <strong className="text-white/80">PKR 280,000</strong>. This results in the complete Academix system being handed over to the purchasing organization.
-              </p>
-              <p className="mt-2">What is included:</p>
-              <ul className="list-disc list-inside space-y-1 pl-2 text-white/60">
-                <li>Complete system handover</li>
-                <li>Developer onboarding</li>
-                <li>3 months of developer support after handover</li>
-              </ul>
-              <p className="mt-2">After the handover, the customer is solely responsible for all operational infrastructure and related recurring costs, including:</p>
-              <ul className="list-disc list-inside space-y-1 pl-2 text-white/60">
-                <li>Hosting</li>
-                <li>Domain</li>
-                <li>Database and server infrastructure</li>
-                <li>All other operational infrastructure costs</li>
-              </ul>
-              <p className="mt-2">
-                The one-time payment does not include lifetime hosting, lifetime domain registration, lifetime database costs, or unlimited future development. Developer support or custom development after the included 3-month period should be discussed and agreed upon separately.
-              </p>
-            </section>
-
-            <section className="space-y-2">
-              <h2 className="text-base font-bold text-white tracking-tight">8. Acceptable Use</h2>
-              <p>
-                Users must not use the Academix platform to engage in any unlawful activity, upload harmful or illegal content, attempt to compromise the security of any workspace, or misuse the platform in a way that disrupts service for other colleges.
-              </p>
-            </section>
-
-            <section className="space-y-2">
-              <h2 className="text-base font-bold text-white tracking-tight">9. Uploaded Content &amp; Data Responsibility</h2>
-              <p>
-                Content uploaded to the platform — including documents, images, student records, and other files — remains the responsibility of the uploading institution. Academix does not claim ownership over uploaded institutional data. Colleges are responsible for ensuring that the content they upload complies with applicable laws.
-              </p>
-            </section>
-
-            <section className="space-y-2">
-              <h2 className="text-base font-bold text-white tracking-tight">10. Service Availability</h2>
-              <p>
-                Academix operates on a best-effort basis. No specific uptime percentage is guaranteed. Maintenance periods and unforeseen technical issues may result in temporary unavailability. We aim to minimize disruptions and will communicate planned maintenance where possible.
-              </p>
-            </section>
-
-            <section className="space-y-2">
-              <h2 className="text-base font-bold text-white tracking-tight">11. Suspension &amp; Termination</h2>
-              <p>
-                Access to a college workspace may be restricted or terminated if subscription payments are not made, if the platform is used in violation of these terms, or if the college requests deactivation. Data may be retained for a period following termination in accordance with the Privacy Policy.
-              </p>
-            </section>
-
-            <section className="space-y-2">
-              <h2 className="text-base font-bold text-white tracking-tight">12. Changes to Features &amp; Pricing</h2>
-              <p>
-                Academix reserves the right to modify features, usage limits, or pricing with reasonable advance notice. Continued use of the platform after such notice constitutes acceptance of the updated terms.
-              </p>
-            </section>
-
-            <section className="space-y-2">
-              <h2 className="text-base font-bold text-white tracking-tight">13. Contact Information</h2>
-              <p>For terms inquiries or questions about your subscription, please contact:</p>
-              <p className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04] text-xs font-mono w-fit">
-                Email: syyedsanaullah@gmail.com<br />
-                Phone: +92 313 5013303
-              </p>
-            </section>
-
-          </div>
-        </div>
-      </div>
-
-      {/* FOOTER */}
-      <PublicFooter />
-    </div>
+    <LegalLayout
+      title="Terms & Conditions"
+      updated="October 23, 2026"
+      summary={[
+        'Four monthly plans, from PKR 7,999. Yearly billing is 10 months for 12.',
+        'Every service is labelled available now, being completed or coming soon.',
+        'Changing plans never deletes your data.',
+      ]}
+      sections={SECTIONS}
+      other={{ href: '/privacy', label: 'Privacy Policy' }}
+    />
   );
 }

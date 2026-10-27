@@ -34,37 +34,21 @@ export default function ActivityItem({ activity, isCompact = false }) {
   const timeString = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const dateString = dateObj.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
 
-  // Status Badge Styling (Light + Dark compatible)
+  // Status badge (text + icon + tint, so never colour alone)
   const getStatusBadge = (st) => {
     switch (st?.toLowerCase()) {
       case 'verified':
       case 'completed':
       case 'success':
-        return {
-          label: 'Verified',
-          icon: HiOutlineCheckCircle,
-          cls: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
-        };
+        return { label: 'Verified', icon: HiOutlineCheckCircle, cls: 'badge-success' };
       case 'pending':
-        return {
-          label: 'Pending',
-          icon: HiOutlineClock,
-          cls: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20'
-        };
+        return { label: 'Pending', icon: HiOutlineClock, cls: 'badge-warning' };
       case 'rejected':
       case 'failed':
       case 'issue':
-        return {
-          label: 'Issue',
-          icon: HiOutlineExclamationCircle,
-          cls: 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/20'
-        };
+        return { label: 'Issue', icon: HiOutlineExclamationCircle, cls: 'badge-danger' };
       default:
-        return {
-          label: st || 'Logged',
-          icon: HiOutlineInformationCircle,
-          cls: 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/20'
-        };
+        return { label: st || 'Logged', icon: HiOutlineInformationCircle, cls: 'badge-primary' };
     }
   };
 
@@ -72,93 +56,95 @@ export default function ActivityItem({ activity, isCompact = false }) {
   const StatusIcon = badge.icon;
   const hasMetadata = metadata && Object.keys(metadata).length > 0;
 
+  // Compact rows live inside another card (dashboard widget) → light block, not a nested card.
+  const shell = isCompact
+    ? 'flex w-full items-start gap-2.5 rounded-xl bg-card-2 p-2.5'
+    : 'card flex w-full items-start gap-3 hover:border-line-strong';
+
   return (
-    <div
-      className={`w-full flex items-start gap-3 sm:gap-4 ${
-        isCompact ? 'p-3 sm:p-3.5' : 'p-4 sm:p-4.5'
-      } rounded-2xl bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.06] hover:border-indigo-500/30 dark:hover:border-indigo-500/30 transition-all duration-200 shadow-xs hover:shadow-md`}
-    >
+    <div className={shell}>
       <ActivityCategoryIcon category={category} size={isCompact ? 16 : 18} />
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
           <h4
-            className={`font-bold text-slate-900 dark:text-white leading-tight ${
-              isCompact ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'
-            }`}
+            className={`min-w-0 break-words font-semibold leading-tight text-fg ${isCompact ? 'text-[13px]' : 'text-sm sm:text-[15px]'
+              }`}
           >
             {title}
           </h4>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex shrink-0 items-center gap-1.5">
             {category && (
-              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-white/60 border-slate-200 dark:border-white/[0.08]">
-                <HiOutlineTag size={11} />
+              <span className="badge badge-neutral hidden sm:inline-flex">
+                <HiOutlineTag size={11} aria-hidden="true" />
                 {category}
               </span>
             )}
-            <span
-              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border capitalize ${badge.cls}`}
-            >
-              <StatusIcon size={12} />
+            <span className={`badge capitalize ${badge.cls}`}>
+              <StatusIcon size={12} aria-hidden="true" />
               {badge.label}
             </span>
           </div>
         </div>
 
         {description && (
-          <p className="text-xs text-slate-600 dark:text-white/70 mt-1 leading-relaxed">
+          <p className="mt-1 break-words text-xs leading-relaxed text-fg-muted">
             {description}
           </p>
         )}
 
-        {/* Footer Info Row */}
-        <div className="flex items-center gap-3 mt-2.5 flex-wrap text-[11px] text-slate-500 dark:text-white/40">
+        {/* Footer info row */}
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-fg-muted">
           <div className="flex items-center gap-1">
-            <HiOutlineClock size={13} className="text-slate-400 dark:text-white/40 shrink-0" />
-            <span className="font-medium">{timeString} · {dateString}</span>
+            <HiOutlineClock size={13} className="shrink-0 text-fg-faint" aria-hidden="true" />
+            <span className="font-medium tabular-nums">{timeString} · {dateString}</span>
           </div>
 
           {actorName && (
-            <div className="flex items-center gap-1">
-              <HiOutlineUser size={13} className="text-slate-400 dark:text-white/40 shrink-0" />
-              <span>
-                by <strong className="font-bold text-slate-800 dark:text-white/90">{actorName}</strong>
-                {actorRole && <span className="opacity-75 font-normal"> ({actorRole})</span>}
+            <div className="flex min-w-0 items-center gap-1">
+              <HiOutlineUser size={13} className="shrink-0 text-fg-faint" aria-hidden="true" />
+              <span className="min-w-0 break-words">
+                by <strong className="font-semibold text-fg">{actorName}</strong>
+                {actorRole && <span className="font-normal text-fg-faint"> ({actorRole})</span>}
               </span>
             </div>
           )}
 
           {category && (
-            <span className="inline-flex sm:hidden items-center gap-1 text-[10px] text-slate-500 dark:text-white/40">
-              <HiOutlineTag size={11} />
+            <span className="inline-flex items-center gap-1 text-[10px] text-fg-faint sm:hidden">
+              <HiOutlineTag size={11} aria-hidden="true" />
               {category}
             </span>
           )}
 
           {!isCompact && hasMetadata && (
             <button
+              type="button"
               onClick={() => setExpanded(!expanded)}
-              className="ml-auto text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-bold flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 transition-colors text-[10px] cursor-pointer"
+              aria-expanded={expanded}
+              className="btn-ghost btn-sm ml-auto"
             >
               <span>{expanded ? 'Hide Details' : 'View Details'}</span>
-              {expanded ? <HiOutlineChevronUp size={13} /> : <HiOutlineChevronDown size={13} />}
+              {expanded
+                ? <HiOutlineChevronUp size={14} aria-hidden="true" />
+                : <HiOutlineChevronDown size={14} aria-hidden="true" />}
             </button>
           )}
         </div>
 
-        {/* Expanded Metadata Details */}
+        {/* Expanded metadata details */}
         {expanded && hasMetadata && (
-          <div className="mt-3 p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.08] flex flex-wrap gap-2">
+          <div className="mt-2.5 flex flex-wrap gap-2 rounded-xl bg-card-2 p-2.5">
             {Object.entries(metadata).map(([k, v]) => (
               <div
                 key={k}
-                className="text-xs px-2.5 py-1 rounded-lg bg-white dark:bg-[#131920] border border-slate-200 dark:border-white/[0.06] text-slate-800 dark:text-white/90 shadow-xs"
+                className="min-w-0 max-w-full break-words rounded-lg border border-line bg-card px-2.5 py-1 text-xs"
               >
-                <span className="text-slate-500 dark:text-white/40 font-medium capitalize">
+                <span className="font-medium capitalize text-fg-muted">
                   {k.replace(/([A-Z])/g, ' $1')}:{' '}
                 </span>
-                <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                <span className="break-all font-mono font-semibold text-accent">
                   {typeof v === 'object' ? JSON.stringify(v) : String(v)}
                 </span>
               </div>

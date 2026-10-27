@@ -1,0 +1,50 @@
+# ════════════════════════════════════════════════════════════
+#  CESMS / Academix — Hostinger Apache .htaccess
+#  Place this file in the root of public_html (or the subfolder
+#  where you upload the Next.js static export output).
+# ════════════════════════════════════════════════════════════
+
+Options -MultiViews
+RewriteEngine On
+
+# ── 1. Serve existing files/directories as-is ───────────────
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# ── 2. Serve .html file if it exists (trailingSlash=true ────
+#       generates /route/index.html for every page)
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^(.*)$ $1.html [L]
+
+# ── 3. Try /route/index.html (trailingSlash directory form) ──
+RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI}/index.html -f
+RewriteRule ^(.*)/?$ $1/index.html [L]
+
+# ── 4. Fall back: send everything else to /index.html ────────
+#       (catches deep links and browser refreshes)
+RewriteRule ^ /index.html [L]
+
+# ── Security headers ──────────────────────────────────────────
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set X-XSS-Protection "1; mode=block"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# ── Cache static assets aggressively ─────────────────────────
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css              "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType image/webp            "access plus 1 year"
+  ExpiresByType image/svg+xml         "access plus 1 year"
+  ExpiresByType font/woff2            "access plus 1 year"
+  ExpiresByType application/json      "access plus 0 seconds"
+</IfModule>
+
+# ── Enable gzip compression ───────────────────────────────────
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json
+</IfModule>

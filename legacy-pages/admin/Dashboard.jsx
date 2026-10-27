@@ -4,6 +4,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import RecentActivityWidget from '../../components/activity/RecentActivityWidget';
+import OnboardingChecklistWidget from '../../components/admin/OnboardingChecklistWidget';
 import {
   HiOutlineAcademicCap, 
   HiOutlineUserGroup, 

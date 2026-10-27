@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { 
-  HiOutlineOfficeBuilding, 
-  HiOutlineUserGroup, 
-  HiOutlineAcademicCap, 
-  HiOutlineShieldCheck, 
-  HiOutlineExclamation, 
-  HiOutlineTrendingUp, 
+import {
+  HiOutlineOfficeBuilding,
+  HiOutlineUserGroup,
+  HiOutlineAcademicCap,
+  HiOutlineShieldCheck,
+  HiOutlineExclamation,
+  HiOutlineTrendingUp,
   HiOutlineArrowRight,
   HiOutlineChartBar
 } from 'react-icons/hi';
@@ -18,9 +18,9 @@ import RecentActivityWidget from '../../components/activity/RecentActivityWidget
 const CustomChartTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white dark:bg-[#0f1721] p-3 rounded-xl border border-slate-200 dark:border-white/10 shadow-xl text-xs">
-        <p className="font-semibold text-slate-600 dark:text-white/70 mb-1">{label}</p>
-        <p className="font-bold text-indigo-600 dark:text-indigo-400">
+      <div className="rounded-xl border border-line bg-card p-2.5 text-xs shadow-lg">
+        <p className="mb-1 font-semibold text-fg-muted">{label}</p>
+        <p className="font-bold tabular-nums text-accent">
           {payload[0].name}: {payload[0].value}
         </p>
       </div>
@@ -44,10 +44,10 @@ const SuperAdminDashboard = () => {
         ]);
         setData(dash.data.data);
         setAnalytics(ov.data.data);
-      } catch { 
-        toast.error('Failed to load dashboard'); 
-      } finally { 
-        setLoading(false); 
+      } catch {
+        toast.error('Failed to load dashboard');
+      } finally {
+        setLoading(false);
       }
     };
     fetch();
@@ -55,271 +55,270 @@ const SuperAdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[350px] w-full">
-        <div className="w-9 h-9 border-3 border-indigo-500/20 border-t-indigo-600 rounded-full animate-spin" />
+      <div className="page" aria-busy="true">
+        <div className="page-head">
+          <div className="min-w-0 flex-1">
+            <div className="skeleton h-7 w-56 max-w-full" />
+            <div className="skeleton mt-2 h-4 w-72 max-w-full" />
+          </div>
+          <div className="skeleton h-10 w-40" />
+        </div>
+        <div className="stat-grid stat-grid-3">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="skeleton h-[88px]" />
+          ))}
+        </div>
+        <div className="split split-even">
+          <div className="skeleton h-[220px]" />
+          <div className="skeleton h-[220px]" />
+        </div>
       </div>
     );
   }
 
   const s = data?.stats || {};
   const plans = data?.planDistribution || {};
-
-  const cards = [
-    { 
-      label: 'Total Colleges',  
-      value: s.totalColleges || 0,   
-      icon: HiOutlineOfficeBuilding, 
-      color: 'text-indigo-600 dark:text-indigo-400', 
-      bg: 'bg-indigo-50 dark:bg-indigo-500/12 border-indigo-100 dark:border-indigo-500/20' 
-    },
-    { 
-      label: 'Active Colleges', 
-      value: s.activeColleges || 0,  
-      icon: HiOutlineShieldCheck,   
-      color: 'text-emerald-600 dark:text-emerald-400', 
-      bg: 'bg-emerald-50 dark:bg-emerald-500/12 border-emerald-100 dark:border-emerald-500/20' 
-    },
-    { 
-      label: 'Total Users',     
-      value: s.totalUsers || 0,      
-      icon: HiOutlineUserGroup,     
-      color: 'text-sky-600 dark:text-sky-400', 
-      bg: 'bg-sky-50 dark:bg-sky-500/12 border-sky-100 dark:border-sky-500/20' 
-    },
-    { 
-      label: 'Total Students',  
-      value: s.totalStudents || 0,   
-      icon: HiOutlineAcademicCap,   
-      color: 'text-amber-600 dark:text-amber-400', 
-      bg: 'bg-amber-50 dark:bg-amber-500/12 border-amber-100 dark:border-amber-500/20' 
-    },
-    { 
-      label: 'Suspended',       
-      value: s.suspendedColleges || 0, 
-      icon: HiOutlineExclamation,   
-      color: 'text-rose-600 dark:text-rose-400', 
-      bg: 'bg-rose-50 dark:bg-rose-500/12 border-rose-100 dark:border-rose-500/20' 
-    },
-    { 
-      label: 'Growth Rate',          
-      value: '+12%',                  
-      icon: HiOutlineTrendingUp,    
-      color: 'text-purple-600 dark:text-purple-400', 
-      bg: 'bg-purple-50 dark:bg-purple-500/12 border-purple-100 dark:border-purple-500/20' 
-    },
-  ];
+  const recentColleges = data?.recentColleges || [];
 
   const totalForPct = s.totalColleges || 1;
-  const planData = [
-    { name: 'Basic',      count: plans.basic || 0,      color: '#60a5fa' },
-    { name: 'Premium',    count: plans.premium || 0,    color: '#818cf8' },
-    { name: 'Enterprise', count: plans.enterprise || 0, color: '#fbbf24' },
+  // Derived from existing numbers only: share of colleges that are active.
+  const activeShare = s.totalColleges ? Math.round(((s.activeColleges || 0) / s.totalColleges) * 100) : 0;
+
+  const cards = [
+    { label: 'Total Colleges', value: s.totalColleges || 0, icon: HiOutlineOfficeBuilding, tone: '' },
+    { label: 'Active Colleges', value: s.activeColleges || 0, icon: HiOutlineShieldCheck, tone: 'text-ok' },
+    { label: 'Total Users', value: s.totalUsers || 0, icon: HiOutlineUserGroup, tone: '' },
+    { label: 'Total Students', value: s.totalStudents || 0, icon: HiOutlineAcademicCap, tone: '' },
+    {
+      label: 'Suspended',
+      value: s.suspendedColleges || 0,
+      icon: HiOutlineExclamation,
+      tone: (s.suspendedColleges || 0) > 0 ? 'text-bad' : ''
+    },
+    { label: 'Active Share', value: `${activeShare}%`, icon: HiOutlineTrendingUp, tone: '' },
   ];
 
+  const planData = [
+    { name: 'Basic', count: plans.basic || 0, color: 'var(--chart-2)' },
+    { name: 'Premium', count: plans.premium || 0, color: 'var(--chart-3)' },
+    { name: 'Enterprise', count: plans.enterprise || 0, color: 'var(--chart-1)' },
+  ];
+
+  const hasGrowth = analytics?.monthlyRegistrations?.length > 0;
+  const hasLogins = analytics?.dailyLogins?.length > 0;
+
   return (
-    <div className="animate-fade-in flex flex-col gap-6 w-full max-w-full pb-8">
+    <div className="page">
 
-      {/* ── 1. Top Header ────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
-        <div>
-          <div className="flex items-center gap-2.5 flex-wrap mb-1">
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              Super Admin Overview
-            </h1>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Platform Healthy
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-white/50 font-medium">
-            Global operational overview across all registered colleges
-          </p>
+      {/* ── 1. Page header ───────────────────────────────────────────── */}
+      <div className="page-head">
+        <div className="min-w-0">
+          <h1 className="page-title">Super Admin Overview</h1>
+          <p className="page-sub">Global operational overview across all registered colleges</p>
         </div>
-
-        <button 
-          onClick={() => navigate('/super-admin/colleges')} 
-          className="btn-primary self-start sm:self-auto px-5 py-2.5 shadow-md shadow-indigo-600/20 hover:shadow-indigo-600/30 flex items-center justify-center gap-2 text-xs sm:text-sm font-bold active:scale-98 transition-all"
-        >
-          <HiOutlineOfficeBuilding size={18} />
-          <span>Manage Colleges</span>
-        </button>
+        <div className="page-actions">
+          <button type="button" onClick={() => navigate('/super-admin/colleges')} className="btn-primary">
+            <HiOutlineOfficeBuilding size={18} aria-hidden="true" />
+            <span>Manage Colleges</span>
+          </button>
+        </div>
       </div>
 
-      {/* ── 2. Stat Cards Grid ───────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 w-full">
-        {cards.map((c, i) => {
+      {/* ── 2. KPI strip ─────────────────────────────────────────────── */}
+      <div className="stat-grid stat-grid-3">
+        {cards.map((c) => {
           const IconComp = c.icon;
           return (
-            <div 
-              key={i} 
-              className="glass-card p-4 sm:p-5 bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.06] rounded-2xl shadow-xs dark:shadow-none flex flex-col justify-between gap-3 hover:border-indigo-500/30 hover:-translate-y-0.5 transition-all duration-200"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-white/45 uppercase tracking-wider truncate">
-                  {c.label}
+            <div key={c.label} className="stat-card">
+              <div className="stat-top">
+                <span className="stat-label truncate">{c.label}</span>
+                <span className="stat-icon">
+                  <IconComp size={18} aria-hidden="true" />
                 </span>
-                <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl ${c.bg} border flex items-center justify-center shrink-0`}>
-                  <IconComp className={`text-base sm:text-lg ${c.color}`} />
-                </div>
               </div>
-
-              <div className="mt-1">
-                <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-none tracking-tight">
-                  {typeof c.value === 'number' ? c.value.toLocaleString() : c.value}
-                </p>
+              <div className={`stat-value tabular-nums ${c.tone}`}>
+                {typeof c.value === 'number' ? c.value.toLocaleString() : c.value}
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* ── 3. Middle Section: Subscription Plans & Recent Colleges ──── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 w-full">
+      {/* ── 3. Subscription plans & recent colleges ──────────────────── */}
+      <div className="split split-even">
 
-        {/* Subscription Plans Card */}
-        <div className="glass-card p-5 sm:p-6 bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.06] rounded-2xl shadow-xs dark:shadow-none flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100 dark:border-white/[0.04]">
-              <HiOutlineChartBar size={18} className="text-indigo-600 dark:text-indigo-400" />
-              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
-                Subscription Tier Distribution
-              </h3>
+        {/* Subscription tier distribution */}
+        <div className="card min-w-0">
+          <div className="card-head">
+            <div className="card-title flex min-w-0 items-center gap-2">
+              <HiOutlineChartBar size={18} className="shrink-0 text-accent" aria-hidden="true" />
+              <span className="truncate">Subscription Tier Distribution</span>
             </div>
+          </div>
 
-            <div className="space-y-4">
-              {planData.map((p) => {
-                const pct = Math.round((p.count / totalForPct) * 100);
-                return (
-                  <div key={p.name} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs font-medium">
-                      <span className="text-slate-700 dark:text-white/80 font-bold">{p.name}</span>
-                      <span className="text-slate-500 dark:text-white/50">{p.count} colleges ({pct}%)</span>
-                    </div>
-                    <div className="h-2 w-full bg-slate-100 dark:bg-white/[0.06] rounded-full overflow-hidden">
-                      <div 
-                        className="h-full rounded-full transition-all duration-700 ease-out"
-                        style={{ width: `${pct}%`, backgroundColor: p.color }} 
+          <div className="flex flex-col gap-3">
+            {planData.map((p) => {
+              const pct = Math.round((p.count / totalForPct) * 100);
+              return (
+                <div key={p.name} className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="flex min-w-0 items-center gap-2 font-semibold text-fg">
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: p.color }}
+                        aria-hidden="true"
                       />
-                    </div>
+                      <span className="truncate">{p.name}</span>
+                    </span>
+                    <span className="shrink-0 tabular-nums text-fg-muted">
+                      {p.count} colleges ({pct}%)
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="progress" role="img" aria-label={`${p.name}: ${pct}%`}>
+                    <i style={{ width: `${pct}%`, background: p.color }} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Recent Colleges Card */}
-        <div className="glass-card p-5 sm:p-6 bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.06] rounded-2xl shadow-xs dark:shadow-none flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100 dark:border-white/[0.04]">
-              <div className="flex items-center gap-2">
-                <HiOutlineOfficeBuilding size={18} className="text-indigo-600 dark:text-indigo-400" />
-                <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
-                  Recently Onboarded Colleges
-                </h3>
-              </div>
-              <button 
-                onClick={() => navigate('/super-admin/colleges')} 
-                className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1 transition-colors"
-              >
-                <span>View all</span>
-                <HiOutlineArrowRight size={13} />
-              </button>
+        {/* Recently onboarded colleges */}
+        <div className="card min-w-0">
+          <div className="card-head">
+            <div className="card-title flex min-w-0 items-center gap-2">
+              <HiOutlineOfficeBuilding size={18} className="shrink-0 text-accent" aria-hidden="true" />
+              <span className="truncate">Recently Onboarded Colleges</span>
             </div>
-
-            {(data?.recentColleges || []).length === 0 ? (
-              <div className="py-8 text-center text-slate-500 dark:text-white/40 text-xs">
-                No colleges registered yet
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {data.recentColleges.map((c) => (
-                  <div 
-                    key={c._id} 
-                    className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/70 dark:border-white/[0.04] hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors"
-                  >
-                    <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-500/15 border border-indigo-100 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-extrabold text-xs flex items-center justify-center shrink-0 uppercase">
-                      {c.code?.slice(0, 2)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                        {c.name}
-                      </p>
-                      <p className="text-[11px] text-slate-500 dark:text-white/40 font-medium">
-                        {c.code} · {c.totalStudents || 0} students
-                      </p>
-                    </div>
-                    <span 
-                      className={`text-[10px] font-bold px-2.5 py-1 rounded-full border capitalize shrink-0 ${
-                        c.subscription?.status === 'active' 
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/20' 
-                          : 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/20'
-                      }`}
-                    >
-                      {c.subscription?.status || 'inactive'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={() => navigate('/super-admin/colleges')}
+              className="btn-ghost btn-sm shrink-0"
+            >
+              <span>View all</span>
+              <HiOutlineArrowRight size={14} aria-hidden="true" />
+            </button>
           </div>
+
+          {recentColleges.length === 0 ? (
+            <div className="empty">No colleges registered yet</div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {recentColleges.map((c) => (
+                <div key={c._id} className="flex items-center gap-2.5 rounded-xl bg-card-2 p-2.5">
+                  <div className="avatar shrink-0 uppercase" aria-hidden="true">
+                    {c.code?.slice(0, 2)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-fg" title={c.name}>
+                      {c.name}
+                    </p>
+                    <p className="truncate text-xs tabular-nums text-fg-muted">
+                      {c.code} · {c.totalStudents || 0} students
+                    </p>
+                  </div>
+                  <span
+                    className={`badge shrink-0 capitalize ${c.subscription?.status === 'active' ? 'badge-success' : 'badge-danger'}`}
+                  >
+                    {c.subscription?.status || 'inactive'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>
 
-      {/* ── 4. Charts Row ────────────────────────────────────────────── */}
-      {(analytics?.monthlyRegistrations?.length > 0 || analytics?.dailyLogins?.length > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 w-full">
-          {analytics?.monthlyRegistrations?.length > 0 && (
-            <div className="glass-card p-5 sm:p-6 bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.06] rounded-2xl shadow-xs dark:shadow-none">
-              <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                <span>📈</span> User Growth (12 months)
-              </h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <AreaChart data={analytics.monthlyRegistrations}>
-                  <defs>
-                    <linearGradient id="gU" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#818cf8" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#818cf8" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.15)" />
-                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<CustomChartTooltip />} />
-                  <Area type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={2.5} fill="url(#gU)" name="Users" />
-                </AreaChart>
-              </ResponsiveContainer>
+      {/* ── 4. Charts ────────────────────────────────────────────────── */}
+      {(hasGrowth || hasLogins) && (
+        <div className="split split-even">
+          {hasGrowth && (
+            <div className="card min-w-0">
+              <div className="card-head">
+                <div className="card-title flex min-w-0 items-center gap-2">
+                  <HiOutlineTrendingUp size={18} className="shrink-0 text-accent" aria-hidden="true" />
+                  <span className="truncate">User Growth (12 months)</span>
+                </div>
+              </div>
+              <div className="min-w-0 text-fg-faint">
+                <ResponsiveContainer width="100%" height={220}>
+                  <AreaChart data={analytics.monthlyRegistrations} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="gU" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.35} />
+                        <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.2} vertical={false} />
+                    <XAxis
+                      dataKey="label"
+                      tick={{ fontSize: 10, fill: 'currentColor' }}
+                      axisLine={false}
+                      tickLine={false}
+                      minTickGap={16}
+                    />
+                    <YAxis
+                      width={32}
+                      tick={{ fontSize: 10, fill: 'currentColor' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip content={<CustomChartTooltip />} />
+                    <Area
+                      type="monotone"
+                      dataKey="count"
+                      stroke="var(--chart-1)"
+                      strokeWidth={2.5}
+                      fill="url(#gU)"
+                      name="Users"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           )}
 
-          {analytics?.dailyLogins?.length > 0 && (
-            <div className="glass-card p-5 sm:p-6 bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.06] rounded-2xl shadow-xs dark:shadow-none">
-              <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                <span>🔑</span> Daily Logins (30 days)
-              </h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={analytics.dailyLogins}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.15)" />
-                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<CustomChartTooltip />} />
-                  <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} name="Logins" />
-                </BarChart>
-              </ResponsiveContainer>
+          {hasLogins && (
+            <div className="card min-w-0">
+              <div className="card-head">
+                <div className="card-title flex min-w-0 items-center gap-2">
+                  <HiOutlineUserGroup size={18} className="shrink-0 text-accent" aria-hidden="true" />
+                  <span className="truncate">Daily Logins (30 days)</span>
+                </div>
+              </div>
+              <div className="min-w-0 text-fg-faint">
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={analytics.dailyLogins} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.2} vertical={false} />
+                    <XAxis
+                      dataKey="label"
+                      tick={{ fontSize: 10, fill: 'currentColor' }}
+                      axisLine={false}
+                      tickLine={false}
+                      minTickGap={16}
+                    />
+                    <YAxis
+                      width={32}
+                      tick={{ fontSize: 10, fill: 'currentColor' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip content={<CustomChartTooltip />} cursor={{ fill: 'currentColor', fillOpacity: 0.08 }} />
+                    <Bar dataKey="count" fill="var(--chart-3)" radius={[4, 4, 0, 0]} name="Logins" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           )}
         </div>
       )}
 
-      {/* ── 5. Recent Activity Section ───────────────────────────────── */}
-      <div className="w-full">
-        <RecentActivityWidget role="super-admin" />
-      </div>
+      {/* ── 5. Recent activity ───────────────────────────────────────── */}
+      <RecentActivityWidget role="super-admin" />
 
     </div>
   );
 };
 
 export default SuperAdminDashboard;
-

@@ -18,11 +18,33 @@ export default function AuthGuard({ children, allowedRoles }) {
     if (!loading) {
       if (!user) {
         router.replace('/login');
-      } else if (allowedRoles && !allowedRoles.includes(user.role)) {
+        return;
+      }
+      
+      if (allowedRoles && !allowedRoles.includes(user.role)) {
         router.replace('/unauthorized');
+        return;
+      }
+
+      // Phase 4: Unverified admin is forced to /verify-email
+      if (user.role === 'admin' && user.email_verified === false && pathname !== '/verify-email') {
+        router.replace('/verify-email');
+        return;
+      }
+
+      // Phase 5: Gating for college status 'onboarding'
+      if (user.role === 'admin' && user.college?.status === 'onboarding' && pathname !== '/onboarding' && pathname !== '/verify-email') {
+        router.replace('/onboarding');
+        return;
+      }
+
+      // Phase 5: Active colleges never see onboarding
+      if (user.role === 'admin' && user.college?.status === 'active' && pathname === '/onboarding') {
+        router.replace('/admin');
+        return;
       }
     }
-  }, [user, loading, allowedRoles, router]);
+  }, [user, loading, allowedRoles, router, pathname]);
 
   if (loading || !user || (allowedRoles && !allowedRoles.includes(user.role))) {
     return (

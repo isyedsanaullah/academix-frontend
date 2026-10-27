@@ -1,15 +1,14 @@
-'use client';
+// Server component wrapper — required for Next.js static export.
+// generateStaticParams returns [] so no pages are pre-rendered;
+// the .htaccess SPA fallback handles all dynamic routes client-side.
+export const dynamic = 'force-static';
+export const dynamicParams = false;
+import ClientPage from './_client';
 
-import PageComponent from '@/legacy-pages/admin/FeeReceipt';
-import AuthGuard from '@/components/common/AuthGuard';
-import DashboardLayout from '@/components/layout/DashboardLayout';
+export function generateStaticParams() {
+  return [{"id":"_"}];
+}
 
-export default function Page() {
-  return (
-    <AuthGuard allowedRoles={["accountant"]}>
-      <DashboardLayout>
-        <PageComponent />
-      </DashboardLayout>
-    </AuthGuard>
-  );
+export default function Page(props) {
+  return <ClientPage {...props} />;
 }

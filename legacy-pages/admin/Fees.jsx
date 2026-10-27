@@ -14,7 +14,9 @@ import {
   HiOutlineBookOpen,
   HiOutlineCurrencyRupee,
   HiOutlineCheckCircle,
-  HiOutlineClock
+  HiOutlineClock,
+  HiOutlineDocumentText,
+  HiOutlineReceiptTax
 } from 'react-icons/hi';
 import Pagination from '../../components/common/Pagination';
 
@@ -701,6 +703,24 @@ const Fees = () => {
                               >
                                 <HiOutlineCash size={14} className="text-emerald-400" /> Pay
                               </button>
+                            )}
+                            <a
+                              href={`/api/documents/voucher/${f._id || f.id}.pdf`}
+                              download
+                              className="p-2 rounded-xl bg-surface-800 border border-white/[0.05] hover:border-amber-500 hover:text-amber-400 transition cursor-pointer"
+                              title="Download 3-Copy Bank Challan PDF"
+                            >
+                              <HiOutlineDocumentText size={15} />
+                            </a>
+                            {f.paidAmount > 0 && (
+                              <a
+                                href={`/api/documents/receipt/${f.payment_id || f._id || f.id}.pdf`}
+                                download
+                                className="p-2 rounded-xl bg-surface-800 border border-white/[0.05] hover:border-emerald-500 hover:text-emerald-400 transition cursor-pointer"
+                                title="Download Official Paid Receipt PDF"
+                              >
+                                <HiOutlineReceiptTax size={15} />
+                              </a>
                             )}
                             {f.paidAmount > 0 && (
                               <button

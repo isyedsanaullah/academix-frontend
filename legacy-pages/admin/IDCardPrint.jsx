@@ -3,7 +3,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { QRCodeSVG } from 'qrcode.react';
-import { HiOutlinePrinter, HiOutlineSearch, HiOutlineQrcode, HiOutlineFilter, HiOutlineRefresh } from 'react-icons/hi';
+import { HiOutlinePrinter, HiOutlineSearch, HiOutlineQrcode, HiOutlineFilter, HiOutlineRefresh, HiOutlineDownload } from 'react-icons/hi';
 
 const IDCardPrint = () => {
   const { user } = useAuth();
@@ -74,6 +74,30 @@ const IDCardPrint = () => {
     window.print();
   };
 
+  const handleDownloadSheet = async () => {
+    try {
+      const studentIds = filteredItems.map(i => i.id);
+      if (studentIds.length === 0) {
+        toast.error('No members available to export');
+        return;
+      }
+      toast.loading('Generating printable card sheet...', { id: 'sheet-dl' });
+      const res = await api.post('/documents/student-cards.pdf', { studentIds }, { responseType: 'blob' });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `student_cards_sheet_${studentIds.length}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success('Card sheet downloaded!', { id: 'sheet-dl' });
+    } catch {
+      toast.error('Failed to download student cards sheet', { id: 'sheet-dl' });
+    }
+  };
+
   const filteredItems = items.filter(i => 
     i.name.toLowerCase().includes(search.toLowerCase()) || 
     i.cardId.toLowerCase().includes(search.toLowerCase())
@@ -93,6 +117,9 @@ const IDCardPrint = () => {
         <div className="flex flex-wrap items-center gap-3">
           <button onClick={fetchMembers} className="btn-secondary text-xs py-2 px-3 flex items-center gap-1.5">
             <HiOutlineRefresh size={14} /> Refresh
+          </button>
+          <button onClick={handleDownloadSheet} className="btn-secondary text-xs py-2 px-3 flex items-center gap-1.5 border-indigo-500/30 text-indigo-300">
+            <HiOutlineDownload size={14} /> Download Sheet (8-Up)
           </button>
           <button onClick={handlePrint} className="btn-primary text-xs py-2 px-4 flex items-center gap-2 shadow-lg shadow-indigo-500/20">
             <HiOutlinePrinter size={16} /> Print All Cards
@@ -212,6 +239,13 @@ const IDCardPrint = () => {
                 <div>
                   <p className="text-[8px] uppercase tracking-widest font-extrabold text-surface-400">Gate Access QR</p>
                   <p className="text-[9px] font-mono text-white font-bold mt-0.5">{item.cardId}</p>
+                  <a
+                    href={`/api/documents/student-card/${item.id}.pdf`}
+                    download
+                    className="no-print inline-block text-[10px] text-indigo-400 hover:text-indigo-300 font-semibold mt-1"
+                  >
+                    Download CR80 PDF
+                  </a>
                 </div>
                 <div className="bg-white p-1.5 rounded-lg shadow-md shrink-0">
                   <QRCodeSVG value={item.qrCode} size={64} level="M" />

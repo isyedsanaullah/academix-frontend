@@ -1,297 +1,102 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import PublicFooter from '@/components/common/PublicFooter';
-import { HiOutlineArrowRight, HiOutlineShieldCheck, HiOutlineDocumentText, HiOutlineLockClosed, HiOutlineExclamationCircle } from 'react-icons/hi';
+import LegalLayout, { P, H3, UL, Note } from '@/components/common/LegalLayout';
 
 const SECTIONS = [
-  { id: 'introduction', label: '1. Introduction' },
-  { id: 'info-collect', label: '2. Information We Collect' },
-  { id: 'info-use', label: '3. How Information Is Used' },
-  { id: 'tenant-isolation', label: '4. Multi-Tenant Data Isolation' },
-  { id: 'ai-features', label: '5. AI Integration & Disclaimers' },
-  { id: 'uploaded-docs', label: '6. Uploaded Materials & Documents' },
-  { id: 'security', label: '7. Data Security Measures' },
-  { id: 'data-sharing', label: '8. Data Sharing & Third Parties' },
-  { id: 'retention', label: '9. Data Retention' },
-  { id: 'children-data', label: '10. Children\'s & Student Data' },
-  { id: 'user-rights', label: '11. Your Rights & Access' },
-  { id: 'changes', label: '12. Policy Changes' },
-  { id: 'contact', label: '13. Contact Information' },
+  { id: 'introduction', title: 'Introduction', content: (<>
+    <P>CollegesHub (“CollegesHub”, “we”, “our”, “us”) is a digital college management platform available at Collegeshub.org. This policy explains what information we collect, how we use it, who can see it and how long we keep it.</P>
+    <P>It applies to college representatives, administrators, teachers, staff, students and parents who use any CollegesHub portal or dashboard.</P>
+    <P>Each college is the data controller for its own students, staff and records. CollegesHub acts as the data processor and handles that data on the college’s behalf.</P>
+  </>) },
+  { id: 'info-collect', title: 'Information we collect', content: (<>
+    <H3>Your college</H3>
+    <UL items={['College name, code, city, website and email', 'Administrator accounts and sign-in activity', 'Your plan, limits and billing details']} />
+    <H3>Students and guardians</H3>
+    <UL items={['Name, CNIC, roll number, date of birth and address', 'Matric result, board and roll number recorded at admission', 'Guardian relationships and contact details', 'Student profile photos and uploaded documents such as DMC scans']} />
+    <H3>Teachers and staff</H3>
+    <UL items={['Qualifications, subjects, classes and assigned sections', 'Leave records, payroll and pay slips']} />
+    <H3>Daily college activity</H3>
+    <UL items={['Attendance, including manual registers and gate QR scans', 'Exams, marks, roll slips and result cards', 'Fee vouchers, bank challans, dues, fines and treasury records', 'Assignments and submissions, quizzes, announcements', 'Visitor entries and early-exit passes']} />
+    <H3>Technical data</H3>
+    <UL items={['IP address, browser and device type', 'Audit logs that record who changed what, and when']} />
+    <Note>Some services, such as biometric device sync, parent portal and online fee payment, are still in development. Data for these is collected only once a college uses them.</Note>
+  </>) },
+  { id: 'info-use', title: 'How we use information', content: (<>
+    <P>We use information only to run and improve CollegesHub:</P>
+    <UL items={[
+      <><strong>Providing the service:</strong> signing users in, setting up colleges and running student, teacher and staff portals.</>,
+      <><strong>Access control:</strong> matching each person to their role, such as registrar, accountant, principal or teacher, so they see only what they should.</>,
+      <><strong>Notifications:</strong> announcements, assignment notices and fee reminders.</>,
+      <><strong>Support and improvement:</strong> fixing problems, reviewing audit logs and improving the platform.</>,
+    ]} />
+  </>) },
+  { id: 'tenant-isolation', title: 'Separate data for every college', content: (<>
+    <P>CollegesHub uses multi-tenant database isolation. Every college is assigned its own PostgreSQL connection, and its student, teacher, attendance, timetable and academic data is routed to that college’s own database schema.</P>
+    <P>This is designed to prevent one college from reaching another college’s data.</P>
+  </>) },
+  { id: 'ai-features', title: 'AI features', content: (<>
+    <P>AI features are part of the Enterprise plan. They include an AI tutor, a PDF knowledge library and quiz, paper and MCQ generators. Colleges on other plans do not use these features.</P>
+    <UL items={[
+      <><strong>What is sent:</strong> text you type, syllabus text or PDF files you upload to an AI tool may be sent to the configured AI provider (Google Gemini) to produce the result you asked for.</>,
+      <><strong>Training:</strong> material sent for generation travels over secure API channels and is not used by the provider to train public models.</>,
+      <><strong>Accuracy:</strong> AI output can contain mistakes. Qualified staff must review quizzes, papers and summaries before they are published.</>,
+    ]} />
+  </>) },
+  { id: 'uploaded-docs', title: 'Uploaded files', content: (<>
+    <P>Colleges upload files such as student photos, DMC scans, assignments, curriculum material, logos, stamps and signatures. Files are stored in a private file vault that counts toward your plan’s storage limit.</P>
+    <P>Only signed-in college staff with the right permission can open them, for example a teacher grading an assignment or a registrar reviewing an admission.</P>
+  </>) },
+  { id: 'security', title: 'Security', content: (<>
+    <UL items={['SSL/TLS encryption for data in transit', 'Role-based access control checks on every API endpoint', 'Hashed storage of user passwords', 'An audit trail of critical actions, and a recycle bin for deleted records']} />
+    <P>No online system is perfectly secure. If we learn of a breach that affects your data, we will tell the affected college.</P>
+  </>) },
+  { id: 'data-sharing', title: 'Sharing with others', content: (<>
+    <P>We do not sell, rent or trade student, teacher or college data. We share information only with:</P>
+    <UL items={[
+      <><strong>AI provider:</strong> Google Gemini, only when an Enterprise college uses an AI feature.</>,
+      <><strong>Infrastructure providers:</strong> the hosting company that runs our databases and servers.</>,
+      <><strong>Authorities:</strong> when a court order or the law requires it, or to defend a legal claim.</>,
+    ]} />
+    <P>If a college turns on SMS, WhatsApp or online payment services when they launch, the provider will receive the details needed to deliver those messages or payments.</P>
+  </>) },
+  { id: 'retention', title: 'How long we keep data', content: (<>
+    <UL items={[
+      'Your data is kept while your subscription is active.',
+      'Audit logs are kept for 30 days on Starter, 90 days on Standard, 180 days on Premium and 365 days on Enterprise.',
+      'Changing plans never deletes existing data. After a downgrade, services above your new plan become read-only for 30 days and your data is kept for 90 days.',
+      'If a payment is late, you keep full access for 7 days, then read-only access for 14 days, then the workspace is suspended.',
+    ]} />
+    <P>When a subscription ends, we keep data for a cleanup window and then deactivate or securely delete it. Contact us before leaving to agree how your data is returned or deleted.</P>
+  </>) },
+  { id: 'children-data', title: 'Students and minors', content: (<>
+    <P>Colleges record details about students who may be under 18, such as date of birth and guardian phone numbers. The college is responsible for getting any parent or guardian consent it needs, and for following the education and child-protection laws that apply to it.</P>
+  </>) },
+  { id: 'user-rights', title: 'Your rights', content: (<>
+    <P>Administrators, staff and students can ask to see, correct or delete their personal records. Because the college is the data controller, it must approve and carry out requests about student records. We will help the college do so.</P>
+    <P>If you are a student or parent, start by asking your college’s administrator.</P>
+  </>) },
+  { id: 'changes', title: 'Changes to this policy', content: (<>
+    <P>We may update this policy. When we make material changes, we will change the “Last updated” date on this page or show a notice on the CollegesHub site.</P>
+  </>) },
+  { id: 'contact', title: 'Contact us', content: (<>
+    <P>For questions about this policy, security concerns or data requests:</P>
+    <UL items={['Email: syyedsanaullah@gmail.com (subject: CollegesHub privacy inquiry)', 'Phone: +92 313 5013303']} />
+  </>) },
 ];
 
 export default function PrivacyPolicyPage() {
-  const router = useRouter();
-  const [activeSection, setActiveSection] = useState('introduction');
-
-  const scrollToSection = (id) => {
-    setActiveSection(id);
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-[#04070d] text-white/85 flex flex-col font-sans">
-      {/* HEADER */}
-      <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-[#04070d]/85 backdrop-blur-xl shadow-[0_1px_0_rgba(255,255,255,0.05)]">
-        <div className="max-w-[1440px] mx-auto px-3.5 sm:px-6 lg:px-10 h-16 sm:h-[68px] flex items-center justify-between gap-3 sm:gap-4">
-          <div className="flex items-center gap-2.5 sm:gap-3.5 cursor-pointer shrink-0 min-w-0" onClick={() => router.push('/')}>
-            <div className="w-10 h-10 sm:w-11 sm:h-11 shrink-0 relative">
-              <Image src="/logo.svg" alt="Academix" fill className="object-contain" priority />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-base sm:text-[17px] font-extrabold text-white leading-none tracking-tight">Academix</h1>
-              <p className="text-[9px] sm:text-[10px] text-white/40 font-semibold uppercase tracking-wider sm:tracking-widest mt-1 leading-none truncate">
-                Privacy Policy
-              </p>
-            </div>
-          </div>
-          <button onClick={() => router.push('/')} className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs font-semibold text-white/70 hover:text-white bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 rounded-xl transition-all shadow-sm shrink-0">
-            Back to Home
-          </button>
-        </div>
-      </header>
-
-      {/* CONTAINER */}
-      <div className="flex-1 max-w-[1280px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col lg:flex-row gap-8">
-        
-        {/* SIDEBAR NAVIGATION */}
-        <aside className="w-full lg:w-[260px] shrink-0 lg:sticky lg:top-24 h-fit">
-          <div className="bg-[#0d1117] border border-white/[0.06] rounded-2xl p-4 space-y-1">
-            <p className="text-[10px] font-bold text-white/35 uppercase tracking-wider mb-3 px-2">Table of Contents</p>
-            {SECTIONS.map((sec) => (
-              <button
-                key={sec.id}
-                onClick={() => scrollToSection(sec.id)}
-                className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                  activeSection === sec.id
-                    ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/15 shadow-sm'
-                    : 'text-white/50 hover:text-white/80 hover:bg-white/[0.03] border border-transparent'
-                }`}
-              >
-                {sec.label}
-              </button>
-            ))}
-          </div>
-        </aside>
-
-        {/* POLICY CONTENT */}
-        <main className="flex-1 bg-[#0d1117] border border-white/[0.06] rounded-2xl p-6 sm:p-8 space-y-10">
-          
-          {/* INTRO */}
-          <div>
-            <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest bg-indigo-500/10 px-2.5 py-1 rounded-md">
-              Draft Document
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mt-4">
-              Privacy Policy
-            </h1>
-            <p className="text-xs text-white/40 mt-2 font-medium">
-              Last Updated: August 9, 2026
-            </p>
-            <div className="mt-6 flex items-start gap-3 p-4 rounded-xl bg-amber-500/[0.05] border border-amber-500/15 text-xs text-amber-300/80 leading-relaxed">
-              <HiOutlineExclamationCircle size={18} className="shrink-0 text-amber-400 mt-0.5" />
-              <p>
-                <strong>Important Notice:</strong> This Privacy Policy is a draft model describing the data handling operations of the Academix SaaS platform. It does not constitute legal advice. Institutions using this platform should have this document reviewed by qualified legal counsel to ensure compliance with relevant local and international regulations prior to production onboarding.
-              </p>
-            </div>
-          </div>
-
-          <hr className="border-white/[0.06]" />
-
-          {/* SECTIONS */}
-          <div className="space-y-12 text-sm text-white/70 leading-relaxed font-normal">
-            
-            {/* 1 */}
-            <section id="introduction" className="space-y-3">
-              <h2 className="text-base font-bold text-white tracking-tight">1. Introduction</h2>
-              <p>
-                Welcome to Academix (the "Platform", "we", "our", or "us"), a digital college management platform. This Privacy Policy describes how we collect, use, store, share, and protect information in connection with our services.
-              </p>
-              <p>
-                This policy applies to visiting representatives of colleges or educational institutions, registered institutional administrators, teachers, staff, students, and parents accessing any portal, mobile client, or dashboard powered by the Platform.
-              </p>
-            </section>
-
-            {/* 2 */}
-            <section id="info-collect" className="space-y-4">
-              <h2 className="text-base font-bold text-white tracking-tight">2. Information We Collect</h2>
-              <p>
-                We collect multiple categories of information to support institutional operations and provide system services.
-              </p>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                  <h3 className="text-xs font-bold text-white mb-2">Institutional Data</h3>
-                  <ul className="list-disc list-inside space-y-1 text-xs text-white/50">
-                    <li>College name, code, city, website, and email</li>
-                    <li>Administrator credentials and logs</li>
-                    <li>Subscription tier, limits, and pricing details</li>
-                  </ul>
-                </div>
-                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                  <h3 className="text-xs font-bold text-white mb-2">Academic & User Profiles</h3>
-                  <ul className="list-disc list-inside space-y-1 text-xs text-white/50">
-                    <li>Student names, CNIC, roll numbers, dob, addresses</li>
-                    <li>Teacher qualifications, specialization, salary, assigned sections</li>
-                    <li>Guardian relationships and contact details</li>
-                  </ul>
-                </div>
-                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                  <h3 className="text-xs font-bold text-white mb-2">Operational Data</h3>
-                  <ul className="list-disc list-inside space-y-1 text-xs text-white/50">
-                    <li>Attendance logs (Biometric ID, QR codes, manual entry)</li>
-                    <li>Grades, marks, exam schedules, and result cards</li>
-                    <li>Fee challan receipts, fines, canteen transactions</li>
-                  </ul>
-                </div>
-                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                  <h3 className="text-xs font-bold text-white mb-2">Technical & Device Logs</h3>
-                  <ul className="list-disc list-inside space-y-1 text-xs text-white/50">
-                    <li>IP addresses, user agent details, browser types</li>
-                    <li>Audit logs detailing user interactions</li>
-                    <li>System performance metrics and diagnostic reports</li>
-                  </ul>
-                </div>
-              </div>
-            </section>
-
-            {/* 3 */}
-            <section id="info-use" className="space-y-3">
-              <h2 className="text-base font-bold text-white tracking-tight">3. How Information Is Used</h2>
-              <p>
-                We use collected information strictly to deliver, monitor, and optimize the Academix system:
-              </p>
-              <ul className="list-inside list-disc space-y-1.5 pl-2 text-white/60">
-                <li><strong>Service Provision:</strong> Managing user sessions, onboarding colleges, and enabling student, teacher, and employee portal activities.</li>
-                <li><strong>Authentication:</strong> Assuring secure logins and matching roles (e.g. registrar, accountant, principal) to prevent unauthorized access.</li>
-                <li><strong>Notifications:</strong> Generating attendance warnings, grading updates, assignment notices, and fee defaulter alerts.</li>
-                <li><strong>System Improvement:</strong> Diagnostic debugging, audit logs tracking critical actions, and AI template optimizations.</li>
-              </ul>
-            </section>
-
-            {/* 4 */}
-            <section id="tenant-isolation" className="space-y-4">
-              <h2 className="text-base font-bold text-white tracking-tight">4. Multi-Tenant Data Isolation</h2>
-              <div className="p-4 rounded-xl bg-indigo-500/[0.03] border border-indigo-500/10">
-                <div className="flex items-center gap-2 mb-3">
-                  <HiOutlineLockClosed className="text-indigo-400" size={18} />
-                  <h3 className="text-xs font-bold text-white uppercase tracking-wider">Isolated Database Schema Architecture</h3>
-                </div>
-                <p className="text-xs text-white/60 leading-relaxed">
-                  Academix utilizes logical multi-tenant database isolation. Every college is assigned a dedicated PostgreSQL connection string. Student profiles, teacher records, attendance logs, timetables, and academic performance data are dynamically routed and physically isolated inside the respective college's database schema. This safeguards institutional data, preventing cross-tenant access, leakage, or inter-college data exposure.
-                </p>
-              </div>
-            </section>
-
-            {/* 5 */}
-            <section id="ai-features" className="space-y-4">
-              <h2 className="text-base font-bold text-white tracking-tight">5. AI Integration & Disclaimers</h2>
-              <p>
-                Academix incorporates artificial intelligence features (e.g., automated paper generators, notice writing templates, study assistants, and AI evaluations) to assist teachers and administrators.
-              </p>
-              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] text-xs space-y-2">
-                <p>
-                  <strong>• Processing:</strong> Text inputs, study syllabus documents, or uploaded PDF files may be parsed and analyzed by the configured LLM API provider to generate the requested output.
-                </p>
-                <p>
-                  <strong>• Data Privacy:</strong> User-provided institutional materials processed for generation are sent via secure API channels and are not used by the provider to train public models.
-                </p>
-                <p>
-                  <strong>• Accuracy:</strong> AI-generated content (including quiz answers and evaluation summaries) may contain mistakes. Final manual review by qualified academic staff is mandatory before publishing tests or reports.
-                </p>
-              </div>
-            </section>
-
-            {/* 6 */}
-            <section id="uploaded-docs" className="space-y-3">
-              <h2 className="text-base font-bold text-white tracking-tight">6. Uploaded Materials & Documents</h2>
-              <p>
-                Users upload files such as DMC/transcript scans, student photos, assignments, and curriculum materials. These files are securely stored on our designated infrastructure. Access is restricted to authenticated college personnel (e.g. teachers grading assignments, registrars reviewing admissions) who possess explicit authorization flags.
-              </p>
-            </section>
-
-            {/* 7 */}
-            <section id="security" className="space-y-3">
-              <h2 className="text-base font-bold text-white tracking-tight">7. Data Security Measures</h2>
-              <p>
-                We employ standard administrative and technical safeguards:
-              </p>
-              <ul className="list-inside list-disc space-y-1 pl-2 text-white/60">
-                <li>SSL/TLS encryption for all data transit</li>
-                <li>Role-Based Access Control (RBAC) checks on every API endpoint</li>
-                <li>Hashed storage of local system user passwords</li>
-                <li>Continuous audit logging tracking critical database writes</li>
-              </ul>
-            </section>
-
-            {/* 8 */}
-            <section id="data-sharing" className="space-y-3">
-              <h2 className="text-base font-bold text-white tracking-tight">8. Data Sharing & Third Parties</h2>
-              <p>
-                We do not sell, rent, or trade student, teacher, or institutional data. We only share information with:
-              </p>
-              <ul className="list-inside list-disc space-y-1 pl-2 text-white/60">
-                <li><strong>AI Providers:</strong> Gemini/Google APIs to fulfill requested AI generation commands.</li>
-                <li><strong>Infrastructure Providers:</strong> Hosted database and server instances.</li>
-                <li><strong>Legal Mandate:</strong> Authorities when required by court orders or to defend legal claims.</li>
-              </ul>
-            </section>
-
-            {/* 9 */}
-            <section id="retention" className="space-y-3">
-              <h2 className="text-base font-bold text-white tracking-tight">9. Data Retention</h2>
-              <p>
-                Institutional data is retained for the active duration of the college's subscription. Upon termination or non-renewal, records are kept for a standard cleanup window (or up to the limit of the chosen plan, e.g. up to 10 years of historical data for Premium subscribers) after which data is deactivated or securely deleted.
-              </p>
-            </section>
-
-            {/* 10 */}
-            <section id="children-data" className="space-y-3">
-              <h2 className="text-base font-bold text-white tracking-tight">10. Children's & Student Data</h2>
-              <p>
-                Due to our focus on high school and college institutions, student data containing minor details (e.g., date of birth, guardian phone numbers) is recorded. Educational institutions are solely responsible for obtaining parental consent and ensuring that registering minor student records complies with national and local educational protection laws.
-              </p>
-            </section>
-
-            {/* 11 */}
-            <section id="user-rights" className="space-y-3">
-              <h2 className="text-base font-bold text-white tracking-tight">11. Your Rights & Access</h2>
-              <p>
-                Administrators, students, and staff members may request review, update, or deletion of their specific personal profile records. Requests for student record deletion must be approved and executed by the respective college administrator since they serve as the primary data controller, while Academix acts as the data processor.
-              </p>
-            </section>
-
-            {/* 12 */}
-            <section id="changes" className="space-y-3">
-              <h2 className="text-base font-bold text-white tracking-tight">12. Policy Changes</h2>
-              <p>
-                We may update this Privacy Policy from time to time. Any material changes will be notified by updating the "Last Updated" date at the top of this page or by displaying a banner announcement on the root SaaS portal.
-              </p>
-            </section>
-
-            {/* 13 */}
-            <section id="contact" className="space-y-3">
-              <h2 className="text-base font-bold text-white tracking-tight">13. Contact Information</h2>
-              <p>
-                For questions regarding this policy, security inquiries, or data access requests, please contact:
-              </p>
-              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] text-xs font-mono">
-                Email: syyedsanaullah@gmail.com<br/>
-                Subject: Academix Privacy Inquiry
-              </div>
-            </section>
-
-          </div>
-
-        </main>
-      </div>
-
-      {/* FOOTER */}
-      <PublicFooter />
-    </div>
+    <LegalLayout
+      title="Privacy Policy"
+      updated="October 23, 2026"
+      summary={[
+        'Your college’s data stays in its own separate database.',
+        'We never sell student, teacher or college data.',
+        'Colleges decide what happens to their students’ records.',
+      ]}
+      notice="This policy describes how CollegesHub handles data. It is not legal advice. Colleges should have it reviewed by qualified legal counsel before going live."
+      sections={SECTIONS}
+      other={{ href: '/terms', label: 'Terms & Conditions' }}
+    />
   );
 }

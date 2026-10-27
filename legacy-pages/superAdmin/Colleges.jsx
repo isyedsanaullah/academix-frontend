@@ -52,6 +52,12 @@ const getStatusBadgeClass = (status) => {
       return 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/20';
     case 'expired':
       return 'bg-slate-100 dark:bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-500/20';
+    case 'grace':
+      return 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20';
+    case 'onboarding':
+      return 'bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-500/20';
+    case 'pending_setup':
+      return 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/20';
     default:
       return 'bg-slate-100 dark:bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-500/20';
   }
@@ -71,6 +77,7 @@ const Colleges = () => {
   const [invitesLoading, setInvitesLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [planFilter, setPlanFilter] = useState('');
+  const [expiryFilter, setExpiryFilter] = useState('all');
 
   const [availablePlans, setAvailablePlans] = useState([
     { id: 'basic', name: 'Basic Plan' },
@@ -225,9 +232,17 @@ const Colleges = () => {
         c.email?.toLowerCase().includes(query) ||
         c.city?.toLowerCase().includes(query);
       const matchesPlan = !planFilter || c.subscription?.plan === planFilter;
-      return matchesSearch && matchesPlan;
+
+      let matchesExpiry = true;
+      if (expiryFilter === 'expiring_soon') {
+        matchesExpiry = c.daysLeft !== null && c.daysLeft <= 30 && c.daysLeft > 0;
+      } else if (expiryFilter === 'expired') {
+        matchesExpiry = c.daysLeft !== null && c.daysLeft <= 0;
+      }
+
+      return matchesSearch && matchesPlan && matchesExpiry;
     });
-  }, [colleges, search, planFilter]);
+  }, [colleges, search, planFilter, expiryFilter]);
 
   const activeCollegesCount = useMemo(() => {
     return colleges.filter(c => c.subscription?.status === 'active').length;
@@ -412,11 +427,24 @@ const Colleges = () => {
                 </select>
               </div>
 
-              {(search || planFilter) && (
+              <div className="relative flex-1 sm:w-44">
+                <select
+                  value={expiryFilter}
+                  onChange={e => setExpiryFilter(e.target.value)}
+                  className="input-field text-xs font-semibold"
+                >
+                  <option value="all">All Expiries</option>
+                  <option value="expiring_soon">Expiring Soon (≤30d)</option>
+                  <option value="expired">Expired / Grace</option>
+                </select>
+              </div>
+
+              {(search || planFilter || expiryFilter !== 'all') && (
                 <button
                   onClick={() => {
                     setSearch('');
                     setPlanFilter('');
+                    setExpiryFilter('all');
                   }}
                   className="btn-secondary py-2.5 px-3 text-xs shrink-0"
                   title="Reset filters"
@@ -461,6 +489,7 @@ const Colleges = () => {
                       <th className="pl-5">College Info</th>
                       <th>Code</th>
                       <th>Subscription Plan</th>
+                      <th>Expiry Date</th>
                       <th>Onboarding</th>
                       <th>Status</th>
                       <th>City</th>
@@ -507,6 +536,29 @@ const Colleges = () => {
                         </td>
 
                         <td>
+                          {c.expiryDate ? (
+                            <div className="space-y-0.5 whitespace-nowrap">
+                              <span className="text-xs font-semibold text-slate-800 dark:text-white/80">
+                                {new Date(c.expiryDate).toLocaleDateString()}
+                              </span>
+                              {c.daysLeft !== null && (
+                                <div className="text-[10px]">
+                                  {c.daysLeft <= 0 ? (
+                                    <span className="text-rose-600 dark:text-rose-400 font-bold">Expired</span>
+                                  ) : c.daysLeft <= 30 ? (
+                                    <span className="text-amber-600 dark:text-amber-400 font-bold">{c.daysLeft}d left</span>
+                                  ) : (
+                                    <span className="text-slate-400">{c.daysLeft}d left</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-xs">—</span>
+                          )}
+                        </td>
+
+                        <td>
                           <span
                             className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border capitalize ${
                               c.onboardingStatus === 'completed'
@@ -526,10 +578,10 @@ const Colleges = () => {
                         <td>
                           <span
                             className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border capitalize ${getStatusBadgeClass(
-                              c.subscription?.status
+                              c.subscription_status || c.subscription?.status || c.status
                             )}`}
                           >
-                            {c.subscription?.status || 'active'}
+                            {c.subscription_status || c.subscription?.status || c.status || 'active'}
                           </span>
                         </td>
 
