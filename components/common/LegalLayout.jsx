@@ -2,13 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { motion, useReducedMotion, useScroll, useSpring } from 'framer-motion';
-import { Bricolage_Grotesque, Figtree } from 'next/font/google';
 import { HiArrowLeft, HiOutlinePrinter, HiOutlineChevronDown } from 'react-icons/hi';
 import BrandLogo from '@/components/common/BrandLogo';
 import PublicFooter from '@/components/common/PublicFooter';
-
-const display = Bricolage_Grotesque({ subsets: ['latin'], weight: ['600', '700', '800'], variable: '--font-display', display: 'swap' });
-const body = Figtree({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-body', display: 'swap' });
 
 /* Text helpers used by the page files */
 export const P = ({ children }) => <p className="mt-3 first:mt-0">{children}</p>;
@@ -23,6 +19,7 @@ export const Note = ({ children }) => (
 );
 
 const CSS = `
+:root { --font-display: 'Bricolage Grotesque', system-ui, sans-serif; --font-body: 'Figtree', system-ui, sans-serif; }
 .lg-root { font-family: var(--font-body), system-ui, -apple-system, 'Segoe UI', sans-serif; }
 .lg-display { font-family: var(--font-display), var(--font-body), system-ui, sans-serif; letter-spacing: -0.02em; }
 .lg-root a:focus-visible, .lg-root button:focus-visible { outline: 2px solid #4C94E8; outline-offset: 2px; }
@@ -59,7 +56,7 @@ export default function LegalLayout({ title, updated, summary = [], notice, sect
   const wrap = 'mx-auto w-full max-w-[1200px] px-4 sm:px-6 lg:px-8';
 
   return (
-    <div className={`${display.variable} ${body.variable} lg-root flex min-h-screen flex-col bg-white text-[#0E2238] selection:bg-[#4C94E8]/30`}>
+    <div className="lg-root flex min-h-screen flex-col bg-white text-[#0E2238] selection:bg-[#4C94E8]/30">
       <style>{CSS}</style>
 
       <header className="lg-hide fixed inset-x-0 top-0 z-50 border-b border-[#DDE6F0] bg-white/90 backdrop-blur-md">

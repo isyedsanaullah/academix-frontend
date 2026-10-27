@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Bricolage_Grotesque, Figtree } from 'next/font/google';
 import {
   HiArrowRight, HiOutlineMail, HiOutlinePhone, HiOutlineOfficeBuilding,
   HiOutlineUser, HiOutlineLogin, HiOutlineShieldCheck, HiOutlineUserGroup,
@@ -30,8 +29,6 @@ import toast from 'react-hot-toast';
    surface   #F4F7FB  alt sections    line   #DDE6F0  borders
    ────────────────────────────────────────────────────────────────────── */
 
-const display = Bricolage_Grotesque({ subsets: ['latin'], weight: ['600', '700', '800'], variable: '--font-display', display: 'swap' });
-const body = Figtree({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-body', display: 'swap' });
 
 /* ── Content (all values are the approved ones from the original page) ─ */
 
@@ -106,6 +103,7 @@ const HUB_NODES = [
 /* ── Small pieces ──────────────────────────────────────────────────── */
 
 const GLOBAL_CSS = `
+:root { --font-display: 'Bricolage Grotesque', system-ui, sans-serif; --font-body: 'Figtree', system-ui, sans-serif; }
 .ch-root { font-family: var(--font-body), system-ui, -apple-system, 'Segoe UI', sans-serif; }
 .ch-display { font-family: var(--font-display), var(--font-body), system-ui, sans-serif; letter-spacing: -0.02em; }
 .ch-root a:focus-visible, .ch-root button:focus-visible, .ch-root input:focus-visible,
@@ -297,7 +295,7 @@ export default function JoinPage() {
   ];
 
   return (
-    <div className={`${display.variable} ${body.variable} ch-root flex min-h-screen flex-col bg-white text-[#0E2238] selection:bg-[#4C94E8]/30`}>
+    <div className="ch-root flex min-h-screen flex-col bg-white text-[#0E2238] selection:bg-[#4C94E8]/30">
       <style>{GLOBAL_CSS}</style>
 
       {/* ── HEADER ─────────────────────────────────────────────── */}
