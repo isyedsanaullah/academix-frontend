@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import {
   HiOutlineMail,
@@ -43,6 +43,7 @@ const roleRedirects = {
 
 export default function Login() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login, logout } = useAuth();
 
   const [mounted, setMounted] = useState(false);
@@ -66,6 +67,60 @@ export default function Login() {
   const [tenantProfile, setTenantProfile] = useState(null);
   const [tenantNotFound, setTenantNotFound] = useState(false);
   const [tenantLoading, setTenantLoading] = useState(false);
+
+  // Auto-resolve college code if ?code= URL param is present (e.g. from public profile login button)
+  useEffect(() => {
+    const urlCode = searchParams?.get('code');
+    if (!urlCode) return;
+
+    const cleanCode = urlCode.trim();
+    if (!cleanCode) return;
+
+    setCode(cleanCode.toUpperCase());
+    setLoading(true);
+
+    // Super admin shortcut codes
+    if (['superadmin', 'admin', 'collegeshub'].includes(cleanCode.toLowerCase())) {
+      setResolvedCollege({
+        name: 'Collegeshub Platform Administration',
+        tagline: 'Super Administrator Control Center',
+        code: 'SUPER-ADMIN',
+        isSuperAdmin: true
+      });
+      setStep('credentials');
+      setLoading(false);
+      return;
+    }
+
+    api.post('/public/resolve-code', { code: cleanCode })
+      .then(res => {
+        if (res.data?.success) {
+          if (res.data.type === 'super-admin') {
+            setResolvedCollege({
+              name: 'Collegeshub Platform Administration',
+              tagline: 'Super Administrator Control Center',
+              code: 'SUPER-ADMIN',
+              isSuperAdmin: true
+            });
+            setStep('credentials');
+          } else if (res.data.type === 'college') {
+            const col = res.data.college || {
+              slug: res.data.slug,
+              code: cleanCode.toUpperCase(),
+              name: `${res.data.slug?.toUpperCase()} College`,
+              tagline: 'Campus Portal'
+            };
+            setResolvedCollege(col);
+            setTenantSlug(col.slug || res.data.slug);
+            setStep('credentials');
+          }
+        }
+      })
+      .catch(() => {
+        // Silently fail — user will see code form and can re-enter
+      })
+      .finally(() => setLoading(false));
+  }, [searchParams]);
 
   useEffect(() => {
     setMounted(true);

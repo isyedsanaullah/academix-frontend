@@ -91,7 +91,7 @@ export default function CollegeProfilePage() {
         announcements={announcements}
         similarColleges={similarColleges}
         onNavigateApply={() => router.push(`/apply/${(college.slug || college.code).toLowerCase()}`)}
-        onNavigateLogin={() => router.push('/login')}
+        onNavigateLogin={() => router.push(`/login?code=${encodeURIComponent((college.slug || college.code || '').toLowerCase())}`)}
       />
       <PublicFooter />
     </div>
