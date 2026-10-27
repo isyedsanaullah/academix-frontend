@@ -22,8 +22,12 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  login: async (email, password) => {
-    const { data } = await api.post('/auth/login', { email, password });
+  login: async (email, password, expectedCollegeId = null) => {
+    const headers = {};
+    if (expectedCollegeId) {
+      headers['x-expected-college-id'] = expectedCollegeId;
+    }
+    const { data } = await api.post('/auth/login', { email, password }, { headers });
     if (data.success) {
       localStorage.setItem('academix_token', data.data.token);
       localStorage.setItem('academix_user', JSON.stringify(data.data));

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '../../context/AuthContext';
 import {
   HiOutlineMail,
@@ -17,18 +18,12 @@ import {
   HiOutlineExclamationCircle,
   HiOutlineBadgeCheck,
   HiOutlineLocationMarker,
-  HiOutlinePhone,
-  HiOutlineGlobeAlt
+  HiOutlinePhone
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { getHostType, getTenantSlug, buildAdminUrl, buildTenantUrl, ROOT_DOMAIN } from '@/lib/host';
-
-const inputBase =
-  'w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-card text-sm text-slate-900 dark:text-fg placeholder:text-slate-400 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10';
-const labelCls = 'mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-muted';
-const btnPrimary =
-  'inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60';
+import LoginArt from './LoginArt.jsx';
 
 const roleRedirects = {
   superAdmin: '/super-admin',
@@ -40,6 +35,21 @@ const roleRedirects = {
   student: '/student',
   employee: '/employee'
 };
+
+const FEATURES = ['Admissions', 'Academics', 'Attendance', 'Fees', 'Exams', 'AI Tutor'];
+
+// The inactive slide is hidden from keyboard + screen readers once it has slid out of view.
+const panelStyle = (active) => ({
+  visibility: active ? 'visible' : 'hidden',
+  transition: `visibility 0s linear ${active ? '0s' : '.45s'}`
+});
+
+const Spinner = () => (
+  <span
+    className="login-spin h-4 w-4 rounded-full border-2 border-current border-t-transparent"
+    aria-hidden="true"
+  />
+);
 
 export default function Login() {
   const router = useRouter();
@@ -67,6 +77,19 @@ export default function Login() {
   const [tenantProfile, setTenantProfile] = useState(null);
   const [tenantNotFound, setTenantNotFound] = useState(false);
   const [tenantLoading, setTenantLoading] = useState(false);
+
+  // Presentation-only refs (focus after slide, error shake)
+  const codeRef = useRef(null);
+  const emailRef = useRef(null);
+  const shakeRef = useRef(null);
+
+  const shake = () => {
+    const el = shakeRef.current;
+    if (!el) return;
+    el.classList.remove('login-shake');
+    void el.offsetWidth;
+    el.classList.add('login-shake');
+  };
 
   // Auto-resolve college code if ?code= URL param is present (e.g. from public profile login button)
   useEffect(() => {
@@ -156,11 +179,22 @@ export default function Login() {
     }
   }, []);
 
+  // Move focus to the visible field after each slide
+  useEffect(() => {
+    if (!mounted) return;
+    const t = setTimeout(() => {
+      const el = step === 'code' ? codeRef.current : emailRef.current;
+      el?.focus({ preventScroll: true });
+    }, 120);
+    return () => clearTimeout(t);
+  }, [step, mounted]);
+
   // ─── 1. Resolve Institute Code ──────────────────────────────────────────────
   const handleCodeSubmit = async (e) => {
     e.preventDefault();
     const cleanCode = code.trim();
     if (!cleanCode) {
+      shake();
       return toast.error('Please enter your institution or portal code.');
     }
 
@@ -202,11 +236,13 @@ export default function Login() {
           setStep('credentials');
           toast.success(`Connected to ${col.name}!`);
         } else {
+          shake();
           toast.error('Invalid institution code. Please check your college short code.');
         }
       }
     } catch (err) {
       const msg = err.response?.data?.message || 'Invalid institution code. Please check your code or search directory.';
+      shake();
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -217,17 +253,27 @@ export default function Login() {
   const handleCredentialsSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim() || !password) {
+      shake();
       return toast.error('Please enter email/username and password');
     }
 
     setLoading(true);
     try {
-      const userData = await login(email.trim(), password);
+      // Pass the expected college ID to the backend for server-side validation.
+      // Only send it when a specific college was resolved (not super-admin, not subdomain).
+      const expectedCollegeId =
+        resolvedCollege && !resolvedCollege.isSuperAdmin && hostType === 'root'
+          ? (resolvedCollege.id || null)
+          : null;
 
-      // Super admin checks
+      const userData = await login(email.trim(), password, expectedCollegeId);
+
+
+      // ── Guard A: Super-admin portal path ──────────────────────────────────
       if (resolvedCollege?.isSuperAdmin || hostType === 'admin') {
         if (userData.role !== 'superAdmin') {
           logout();
+          shake();
           toast.error('Access denied: Strictly reserved for Super Administrators.');
           return;
         }
@@ -236,12 +282,44 @@ export default function Login() {
         return;
       }
 
-      // College User login
+      // ── Guard B: Block Super Admin from logging in via a college code ─────
+      // If we resolved a specific college (not super-admin) but the account is superAdmin,
+      // reject — superAdmin must use the dedicated super-admin portal.
+      if (userData.role === 'superAdmin') {
+        logout();
+        shake();
+        toast.error('Access denied: Please use the Super Admin portal to sign in.');
+        return;
+      }
+
+      // ── Guard C: Block cross-college login ───────────────────────────────
+      // If a specific college was resolved via code, the authenticated user MUST
+      // belong to that exact college. Compare IDs.
+      if (resolvedCollege?.id && userData.college_id) {
+        if (userData.college_id !== resolvedCollege.id) {
+          logout();
+          shake();
+          toast.error('Access denied: Your account does not belong to this institution.');
+          return;
+        }
+      }
+
+      // ── Guard D: Block users with no college from logging in via college code ─
+      // (e.g. a super admin account that somehow passed guard B)
+      if (resolvedCollege && !resolvedCollege.isSuperAdmin && !userData.college_id) {
+        logout();
+        shake();
+        toast.error('Access denied: Your account is not associated with any institution.');
+        return;
+      }
+
+      // College User login — all checks passed
       const collegeDisplayName = resolvedCollege?.name || tenantProfile?.name || 'College';
       toast.success(`Welcome back to ${collegeDisplayName}, ${userData.name}!`);
       router.push(roleRedirects[userData.role] || '/');
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Login failed. Invalid credentials.';
+      shake();
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -249,27 +327,24 @@ export default function Login() {
   };
 
   if (!mounted) {
-    return <div className="min-h-screen bg-slate-950" />;
+    return <div className="min-h-dvh bg-app" />;
   }
 
   // ─── Case: Subdomain Tenant Not Found ───────────────────────────────────────
   if (hostType === 'tenant' && tenantNotFound) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-slate-950 text-white">
-        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-4 shadow-2xl">
-          <HiOutlineExclamationCircle className="w-12 h-12 text-rose-500 mx-auto" />
-          <h1 className="text-xl font-bold">Institution Not Found</h1>
-          <p className="text-sm text-slate-400">
-            The subdomain <strong className="text-white">{tenantSlug}</strong> does not correspond to an active institution on Collegeshub.
+      <div className="flex min-h-dvh items-center justify-center bg-app p-4">
+        <div className="card login-slide-in flex w-full max-w-md flex-col items-center gap-3 text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-bad/10 text-bad">
+            <HiOutlineExclamationCircle size={26} aria-hidden="true" />
+          </span>
+          <h1 className="text-xl font-bold text-fg">Institution Not Found</h1>
+          <p className="text-sm text-fg-muted">
+            The subdomain <strong className="break-all font-semibold text-fg">{tenantSlug}</strong> does not correspond to an active institution on Collegeshub.
           </p>
-          <div className="pt-2">
-            <a
-              href={`https://${ROOT_DOMAIN}/college`}
-              className="btn-primary w-full text-sm py-2.5 inline-block text-center rounded-xl bg-primary text-white font-semibold"
-            >
-              Browse College Directory
-            </a>
-          </div>
+          <a href={`https://${ROOT_DOMAIN}/college`} className="btn-primary mt-2 w-full">
+            Browse College Directory
+          </a>
         </div>
       </div>
     );
@@ -277,365 +352,416 @@ export default function Login() {
 
   const activeCollege = resolvedCollege || tenantProfile;
   const isSuperAdmin = activeCollege?.isSuperAdmin || hostType === 'admin';
+  const onCredentials = step === 'credentials';
+  const showSuper = onCredentials && isSuperAdmin;
+  const showCollege = onCredentials && activeCollege && !isSuperAdmin;
+  const showTenantSkeleton = hostType === 'tenant' && tenantLoading && !activeCollege;
+  const eyebrow = showSuper ? 'Platform Control' : showCollege ? 'Verified Campus Portal' : 'Smart Campus Cloud';
+  const leftMode = showTenantSkeleton ? 'skeleton' : showCollege ? 'college' : showSuper ? 'super' : 'default';
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-slate-950 text-slate-100 selection:bg-primary/20 selection:text-primary">
-      {/* Top Header */}
-      <header className="w-full px-6 py-4 border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <a href="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0A4D94] to-[#299A49] flex items-center justify-center text-white font-black text-lg shadow-md group-hover:scale-105 transition-transform">
-              C
-            </div>
-            <span className="font-extrabold text-lg tracking-tight text-white">
-              Collegeshub<span className="text-[#299A49]">.org</span>
+    <div className="grid min-h-dvh bg-app text-fg selection:bg-accent-soft lg:h-dvh lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+
+      {/* ════════ LEFT: animated brand panel (desktop only) ════════ */}
+      {/* This panel is always dark (the artwork is drawn for a dark background), so it uses
+          fixed white-on-dark text instead of theme tokens. */}
+      <aside
+        className="relative hidden overflow-hidden bg-gradient-to-br from-brand-blue-900 via-surface-900 to-surface-950 text-white lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:p-10 xl:p-12"
+        aria-label="Collegeshub overview"
+      >
+        {/* Backdrop layers */}
+        {showCollege && activeCollege.coverPhoto && (
+          <img
+            src={activeCollege.coverPhoto}
+            alt=""
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-20"
+          />
+        )}
+        <div className="login-grid pointer-events-none absolute inset-0" aria-hidden="true" />
+        <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-brand-blue-500/25 blur-3xl" aria-hidden="true" />
+        <div className="pointer-events-none absolute -bottom-40 -right-24 h-96 w-96 rounded-full bg-brand-green-600/20 blur-3xl" aria-hidden="true" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-surface-950 via-surface-950/60 to-transparent" aria-hidden="true" />
+
+        {/* Animated artwork */}
+        <div
+          className="pointer-events-none absolute inset-0 flex items-start justify-end pl-16 pr-0 pb-52 pt-6 xl:pl-20"
+          aria-hidden="true"
+        >
+          <LoginArt className="h-full w-full max-w-[600px]" />
+        </div>
+
+        {/* Top row */}
+        <div className="relative z-10 flex items-center justify-between gap-3">
+          <a href="/" className="flex items-center gap-2.5 rounded-lg">
+            <Image src="/logo-mark.svg" alt="" width={36} height={34} priority />
+            <span className="text-lg font-extrabold tracking-tight">
+              Collegeshub<span className="text-brand-green-500">.org</span>
             </span>
           </a>
 
-          <div className="flex items-center gap-3">
+          {onCredentials && hostType === 'root' && (
             <button
+              type="button"
               onClick={() => {
-                setCode('superadmin');
-                setResolvedCollege({
-                  name: 'Collegeshub Platform Administration',
-                  tagline: 'Super Administrator Control Center',
-                  code: 'SUPER-ADMIN',
-                  isSuperAdmin: true
-                });
-                setStep('credentials');
+                setStep('code');
+                setResolvedCollege(null);
               }}
-              className="text-xs px-3 py-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 transition-all font-semibold"
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-3 text-xs font-semibold text-white/80 transition hover:bg-white/10 hover:text-white"
             >
-              Super Admin Sign-in
+              <HiOutlineArrowLeft size={14} aria-hidden="true" /> Change Code
             </button>
-            <a
-              href="/"
-              className="text-xs px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/60 text-slate-300 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1.5"
-            >
-              <HiOutlineHome className="w-3.5 h-3.5" /> Home
-            </a>
-          </div>
+          )}
         </div>
-      </header>
 
-      {/* Main Container: Split 2-Column on PC */}
-      <main className="flex-1 flex items-center justify-center p-4 md:p-8">
-        <div className="w-full max-w-5xl bg-slate-900/90 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-2 min-h-[580px]">
+        {/* Bottom content */}
+        <div className="relative z-10 mt-auto flex flex-col gap-5">
+          <div key={leftMode} className="login-fade-up flex flex-col gap-4" style={{ '--delay': '.05s' }}>
+            <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold backdrop-blur-md">
+              <HiOutlineBadgeCheck size={16} className="text-brand-green-500" aria-hidden="true" />
+              {eyebrow}
+            </span>
 
-          {/* ════════ LEFT COLUMN: Brand or College Card with Cover & Map Overlay ════════ */}
-          <div className="relative p-8 md:p-10 flex flex-col justify-between overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-800 bg-gradient-to-br from-[#081528] via-[#0b1b36] to-[#072418]">
-            
-            {/* If a college is resolved and we are on credentials step: show cover photo + map overlay */}
-            {step === 'credentials' && activeCollege && !isSuperAdmin ? (
-              <div className="absolute inset-0 z-0">
-                {activeCollege.coverPhoto ? (
-                  <img
-                    src={activeCollege.coverPhoto}
-                    alt={activeCollege.name}
-                    className="w-full h-full object-cover opacity-25"
-                  />
-                ) : (
-                  <div
-                    className="w-full h-full opacity-20"
-                    style={{
-                      backgroundImage: 'radial-gradient(#299A49 1px, transparent 1px), radial-gradient(#0A4D94 1px, transparent 1px)',
-                      backgroundSize: '24px 24px',
-                      backgroundPosition: '0 0, 12px 12px'
-                    }}
-                  />
-                )}
-                {/* Gradient Overlays */}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-r from-slate-950/70 to-transparent" />
-              </div>
-            ) : (
-              /* Default background glow for root/superadmin */
-              <div className="absolute inset-0 z-0 pointer-events-none">
-                <div className="absolute -top-24 -left-24 w-72 h-72 rounded-full bg-[#0A4D94]/20 blur-3xl" />
-                <div className="absolute -bottom-24 -right-24 w-72 h-72 rounded-full bg-[#299A49]/20 blur-3xl" />
+            {leftMode === 'skeleton' && (
+              <div className="space-y-3" aria-busy="true">
+                <div className="h-7 w-56 animate-pulse rounded-lg bg-white/10" />
+                <div className="h-4 w-72 max-w-full animate-pulse rounded-lg bg-white/10" />
+                <div className="h-4 w-48 animate-pulse rounded-lg bg-white/10" />
               </div>
             )}
 
-            {/* Top Row inside Left Column */}
-            <div className="relative z-10 flex items-center justify-between">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-white/90 border border-white/10 backdrop-blur-md">
-                <HiOutlineBadgeCheck className="w-4 h-4 text-[#299A49]" />
-                {isSuperAdmin ? 'Platform Control' : activeCollege ? 'Verified Campus Portal' : 'Smart Campus Cloud'}
-              </span>
-
-              {step === 'credentials' && hostType === 'root' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStep('code');
-                    setResolvedCollege(null);
-                  }}
-                  className="text-xs text-slate-400 hover:text-white flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition-all border border-white/10"
-                >
-                  <HiOutlineArrowLeft className="w-3.5 h-3.5" /> Change Code
-                </button>
-              )}
-            </div>
-
-            {/* Center Content in Left Column */}
-            <div className="relative z-10 my-8 space-y-5">
-              {step === 'credentials' && activeCollege && !isSuperAdmin ? (
-                /* Dynamic College Branding with Circle Logo & Cover & Contact */
-                <div className="space-y-4 animate-in fade-in slide-in-from-left duration-300">
-                  <div className="flex items-center gap-4">
-                    {activeCollege.logo ? (
-                      <div className="w-20 h-20 rounded-full p-1 bg-white/10 border-2 border-[#299A49] shadow-xl overflow-hidden shrink-0 backdrop-blur-md">
-                        <img
-                          src={activeCollege.logo}
-                          alt={activeCollege.name}
-                          className="w-full h-full rounded-full object-cover bg-white"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#0A4D94] to-[#299A49] border-2 border-white/20 shadow-xl flex items-center justify-center text-white text-3xl font-black shrink-0">
-                        {activeCollege.name?.charAt(0) || 'C'}
-                      </div>
-                    )}
-                    <div>
-                      <h2 className="text-2xl font-black text-white leading-tight">
-                        {activeCollege.name}
-                      </h2>
-                      <p className="text-xs text-emerald-400 font-semibold mt-0.5">
-                        Code: {activeCollege.code || tenantSlug?.toUpperCase()}
-                      </p>
+            {leftMode === 'college' && (
+              <>
+                <div className="flex items-center gap-4">
+                  {activeCollege.logo ? (
+                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-brand-green-500 bg-white/10 p-0.5 shadow-xl backdrop-blur-md">
+                      <img
+                        src={activeCollege.logo}
+                        alt={activeCollege.name}
+                        className="h-full w-full rounded-full bg-white object-cover"
+                      />
                     </div>
-                  </div>
-
-                  {activeCollege.tagline && (
-                    <p className="text-sm text-slate-300 italic leading-relaxed">
-                      &ldquo;{activeCollege.tagline}&rdquo;
-                    </p>
+                  ) : (
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 border-white/20 bg-gradient-to-br from-brand-blue-700 to-brand-green-600 text-2xl font-black shadow-xl">
+                      {activeCollege.name?.charAt(0) || 'C'}
+                    </div>
                   )}
+                  <div className="min-w-0">
+                    <h2 className="line-clamp-2 break-words text-2xl font-bold leading-tight">
+                      {activeCollege.name}
+                    </h2>
+                    <p className="mt-0.5 text-xs font-semibold text-brand-green-500">
+                      Code: {activeCollege.code || tenantSlug?.toUpperCase()}
+                    </p>
+                  </div>
+                </div>
 
-                  {/* College Contact & Location Badge */}
-                  <div className="pt-2 space-y-2 text-xs text-slate-300">
-                    {(activeCollege.address || activeCollege.city) && (
-                      <div className="flex items-start gap-2 bg-white/5 p-2.5 rounded-xl border border-white/10 backdrop-blur-md">
-                        <HiOutlineLocationMarker className="w-4 h-4 text-[#299A49] shrink-0 mt-0.5" />
-                        <span>{[activeCollege.address, activeCollege.city].filter(Boolean).join(', ')}</span>
+                {activeCollege.tagline && (
+                  <p className="text-sm italic leading-relaxed text-white/75">
+                    &ldquo;{activeCollege.tagline}&rdquo;
+                  </p>
+                )}
+
+                <div className="space-y-2 text-xs text-white/80">
+                  {(activeCollege.address || activeCollege.city) && (
+                    <div className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-2.5 backdrop-blur-md">
+                      <HiOutlineLocationMarker size={16} className="mt-0.5 shrink-0 text-brand-green-500" aria-hidden="true" />
+                      <span className="min-w-0 break-words">{[activeCollege.address, activeCollege.city].filter(Boolean).join(', ')}</span>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 gap-2 xl:grid-cols-2">
+                    {activeCollege.phone && (
+                      <div className="flex min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-2.5 backdrop-blur-md">
+                        <HiOutlinePhone size={14} className="shrink-0 text-brand-blue-400" aria-hidden="true" />
+                        <span className="truncate">{activeCollege.phone}</span>
                       </div>
                     )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {activeCollege.phone && (
-                        <div className="flex items-center gap-2 bg-white/5 p-2 rounded-xl border border-white/10 backdrop-blur-md">
-                          <HiOutlinePhone className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                          <span className="truncate">{activeCollege.phone}</span>
-                        </div>
-                      )}
-                      {activeCollege.email && (
-                        <div className="flex items-center gap-2 bg-white/5 p-2 rounded-xl border border-white/10 backdrop-blur-md">
-                          <HiOutlineMail className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                          <span className="truncate">{activeCollege.email}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ) : isSuperAdmin ? (
-                /* Super Admin Branding */
-                <div className="space-y-3 animate-in fade-in duration-300">
-                  <div className="w-16 h-16 rounded-2xl bg-indigo-600/30 border border-indigo-500/50 flex items-center justify-center text-indigo-400 text-3xl font-black shadow-lg">
-                    <HiOutlineShieldCheck className="w-8 h-8" />
-                  </div>
-                  <h2 className="text-3xl font-black text-white tracking-tight">
-                    Platform Control
-                  </h2>
-                  <p className="text-sm text-slate-300 leading-relaxed max-w-md">
-                    Centralized multi-tenant supervision, college provisioning, subscriptions, and platform telemetry.
-                  </p>
-                </div>
-              ) : (
-                /* Default Left Content (When entering code) */
-                <div className="space-y-4">
-                  <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center text-[#299A49] text-2xl font-black shadow-lg">
-                    <HiOutlineOfficeBuilding className="w-7 h-7" />
-                  </div>
-                  <h2 className="text-3xl font-black text-white tracking-tight leading-tight">
-                    One Portal for All Your Campus Needs
-                  </h2>
-                  <p className="text-sm text-slate-300 leading-relaxed max-w-md">
-                    Enter your institution code to connect to your college database, verify credentials, and access attendance, fees, exams, and LMS.
-                  </p>
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    {['Admissions', 'Academics', 'Attendance', 'Fees', 'Exams', 'AI Tutor'].map((feat) => (
-                      <span key={feat} className="text-xs px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-slate-300 font-medium">
-                        {feat}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Bottom Footer inside Left Column */}
-            <div className="relative z-10 text-xs text-slate-400">
-              &copy; {new Date().getFullYear()} Collegeshub.org &bull; Secure Multi-Tenant Cloud
-            </div>
-          </div>
-
-          {/* ════════ RIGHT COLUMN: Sliding Forms (Code -> Credentials) ════════ */}
-          <div className="p-8 md:p-10 flex flex-col justify-center relative bg-slate-900">
-            
-            {/* ─── FORM A: Institute Code Form (Slides left on submit) ─── */}
-            {step === 'code' ? (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right duration-300">
-                <div>
-                  <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-3">
-                    <HiOutlineKey className="w-3.5 h-3.5" />
-                    Step 1 of 2: Institution Code
-                  </span>
-                  <h1 className="text-2xl font-black tracking-tight text-white">Find Your Institution</h1>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Enter your short college code (e.g. <span className="font-semibold text-white">fmc</span>, <span className="font-semibold text-white">pcs</span>) to open the login screen.
-                  </p>
-                </div>
-
-                <form onSubmit={handleCodeSubmit} className="space-y-4">
-                  <div>
-                    <label htmlFor="portal-code" className={labelCls}>Institution Code</label>
-                    <div className="relative">
-                      <HiOutlineOfficeBuilding className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                      <input
-                        id="portal-code"
-                        type="text"
-                        value={code}
-                        onChange={(e) => setCode(e.target.value)}
-                        placeholder="e.g. fmc, pcs, superadmin"
-                        autoFocus
-                        spellCheck={false}
-                        autoCapitalize="none"
-                        className={`${inputBase} pl-11 py-3 text-base uppercase font-bold text-white bg-slate-950 border-slate-700`}
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading || !code.trim()}
-                    className={`${btnPrimary} py-3 mt-1 bg-gradient-to-r from-[#0A4D94] to-[#299A49]`}
-                  >
-                    {loading ? 'Verifying Institution...' : (
-                      <>
-                        <span>Continue</span>
-                        <HiOutlineArrowRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
-                </form>
-
-                <div className="border-t border-slate-800 pt-4 text-center text-xs text-slate-400 space-y-1.5">
-                  <p>Don&apos;t know your institution code?</p>
-                  <a href="/college" className="text-primary hover:underline font-semibold block">
-                    Search the College Directory &rarr;
-                  </a>
-                </div>
-              </div>
-            ) : (
-              /* ─── FORM B: Credentials Form (Slides in from right) ─── */
-              <div className="space-y-6 animate-in fade-in slide-in-from-right duration-300">
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-                      isSuperAdmin
-                        ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
-                        : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                    }`}>
-                      <HiOutlineShieldCheck className="w-3.5 h-3.5" />
-                      {isSuperAdmin ? 'Super Administrator Access' : 'Sign-in Credentials'}
-                    </span>
-
-                    {hostType === 'root' && (
-                      <button
-                        type="button"
-                        onClick={() => setStep('code')}
-                        className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
-                      >
-                        <HiOutlineArrowLeft className="w-3.5 h-3.5" /> Back
-                      </button>
+                    {activeCollege.email && (
+                      <div className="flex min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-2.5 backdrop-blur-md">
+                        <HiOutlineMail size={14} className="shrink-0 text-brand-blue-400" aria-hidden="true" />
+                        <span className="truncate">{activeCollege.email}</span>
+                      </div>
                     )}
                   </div>
-
-                  <h1 className="text-2xl font-black tracking-tight text-white">Welcome back</h1>
-                  <p className="text-xs text-slate-400 mt-1">
-                    {isSuperAdmin
-                      ? 'Enter your Super Admin credentials to enter the platform console.'
-                      : `Sign in with your ${activeCollege?.name || 'College'} account.`}
-                  </p>
                 </div>
+              </>
+            )}
 
-                <form onSubmit={handleCredentialsSubmit} className="space-y-4">
-                  <div>
-                    <label htmlFor="login-email" className={labelCls}>Email or Username</label>
-                    <div className="relative">
-                      <HiOutlineMail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                      <input
-                        id="login-email"
-                        type="text"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Enter email or username"
-                        autoFocus
-                        autoComplete="username"
-                        className={`${inputBase} pl-11 py-3 text-sm text-white bg-slate-950 border-slate-700`}
-                      />
-                    </div>
-                  </div>
+            {leftMode === 'super' && (
+              <>
+                <h2 className="text-3xl font-bold tracking-tight xl:text-4xl">Platform Control</h2>
+                <p className="max-w-md text-sm leading-relaxed text-white/70">
+                  Centralized multi-tenant supervision, college provisioning, subscriptions, and platform telemetry.
+                </p>
+              </>
+            )}
 
-                  <div>
-                    <label htmlFor="login-password" className={labelCls}>Password</label>
-                    <div className="relative">
-                      <HiOutlineLockClosed className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                      <input
-                        id="login-password"
-                        type={showPass ? 'text' : 'password'}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Enter password"
-                        autoComplete="current-password"
-                        className={`${inputBase} pl-11 pr-11 py-3 text-sm text-white bg-slate-950 border-slate-700`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPass(!showPass)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
-                        aria-label={showPass ? 'Hide password' : 'Show password'}
-                      >
-                        {showPass ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading || !email.trim() || !password}
-                    className={`${btnPrimary} py-3 mt-2 bg-gradient-to-r from-[#0A4D94] to-[#299A49]`}
-                  >
-                    {loading ? 'Authenticating...' : 'Sign In'}
-                  </button>
-                </form>
-
-                {!isSuperAdmin && (
-                  <div className="border-t border-slate-800 pt-4 text-center text-xs text-slate-400">
-                    Need help accessing your student or faculty account?{' '}
-                    <span className="font-semibold text-slate-200">Contact your college registrar office.</span>
-                  </div>
-                )}
-              </div>
+            {leftMode === 'default' && (
+              <>
+                <h2 className="max-w-md text-3xl font-bold leading-tight tracking-tight xl:text-4xl">
+                  One Portal for All Your Campus Needs
+                </h2>
+                <p className="max-w-md text-sm leading-relaxed text-white/70">
+                  Enter your institution code to connect to your college database, verify credentials, and access attendance, fees, exams, and LMS.
+                </p>
+                <ul className="flex flex-wrap gap-2">
+                  {FEATURES.map((feat, i) => (
+                    <li
+                      key={feat}
+                      className="login-fade-up rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-white/80"
+                      style={{ '--delay': `${0.15 + i * 0.07}s` }}
+                    >
+                      {feat}
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
           </div>
 
+          <p className="text-xs text-white/50">
+            &copy; {new Date().getFullYear()} Collegeshub.org &bull; Secure Multi-Tenant Cloud
+          </p>
         </div>
-      </main>
+      </aside>
 
-      {/* Footer */}
-      <footer className="w-full text-center py-4 text-xs text-slate-500 border-t border-slate-800/60">
-        Collegeshub Multi-Tenant System &bull; High Availability Cloud
-      </footer>
+      {/* ════════ RIGHT: sliding forms ════════ */}
+      <section className="relative flex flex-col overflow-y-auto bg-card">
+        <div className="brand-rail" aria-hidden="true" />
+
+        {/* Mobile / tablet brand strip (the artwork panel is desktop only) */}
+        <div className="flex items-center justify-between gap-3 bg-gradient-to-br from-brand-blue-900 to-surface-950 px-4 py-3 text-white sm:px-6 lg:hidden">
+          <a href="/" className="flex items-center gap-2.5 rounded-lg">
+            <Image src="/logo-mark.svg" alt="" width={32} height={30} priority />
+            <span className="text-base font-extrabold tracking-tight">
+              Collegeshub<span className="text-brand-green-500">.org</span>
+            </span>
+          </a>
+          <a
+            href="/"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-3 text-xs font-semibold text-white/85 transition hover:bg-white/10 hover:text-white"
+          >
+            <HiOutlineHome size={14} aria-hidden="true" /> Home
+          </a>
+        </div>
+
+        <div className="flex flex-1 items-center justify-center px-4 py-4 sm:px-8">
+          <div className="login-slide-in w-full max-w-[420px]">
+
+            {/* Step progress (only when the code step exists) */}
+            {hostType === 'root' && (
+              <div className="mb-4 flex items-center gap-3">
+                <div
+                  className="flex flex-1 gap-1.5"
+                  role="progressbar"
+                  aria-label="Sign-in progress"
+                  aria-valuemin={1}
+                  aria-valuemax={2}
+                  aria-valuenow={onCredentials ? 2 : 1}
+                >
+                  <span className="h-1 flex-1 rounded-full bg-accent" />
+                  <span className={`h-1 flex-1 rounded-full transition-colors duration-500 ${onCredentials ? 'bg-accent' : 'bg-card-3'}`} />
+                </div>
+                <span className="text-xs font-semibold tabular-nums text-fg-muted">{onCredentials ? 2 : 1} / 2</span>
+              </div>
+            )}
+
+            <div ref={shakeRef}>
+              <div className="overflow-hidden">
+                <div
+                  className="flex w-[200%] transition-transform duration-[450ms] ease-[cubic-bezier(.22,1,.36,1)]"
+                  style={{ transform: onCredentials ? 'translateX(-50%)' : 'translateX(0)' }}
+                >
+
+                  {/* ─── Slide A: institution code ─── */}
+                  <div
+                    className="w-1/2 shrink-0 px-1.5 py-1.5"
+                    style={panelStyle(!onCredentials)}
+                    aria-hidden={onCredentials}
+                  >
+                    <div className="flex flex-col gap-5">
+                      <div className="flex flex-col gap-2.5">
+                        <span className="badge badge-primary w-fit">
+                          <HiOutlineKey size={13} aria-hidden="true" />
+                          Step 1 of 2: Institution Code
+                        </span>
+                        <h1 className="text-2xl font-bold tracking-tight text-fg sm:text-[28px]">Find Your Institution</h1>
+                        <p className="text-sm leading-relaxed text-fg-muted">
+                          Enter your institution&apos;s short code to open the login screen.
+                        </p>
+                      </div>
+
+                      <form onSubmit={handleCodeSubmit} className="flex flex-col gap-4">
+                        <div>
+                          <label htmlFor="portal-code" className="field-label">Institution Code</label>
+                          <div className="relative">
+                            <HiOutlineOfficeBuilding
+                              className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-fg-faint"
+                              aria-hidden="true"
+                            />
+                            <input
+                              id="portal-code"
+                              ref={codeRef}
+                              type="text"
+                              value={code}
+                              onChange={(e) => setCode(e.target.value)}
+                              placeholder="Enter institution code"
+                              spellCheck={false}
+                              autoCapitalize="none"
+                              autoComplete="off"
+                              className="input-field min-h-12 pl-10 font-semibold uppercase tracking-wider placeholder:font-normal placeholder:normal-case placeholder:tracking-normal"
+                            />
+                          </div>
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={loading || !code.trim()}
+                          className="btn-primary min-h-12 w-full"
+                        >
+                          {loading ? (
+                            <>
+                              <Spinner />
+                              <span>Verifying Institution...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Continue</span>
+                              <HiOutlineArrowRight size={16} aria-hidden="true" />
+                            </>
+                          )}
+                        </button>
+                      </form>
+
+                      <hr className="divider" />
+                      <div className="flex flex-col items-center gap-1 text-center text-xs text-fg-muted">
+                        <p>Don&apos;t know your institution code?</p>
+                        <a href="/college" className="font-semibold text-accent hover:underline">
+                          Search the College Directory &rarr;
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ─── Slide B: credentials ─── */}
+                  <div
+                    className="w-1/2 shrink-0 px-1.5 py-1.5"
+                    style={panelStyle(onCredentials)}
+                    aria-hidden={!onCredentials}
+                  >
+                    <div className="flex flex-col gap-6">
+                      <div className="flex flex-col gap-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="badge badge-primary">
+                            <HiOutlineShieldCheck size={13} aria-hidden="true" />
+                            {isSuperAdmin ? 'Super Administrator Access' : 'Sign-in Credentials'}
+                          </span>
+
+                          {hostType === 'root' && (
+                            <button
+                              type="button"
+                              onClick={() => setStep('code')}
+                              className="btn-ghost btn-sm"
+                            >
+                              <HiOutlineArrowLeft size={14} aria-hidden="true" /> Back
+                            </button>
+                          )}
+                        </div>
+
+                        <h1 className="text-2xl font-bold tracking-tight text-fg sm:text-[28px]">Welcome back</h1>
+                        <p className="text-sm leading-relaxed text-fg-muted">
+                          {isSuperAdmin
+                            ? 'Enter your Super Admin credentials to enter the platform console.'
+                            : `Sign in with your ${activeCollege?.name || 'College'} account.`}
+                        </p>
+                      </div>
+
+                      <form onSubmit={handleCredentialsSubmit} className="flex flex-col gap-4">
+                        <div>
+                          <label htmlFor="login-email" className="field-label">Email or Username</label>
+                          <div className="relative">
+                            <HiOutlineMail
+                              className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-fg-faint"
+                              aria-hidden="true"
+                            />
+                            <input
+                              id="login-email"
+                              ref={emailRef}
+                              type="text"
+                              value={email}
+                              onChange={(e) => setEmail(e.target.value)}
+                              placeholder="Enter email or username"
+                              autoComplete="username"
+                              className="input-field min-h-12 pl-10"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label htmlFor="login-password" className="field-label">Password</label>
+                          <div className="relative">
+                            <HiOutlineLockClosed
+                              className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-fg-faint"
+                              aria-hidden="true"
+                            />
+                            <input
+                              id="login-password"
+                              type={showPass ? 'text' : 'password'}
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              placeholder="Enter password"
+                              autoComplete="current-password"
+                              className="input-field min-h-12 pl-10 pr-12"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPass(!showPass)}
+                              className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-fg-faint transition hover:bg-card-2 hover:text-fg"
+                              aria-label={showPass ? 'Hide password' : 'Show password'}
+                              aria-pressed={showPass}
+                            >
+                              {showPass ? <HiOutlineEyeOff size={18} aria-hidden="true" /> : <HiOutlineEye size={18} aria-hidden="true" />}
+                            </button>
+                          </div>
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={loading || !email.trim() || !password}
+                          className="btn-primary mt-1 min-h-12 w-full"
+                        >
+                          {loading ? (
+                            <>
+                              <Spinner />
+                              <span>Authenticating...</span>
+                            </>
+                          ) : (
+                            <span>Sign In</span>
+                          )}
+                        </button>
+                      </form>
+
+                      {!isSuperAdmin && (
+                        <>
+                          <hr className="divider" />
+                          <p className="text-center text-xs leading-relaxed text-fg-muted">
+                            Need help accessing your student or faculty account?{' '}
+                            <span className="font-semibold text-fg">Contact your college registrar office.</span>
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer className="border-t border-line px-4 py-3 text-center text-xs text-fg-faint">
+          Collegeshub Multi-Tenant System &bull; High Availability Cloud
+        </footer>
+      </section>
     </div>
   );
 }
