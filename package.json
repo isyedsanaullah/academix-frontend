@@ -7,7 +7,10 @@
                     "build":  "next build --webpack",
                     "start":  "next start",
                     "lint":  "eslint",
-                    "build:static":  "cross-env NEXT_STATIC_EXPORT=true NEXT_PUBLIC_API_URL=https://academix-backend-8zcg.onrender.com/api NEXT_PUBLIC_ROOT_DOMAIN=collegeshub.org next build --webpack"
+                    "build:static":  "cross-env NEXT_STATIC_EXPORT=true NEXT_PUBLIC_API_URL=https://academix-backend-8zcg.onrender.com/api NEXT_PUBLIC_ROOT_DOMAIN=collegeshub.org next build --webpack",
+                    "package:hostinger": "powershell -Command \"Compress-Archive -Path 'out\\*' -DestinationPath 'academix-hostinger.zip' -Force\"",
+                    "deploy:hostinger": "node scripts/deployToHostinger.js",
+                    "host": "npm run build:static && npm run package:hostinger && npm run deploy:hostinger"
                 },
     "dependencies":  {
                          "@tanstack/react-query":  "^5.100.11",
