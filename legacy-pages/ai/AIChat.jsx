@@ -152,7 +152,8 @@ const AIChat = () => {
 
     try {
       const token = localStorage.getItem('academix_token');
-      const response = await fetch('/api/ai/chat', {
+      const baseUrl = api.defaults?.baseURL || '/api';
+      const response = await fetch(`${baseUrl}/ai/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

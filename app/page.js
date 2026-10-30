@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/authStore';
 import BrandLogo from '@/components/common/BrandLogo';
 import PublicFooter from '@/components/common/PublicFooter';
 import { buildTenantUrl } from '@/lib/host';
+import { apiGet } from '@/lib/api';
 import {
   HiOutlineSearch, HiOutlineLocationMarker, HiOutlineSpeakerphone, HiOutlineClipboardList,
   HiOutlineLogin, HiOutlineX, HiChevronRight, HiChevronDown, HiArrowRight, HiOutlineMenu,
@@ -135,9 +136,8 @@ export default function HomePage() {
   const dashboardPath = mounted && user?.role ? ROLE_HOME[user.role] : null;
 
   useEffect(() => {
-    fetch('/api/public/colleges')
-      .then(r => r.json())
-      .then(d => { if (d.success && Array.isArray(d.data)) setColleges(d.data); })
+    apiGet('/public/colleges')
+      .then(d => { if (d?.success && Array.isArray(d?.data)) setColleges(d.data); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -155,11 +155,13 @@ export default function HomePage() {
     if (!statusQuery.trim()) return;
     setStatusLoading(true); setStatusResult(null); setStatusError('');
     try {
-      const res = await fetch(`/api/public/applications/track/${encodeURIComponent(statusQuery.trim())}`);
-      const d = await res.json();
-      if (d.success) setStatusResult(d.data); else setStatusError(d.message || 'Application not found');
-    } catch { setStatusError('Could not verify status. Please try again.'); }
-    finally { setStatusLoading(false); }
+      const d = await apiGet(`/public/applications/track/${encodeURIComponent(statusQuery.trim())}`);
+      if (d?.success) setStatusResult(d.data); else setStatusError(d?.message || 'Application not found');
+    } catch (err) {
+      setStatusError(err?.response?.data?.message || 'Could not verify status. Please try again.');
+    } finally {
+      setStatusLoading(false);
+    }
   };
 
   const navTo = (id) => { setMenuOpen(false); go(id); };
@@ -497,8 +499,8 @@ function useCollegeDetails(colleges) {
     if (!colleges.length) return;
     let cancelled = false;
     Promise.all(colleges.slice(0, 3).map(c =>
-      fetch(`/api/public/college/${c.slug || c.code}`).then(r => r.json())
-        .then(d => (d.success ? { college: c, ...d.data } : null)).catch(() => null)
+      apiGet(`/public/college/${c.slug || c.code}`)
+        .then(d => (d?.success ? { college: c, ...d.data } : null)).catch(() => null)
     )).then(list => { if (!cancelled) setDetails(list.filter(Boolean)); });
     return () => { cancelled = true; };
   }, [colleges]);

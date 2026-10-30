@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { apiGet, apiPost } from '@/lib/api';
 import {
   HiOutlineAcademicCap, HiOutlineShieldCheck, HiOutlineCheckCircle,
   HiOutlineExclamationCircle, HiOutlineLockClosed, HiOutlineUser,
@@ -79,15 +80,16 @@ export default function AcceptInvitationPage() {
     if (!token) { setVerifying(false); return; }
     (async () => {
       try {
-        const res  = await fetch(`/api/public/invitations/verify/${token}`);
-        const data = await res.json();
-        if (!res.ok) {
-          setIsExpired(data.message?.toLowerCase().includes('expir'));
-          throw new Error(data.message || 'Invalid invitation link');
+        const data = await apiGet(`/public/invitations/verify/${token}`);
+        if (!data?.success) {
+          setIsExpired(data?.message?.toLowerCase().includes('expir'));
+          throw new Error(data?.message || 'Invalid invitation link');
         }
         setInviteData(data.data);
       } catch (err) {
-        setVerifyError(err.message);
+        const msg = err?.response?.data?.message || err.message;
+        setIsExpired(msg?.toLowerCase().includes('expir'));
+        setVerifyError(msg || 'Invalid invitation link');
       } finally {
         setVerifying(false);
       }
@@ -123,18 +125,13 @@ export default function AcceptInvitationPage() {
     setSubmitError('');
 
     try {
-      const res  = await fetch('/api/public/invitations/accept', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token,
-          name:        form.name.trim(),
-          designation: form.designation.trim(),
-          password:    form.password
-        })
+      const data = await apiPost('/public/invitations/accept', {
+        token,
+        name:        form.name.trim(),
+        designation: form.designation.trim(),
+        password:    form.password
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Failed to accept invitation');
+      if (!data?.success) throw new Error(data?.message || 'Failed to accept invitation');
 
       // Persist auth
       if (data.data?.user) {
