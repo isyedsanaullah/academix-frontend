@@ -656,40 +656,110 @@ function CollegesGrid({ colleges, loading, onSelect }) {
 }
 
 function CollegeCard({ college }) {
+  const [logoErr, setLogoErr] = useState(false);
+  const [coverErr, setCoverErr] = useState(false);
   const settings = college.settings || {};
-  const isOpen = college.admissionSeason?.status === 'open';
+  const cover = !coverErr && (settings.coverPhoto || null);
+  const logo = !logoErr && (college.logo || null);
   const slug = (college.slug || college.code || '').toLowerCase();
   const tenantUrl = buildTenantUrl(slug);
+  const initials = college.code?.replace(/[^A-Za-z0-9]/g, '').slice(0, 3) || college.name?.slice(0, 2).toUpperCase() || 'CH';
+
   return (
-    <a href={tenantUrl} className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left transition-all duration-300 hover:-translate-y-1 hover:border-[#0A4D94]/30 hover:shadow-[0_24px_48px_-24px_rgba(10,77,148,0.45)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0A4D94]">
-      <div className="relative h-24 w-full overflow-hidden bg-gradient-to-br from-[#0A4D94] via-[#1a6bb8] to-[#2A9B4A]">
-        {settings.coverPhoto && (
+    <a
+      href={tenantUrl}
+      className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white text-left transition-all duration-300 hover:-translate-y-1 hover:border-[#0A4D94]/35 hover:shadow-[0_20px_40px_-15px_rgba(10,77,148,0.22)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0A4D94]"
+    >
+      {/* ── Banner / Cover ── */}
+      <div className="relative h-28 w-full overflow-hidden bg-gradient-to-br from-[#072448] via-[#0A4D94] to-[#12589D]">
+        {cover ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={settings.coverPhoto} alt="" className="h-full w-full object-cover opacity-60 transition-transform duration-500 group-hover:scale-105" />
-        )}
-        {isOpen && (
-          <span className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-emerald-700 shadow">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Admissions Open
-          </span>
-        )}
-      </div>
-      <div className="flex flex-1 flex-col gap-3 p-5 pt-0">
-        <div className="-mt-7 flex items-end justify-between">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border-4 border-white bg-[#EEF4FB] text-lg font-black text-[#0A4D94] shadow-md">
-            {college.logo
-              // eslint-disable-next-line @next/next/no-img-element
-              ? <img src={college.logo} alt={college.name} className="h-full w-full object-cover" />
-              : <span>{college.name?.charAt(0) || 'C'}</span>}
+          <img
+            src={cover}
+            alt=""
+            onError={() => setCoverErr(true)}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-between px-4">
+            <div
+              className="absolute inset-0 opacity-15"
+              style={{
+                backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
+                backgroundSize: '16px 16px'
+              }}
+            />
+            <div className="pointer-events-none absolute -right-3 -bottom-5 text-white/[0.09]">
+              <HiOutlineAcademicCap size={100} />
+            </div>
           </div>
-          <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-slate-500">{college.code}</span>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/20" />
+
+        {/* Top Badges */}
+        <div className="absolute inset-x-3.5 top-3 flex items-center justify-between">
+          <span className="rounded-md bg-white/95 px-2.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-[#0A4D94] shadow-sm backdrop-blur-sm">
+            {college.code}
+          </span>
+          {college.admissionSeason?.status === 'open' && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/95 px-2.5 py-0.5 text-[10px] font-bold text-white shadow-sm backdrop-blur-sm">
+              <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" /> Admissions Open
+            </span>
+          )}
         </div>
+      </div>
+
+      {/* ── Content ── */}
+      <div className="relative flex flex-1 flex-col p-5 pt-0">
+        {/* Avatar (positioned cleanly on the banner edge) */}
+        <div className="relative z-10 -mt-8 mb-3 flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-white bg-white p-1 shadow-[0_8px_20px_-4px_rgba(5,29,58,0.2)] ring-1 ring-slate-200/70">
+          {logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logo}
+              alt={college.name}
+              onError={() => setLogoErr(true)}
+              className="h-full w-full rounded-xl object-contain bg-white"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-[#0A4D94] to-[#051d3a] font-mono text-sm font-black tracking-wider text-white shadow-inner">
+              {initials}
+            </div>
+          )}
+        </div>
+
+        {/* Title & Tagline */}
         <div className="flex-1">
-          <h3 className="line-clamp-1 text-base font-bold text-slate-900 transition-colors group-hover:text-[#0A4D94]">{college.name}</h3>
-          <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-slate-500">{college.tagline || settings.bio || 'Public digital workspace on Collegeshub.'}</p>
+          <h3 className="line-clamp-1 text-base font-bold text-slate-900 transition-colors group-hover:text-[#0A4D94]">
+            {college.name}
+          </h3>
+          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">
+            {college.tagline || settings.bio || settings.about || 'Recognized higher education institution on Collegeshub.'}
+          </p>
         </div>
-        <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
-          <span className="flex min-w-0 items-center gap-1"><HiOutlineLocationMarker size={14} className="shrink-0" /><span className="truncate">{college.city || 'Pakistan'}</span></span>
-          <span className="inline-flex shrink-0 items-center gap-0.5 font-semibold text-[#0A4D94] transition-transform group-hover:translate-x-0.5">View Portal <HiChevronRight size={14} /></span>
+
+        {/* Metadata Chips */}
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <span className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600 border border-slate-100">
+            <HiOutlineLocationMarker size={12} className="text-slate-400" />
+            {college.city || 'Pakistan'}
+          </span>
+          {settings.establishedYear && (
+            <span className="inline-flex items-center rounded-md bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-500 border border-slate-100">
+              Est. {settings.establishedYear}
+            </span>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
+          <span className="font-semibold text-slate-400 group-hover:text-slate-600 transition-colors">
+            Public Campus
+          </span>
+          <span className="inline-flex items-center gap-1 font-bold text-[#0A4D94] transition-colors group-hover:text-[#2A9B4A]">
+            View Portal
+            <HiArrowRight size={12} className="transition-transform duration-200 group-hover:translate-x-1" />
+          </span>
         </div>
       </div>
     </a>
