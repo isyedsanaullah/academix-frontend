@@ -5,13 +5,14 @@ import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Sidebar from './Sidebar';
 import {
-  HiOutlineMenu, HiOutlineBell, HiOutlineSearch, HiOutlineLogout,
+  HiOutlineMenu, HiOutlineBell, HiOutlineSearch, HiOutlineLogout, HiOutlineUser,
   HiOutlineCog, HiOutlineX, HiOutlineSpeakerphone,
   HiOutlineChevronRight, HiOutlineSun, HiOutlineMoon
 } from 'react-icons/hi';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../lib/api';
 import SubscriptionExpiryBanner from '../common/SubscriptionExpiryBanner';
+import CollegesHubLoader from '../common/CollegesHubLoader';
 
 // --- Theme Context (light/dark) ---
 const getInitialTheme = () => {
@@ -83,7 +84,14 @@ const getPageTitle = (pathname) => {
     '/admin/id-cards': 'Member ID Cards',
     '/admin/certificates': 'Certificates',
     '/admin/settings': 'Settings',
-    '/admin/profile': 'My Profile',
+    // Profile & Settings
+    '/admin/profile': 'My Profile & Settings',
+    '/teacher/settings': 'Profile & Settings',
+    '/student/settings': 'Profile & Settings',
+    '/principal/settings': 'Profile & Settings',
+    '/registrar/settings': 'Profile & Settings',
+    '/accountant/settings': 'Profile & Settings',
+    '/employee/settings': 'Profile & Settings',
     // Registrar
     '/registrar': 'Registrar Dashboard',
     '/registrar/students': 'Student Registration',
@@ -240,6 +248,7 @@ const buildSearchItems = (role) => {
       { to: '/student/leave', label: 'Leave Application' },
       { to: '/student/ai/chat', label: 'Study Assistant' },
       { to: '/student/ai/notes', label: 'AI Notes Generator' },
+      { to: '/student/settings', label: 'Profile & Settings' },
     ],
     superAdmin: [
       { to: '/super-admin', label: 'Dashboard' },
@@ -254,11 +263,13 @@ const buildSearchItems = (role) => {
       { to: '/registrar/subjects', label: 'Subjects' },
       { to: '/registrar/attendance', label: 'Attendance' },
       { to: '/registrar/announcements', label: 'Announcements' },
+      { to: '/registrar/settings', label: 'Profile & Settings' },
     ],
     accountant: [
       { to: '/accountant', label: 'Dashboard' },
       { to: '/accountant/fees', label: 'Fee Collection' },
       { to: '/accountant/fees/defaulters', label: 'Defaulters' },
+      { to: '/accountant/settings', label: 'Profile & Settings' },
     ],
     principal: [
       { to: '/principal', label: 'Dashboard' },
@@ -269,10 +280,12 @@ const buildSearchItems = (role) => {
       { to: '/principal/fees', label: 'Fees' },
       { to: '/principal/staff', label: 'Staff' },
       { to: '/principal/ai/chat', label: 'AI Advisor' },
+      { to: '/principal/settings', label: 'Profile & Settings' },
     ],
     employee: [
       { to: '/employee', label: 'Dashboard' },
       { to: '/employee/visitors', label: 'Visitors' },
+      { to: '/employee/settings', label: 'Profile & Settings' },
     ],
   };
   return map[role] || [];
@@ -402,8 +415,8 @@ const NotificationsDropdown = ({ open, onClose }) => {
 
       <div className="max-h-72 overflow-y-auto">
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          <div className="py-4">
+            <CollegesHubLoader size="xs" text="Loading notifications…" minHeight="min-h-[80px]" />
           </div>
         ) : announcements.length === 0 ? (
           <div className="py-8 text-center">
@@ -459,8 +472,13 @@ const ProfileDropdown = ({ open, onClose, user }) => {
     onClose();
   };
 
-  const settingsPath = user?.role === 'superAdmin' ? null :
-    ['admin', 'teacher'].includes(user?.role) ? `/${user.role}/settings` : null;
+  const profilePath = user?.role === 'superAdmin'
+    ? '/super-admin/settings'
+    : user?.role === 'admin'
+    ? '/admin/profile'
+    : user?.role ? `/${user.role}/settings` : null;
+
+  const collegeSettingsPath = user?.role === 'admin' ? '/admin/settings' : null;
 
   if (!open) return null;
 
@@ -489,12 +507,20 @@ const ProfileDropdown = ({ open, onClose, user }) => {
       </div>
 
       <div className="py-1">
-        {settingsPath && (
+        {profilePath && (
           <button
-            onClick={() => { router.push(settingsPath); onClose(); }}
+            onClick={() => { router.push(profilePath); onClose(); }}
             className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-fg-muted transition hover:bg-card-2 hover:text-fg"
           >
-            <HiOutlineCog size={16} aria-hidden="true" /> Settings
+            <HiOutlineUser size={16} aria-hidden="true" /> My Profile & Settings
+          </button>
+        )}
+        {collegeSettingsPath && (
+          <button
+            onClick={() => { router.push(collegeSettingsPath); onClose(); }}
+            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-fg-muted transition hover:bg-card-2 hover:text-fg"
+          >
+            <HiOutlineCog size={16} aria-hidden="true" /> College Settings
           </button>
         )}
         <button
