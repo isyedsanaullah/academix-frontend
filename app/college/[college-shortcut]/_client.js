@@ -4,15 +4,20 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import api from '@/lib/api';
-import LottieLoader from '@/components/common/LottieLoader';
+import CollegesHubLoader from '@/components/common/CollegesHubLoader';
 import PublicFooter from '@/components/common/PublicFooter';
 import CollegePublicProfileView from '@/components/college/CollegePublicProfileView';
 import { HiOutlineOfficeBuilding } from 'react-icons/hi';
+import { resolveParam } from '@/lib/paramUtils';
+import { getTenantSlug } from '@/lib/host';
 
-export default function CollegeProfilePage() {
+export default function CollegeProfilePage({ overrideSlug = null }) {
   const params = useParams();
   const router = useRouter();
-  const shortcut = params['college-shortcut'];
+  const rawShortcut = overrideSlug || resolveParam(params?.['college-shortcut'], 'college');
+  const shortcut = (rawShortcut && rawShortcut !== '_')
+    ? rawShortcut
+    : (typeof window !== 'undefined' ? getTenantSlug(window.location.hostname) : null);
 
   const [data, setData] = useState(null);
   const [similarColleges, setSimilarColleges] = useState([]);
@@ -54,7 +59,11 @@ export default function CollegeProfilePage() {
   }, [shortcut]);
 
   if (loading) {
-    return <LottieLoader fullScreen text="Loading College Profile..." />;
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center">
+        <CollegesHubLoader size="lg" text="Loading college profile…" />
+      </div>
+    );
   }
 
   if (error || !data) {

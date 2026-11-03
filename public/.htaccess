@@ -1,29 +1,100 @@
 # ════════════════════════════════════════════════════════════
-#  CESMS / Academix — Hostinger Apache .htaccess
-#  Place this file in the root of public_html (or the subfolder
-#  where you upload the Next.js static export output).
+#  Collegeshub — Hostinger Apache .htaccess
+#  Complete Technical SEO, Canonical www, HTTPS & SPA Routing
 # ════════════════════════════════════════════════════════════
 
 Options -MultiViews
 RewriteEngine On
 
-# ── 1. Serve existing files/directories as-is ───────────────
+# ── 1. Canonical non-www -> www 301 Permanent Redirect ───────
+# Redirects http(s)://collegeshub.org/* -> https://www.collegeshub.org/*
+# Preserves query strings, paths, and leaves college subdomains (e.g. fmc.collegeshub.org) intact
+RewriteCond %{HTTP_HOST} ^collegeshub\.org$ [NC]
+RewriteRule ^(.*)$ https://www.collegeshub.org/$1 [L,R=301,QSA]
+
+# ── 2. Force HTTPS for all domains and subdomains ─────────────
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# ── 3. SEO & Static Assets: Pass through directly ────────────
+# Ensure sitemap.xml, robots.txt, favicons and SVG/PNG assets are never rewritten
+RewriteRule ^sitemap\.xml$ - [L]
+RewriteRule ^robots\.txt$ - [L]
+RewriteRule ^favicon\.ico$ - [L]
+RewriteRule ^favicon\.svg$ - [L]
+RewriteRule ^icon\.svg$ - [L]
+RewriteRule ^logo-mark\.svg$ - [L]
+RewriteRule ^logo\.svg$ - [L]
+RewriteRule ^og-image\.png$ - [L]
+RewriteRule ^apple-touch-icon\.png$ - [L]
+RewriteRule ^collegeshub-loader\.js$ - [L]
+
+# ── 4. Serve existing files and directories as-is ─────────────
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# ── 2. Serve .html file if it exists (trailingSlash=true ────
-#       generates /route/index.html for every page)
+# ── 5. Serve .html file if it exists ─────────────────────────
 RewriteCond %{REQUEST_FILENAME}.html -f
 RewriteRule ^(.*)$ $1.html [L]
 
-# ── 3. Try /route/index.html (trailingSlash directory form) ──
+# ── 5b. Tenant subdomains at root /: serve college profile SPA ─
+RewriteCond %{HTTP_HOST} ^([a-zA-Z0-9-]+)\.collegeshub\.org$ [NC]
+RewriteCond %{HTTP_HOST} !^(www|admin)\.collegeshub\.org$ [NC]
+RewriteRule ^$ /college/_/index.html [L]
+
+# ── 6. Try /route/index.html (Next.js trailingSlash form) ────
 RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI}/index.html -f
 RewriteRule ^(.*)/?$ $1/index.html [L]
 
-# ── 4. Fall back: send everything else to /index.html ────────
-#       (catches deep links and browser refreshes)
+# ── 7. Dynamic route rewrites: map real IDs → _ placeholder ──
+# Super Admin: college detail
+RewriteRule ^super-admin/colleges/([^/]+)(/.*)?$ /super-admin/colleges/_/index.html [L]
+
+# Admin: student detail, staff detail, fee receipt, result card
+RewriteRule ^admin/students/([^/]+)(/.*)?$ /admin/students/_/index.html [L]
+RewriteRule ^admin/staff/([^/]+)(/.*)?$ /admin/staff/_/index.html [L]
+RewriteRule ^admin/fees/receipt/([^/]+)(/.*)?$ /admin/fees/receipt/_/index.html [L]
+RewriteRule ^admin/results/card/([^/]+)(/.*)?$ /admin/results/card/_/index.html [L]
+
+# Principal: student and staff detail
+RewriteRule ^principal/students/([^/]+)(/.*)?$ /principal/students/_/index.html [L]
+RewriteRule ^principal/staff/([^/]+)(/.*)?$ /principal/staff/_/index.html [L]
+
+# Registrar: student detail
+RewriteRule ^registrar/students/([^/]+)(/.*)?$ /registrar/students/_/index.html [L]
+
+# Accountant: fee receipt
+RewriteRule ^accountant/fees/receipt/([^/]+)(/.*)?$ /accountant/fees/receipt/_/index.html [L]
+
+# Public: college profile, application, auth tokens
+RewriteRule ^college/([^/]+)(/.*)?$ /college/_/index.html [L]
+RewriteRule ^apply/([^/]+)(/.*)?$ /apply/_/index.html [L]
+RewriteRule ^register/invitation/([^/]+)(/.*)?$ /register/invitation/_/index.html [L]
+RewriteRule ^setup/([^/]+)(/.*)?$ /setup/_/index.html [L]
+RewriteRule ^set-password/([^/]+)(/.*)?$ /set-password/_/index.html [L]
+RewriteRule ^verify/([^/]+)(/.*)?$ /verify/_/index.html [L]
+
+# ── 8. SPA Fallback: send remaining client routes to /index.html ─
 RewriteRule ^ /index.html [L]
+
+# ── MIME Types & Headers ─────────────────────────────────────
+<IfModule mod_mime.c>
+  AddType application/xml .xml
+  AddType text/plain .txt
+  AddType image/svg+xml .svg
+  AddType image/x-icon .ico
+  AddType image/png .png
+  AddType image/webp .webp
+</IfModule>
+
+<Files "sitemap.xml">
+  Header always set Content-Type "application/xml; charset=utf-8"
+</Files>
+
+<Files "robots.txt">
+  Header always set Content-Type "text/plain; charset=utf-8"
+</Files>
 
 # ── Security headers ──────────────────────────────────────────
 <IfModule mod_headers.c>
@@ -33,18 +104,22 @@ RewriteRule ^ /index.html [L]
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
-# ── Cache static assets aggressively ─────────────────────────
+# ── Cache control ─────────────────────────────────────────────
 <IfModule mod_expires.c>
   ExpiresActive On
-  ExpiresByType text/css              "access plus 1 year"
-  ExpiresByType application/javascript "access plus 1 year"
-  ExpiresByType image/webp            "access plus 1 year"
-  ExpiresByType image/svg+xml         "access plus 1 year"
-  ExpiresByType font/woff2            "access plus 1 year"
-  ExpiresByType application/json      "access plus 0 seconds"
+  ExpiresByType text/css                "access plus 1 year"
+  ExpiresByType application/javascript  "access plus 1 year"
+  ExpiresByType image/webp              "access plus 1 year"
+  ExpiresByType image/svg+xml           "access plus 1 year"
+  ExpiresByType image/png               "access plus 1 year"
+  ExpiresByType image/x-icon            "access plus 1 year"
+  ExpiresByType font/woff2              "access plus 1 year"
+  ExpiresByType application/xml         "access plus 0 seconds"
+  ExpiresByType text/plain              "access plus 0 seconds"
+  ExpiresByType application/json        "access plus 0 seconds"
 </IfModule>
 
 # ── Enable gzip compression ───────────────────────────────────
 <IfModule mod_deflate.c>
-  AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json
+  AddOutputFilterByType DEFLATE text/html text/css text/plain application/xml application/javascript application/json
 </IfModule>

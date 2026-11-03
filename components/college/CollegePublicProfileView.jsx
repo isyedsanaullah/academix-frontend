@@ -12,6 +12,7 @@ import {
 import {
   FaFacebook, FaTwitter, FaLinkedin, FaInstagram, FaYoutube, FaWhatsapp
 } from 'react-icons/fa';
+import { resolveFileUrl } from '@/lib/api';
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=1200&q=80';
 
@@ -57,8 +58,9 @@ export default function CollegePublicProfileView({
   }
 
   const settings = college.settings || {};
-  const coverUrl = college.coverPhoto || settings.coverPhoto || DEFAULT_COVER;
-  const logoUrl = college.logo || '';
+  const rawCover = college.coverPhoto || settings.coverPhoto;
+  const coverUrl = rawCover ? resolveFileUrl(rawCover) : DEFAULT_COVER;
+  const logoUrl = resolveFileUrl(college.logo) || '';
   const collegeName = college.name || 'College Name';
   const tagline = college.tagline || settings.tagline || '';
   const about = college.about || settings.about || '';
