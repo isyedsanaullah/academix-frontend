@@ -229,11 +229,11 @@ export default function CollegePublicProfileView({
 
               <div className="space-y-3.5">
                 {email && (
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
                     <HiOutlineMail className="text-indigo-400 mt-0.5 flex-shrink-0" size={16} />
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-white/40 font-bold uppercase">Public Email</p>
-                      <a href={`mailto:${email}`} className="text-xs font-medium text-white hover:text-indigo-400 transition-colors break-all">
+                      <a href={`mailto:${email}`} className="text-xs font-medium text-white hover:text-indigo-400 transition-colors break-words overflow-hidden text-ellipsis block">
                         {email}
                       </a>
                     </div>

@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
+import CollegesHubLoader from '../../common/CollegesHubLoader';
 import {
   HiOutlineCreditCard,
   HiOutlineRefresh,
@@ -16,7 +17,9 @@ import {
   HiOutlineExclamation,
   HiOutlineShieldCheck,
   HiOutlineCurrencyDollar,
-  HiOutlineDocumentText
+  HiOutlineDocumentText,
+  HiOutlineAcademicCap,
+  HiOutlineUserGroup
 } from 'react-icons/hi';
 
 export default function SubscriptionTab({ collegeId, collegeName, onSubscriptionChanged }) {
@@ -53,17 +56,52 @@ export default function SubscriptionTab({ collegeId, collegeName, onSubscription
 
   const [suspendReason, setSuspendReason] = useState('');
 
+  // Quotas & Capacity state
+  const [quotaForm, setQuotaForm] = useState({
+    maxStudents: '',
+    maxStaff: '',
+    reason: ''
+  });
+  const [savingQuotas, setSavingQuotas] = useState(false);
+
   const fetchSubscription = async () => {
     try {
       setLoading(true);
       const res = await api.get(`/super-admin/colleges/${collegeId}/subscription`);
       if (res.data?.success) {
         setData(res.data.data);
+        if (res.data.data?.quotas) {
+          const q = res.data.data.quotas;
+          setQuotaForm({
+            maxStudents: q.maxStudents === -1 ? '' : String(q.maxStudents ?? ''),
+            maxStaff: q.maxStaff === -1 ? '' : String(q.maxStaff ?? ''),
+            reason: ''
+          });
+        }
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load subscription details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveQuotas = async (e) => {
+    e?.preventDefault();
+    try {
+      setSavingQuotas(true);
+      await api.put(`/super-admin/colleges/${collegeId}/quotas`, {
+        maxStudents: quotaForm.maxStudents.trim() === '' ? -1 : Number(quotaForm.maxStudents),
+        maxStaff: quotaForm.maxStaff.trim() === '' ? -1 : Number(quotaForm.maxStaff),
+        reason: quotaForm.reason
+      });
+      toast.success('College student & staff limits updated successfully!');
+      fetchSubscription();
+      if (onSubscriptionChanged) onSubscriptionChanged();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update quotas');
+    } finally {
+      setSavingQuotas(false);
     }
   };
 
@@ -158,9 +196,8 @@ export default function SubscriptionTab({ collegeId, collegeName, onSubscription
 
   if (loading) {
     return (
-      <div className="space-y-4 py-8">
-        <div className="skeleton h-48 w-full rounded-2xl" />
-        <div className="skeleton h-64 w-full rounded-2xl" />
+      <div className="py-12">
+        <CollegesHubLoader size="md" text="Loading college subscription status…" minHeight="min-h-[220px]" />
       </div>
     );
   }
@@ -338,6 +375,131 @@ export default function SubscriptionTab({ collegeId, collegeName, onSubscription
         )}
       </div>
 
+      {/* Quota & Capacity Management Card */}
+      <div className="p-6 rounded-2xl bg-white dark:bg-[#161b22] border border-slate-200/80 dark:border-white/[0.06] shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-white/[0.05] pb-4">
+          <div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <HiOutlineAcademicCap className="text-indigo-600 dark:text-indigo-400" size={20} />
+              Student & Staff Capacity Quotas
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">
+              Enforce strict account caps or expand quota limits. Leave blank or set to Unlimited for unrestricted access.
+            </p>
+          </div>
+          <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 self-start sm:self-auto">
+            Live Quota Enforcement
+          </span>
+        </div>
+
+        <form onSubmit={handleSaveQuotas} className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Student Limit Card */}
+            <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05] space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 dark:text-white/80 flex items-center gap-1.5">
+                  <HiOutlineAcademicCap size={15} className="text-indigo-500" /> Maximum Student Limit
+                </label>
+                <span className="text-[11px] text-slate-500 dark:text-white/40 font-mono">
+                  Current: <strong className="text-slate-800 dark:text-white">{data?.quotas?.studentCount ?? 0}</strong> enrolled
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="-1"
+                  step="1"
+                  placeholder="Unlimited (No cap)"
+                  value={quotaForm.maxStudents}
+                  onChange={(e) => setQuotaForm(prev => ({ ...prev, maxStudents: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.1] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-white/30 mr-1">Presets:</span>
+                {[50, 100, 250, 500, 1000].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => setQuotaForm(prev => ({ ...prev, maxStudents: String(num) }))}
+                    className="text-[11px] font-medium px-2 py-0.5 rounded-lg bg-white dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-white/70 hover:border-indigo-500 hover:text-indigo-600 transition"
+                  >
+                    {num}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setQuotaForm(prev => ({ ...prev, maxStudents: '' }))}
+                  className="text-[11px] font-semibold px-2 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 transition"
+                >
+                  Unlimited
+                </button>
+              </div>
+            </div>
+
+            {/* Staff Limit Card */}
+            <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05] space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 dark:text-white/80 flex items-center gap-1.5">
+                  <HiOutlineUserGroup size={15} className="text-purple-500" /> Maximum Staff Limit
+                </label>
+                <span className="text-[11px] text-slate-500 dark:text-white/40 font-mono">
+                  Current: <strong className="text-slate-800 dark:text-white">{data?.quotas?.staffCount ?? 0}</strong> active
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="-1"
+                  step="1"
+                  placeholder="Unlimited (No cap)"
+                  value={quotaForm.maxStaff}
+                  onChange={(e) => setQuotaForm(prev => ({ ...prev, maxStaff: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.1] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-white/30 mr-1">Presets:</span>
+                {[10, 25, 50, 100].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => setQuotaForm(prev => ({ ...prev, maxStaff: String(num) }))}
+                    className="text-[11px] font-medium px-2 py-0.5 rounded-lg bg-white dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-white/70 hover:border-purple-500 hover:text-purple-600 transition"
+                  >
+                    {num}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setQuotaForm(prev => ({ ...prev, maxStaff: '' }))}
+                  className="text-[11px] font-semibold px-2 py-0.5 rounded-lg bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/40 text-purple-600 dark:text-purple-400 hover:bg-purple-100 transition"
+                >
+                  Unlimited
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
+            <input
+              type="text"
+              placeholder="Reason / Notes for audit log (optional)"
+              value={quotaForm.reason}
+              onChange={(e) => setQuotaForm(prev => ({ ...prev, reason: e.target.value }))}
+              className="flex-1 px-3.5 py-2 text-xs rounded-xl bg-slate-50 dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.08] text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+            <button
+              type="submit"
+              disabled={savingQuotas}
+              className="btn-primary px-6 py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+            >
+              {savingQuotas ? 'Updating Quotas...' : 'Save Quota Limits'}
+            </button>
+          </div>
+        </form>
+      </div>
+
       {/* Subscription Period History Table */}
       <div className="p-6 rounded-2xl bg-white dark:bg-[#161b22] border border-slate-200/80 dark:border-white/[0.06] shadow-sm space-y-4">
         <div className="flex items-center justify-between">
@@ -410,6 +572,131 @@ export default function SubscriptionTab({ collegeId, collegeName, onSubscription
             </table>
           </div>
         )}
+      </div>
+
+      {/* Quota & Capacity Management Card */}
+      <div className="p-6 rounded-2xl bg-white dark:bg-[#161b22] border border-slate-200/80 dark:border-white/[0.06] shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-white/[0.05] pb-4">
+          <div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <HiOutlineAcademicCap className="text-indigo-600 dark:text-indigo-400" size={20} />
+              Student & Staff Capacity Quotas
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">
+              Enforce strict account caps or expand quota limits. Leave blank or set to Unlimited for unrestricted access.
+            </p>
+          </div>
+          <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 self-start sm:self-auto">
+            Live Quota Enforcement
+          </span>
+        </div>
+
+        <form onSubmit={handleSaveQuotas} className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Student Limit Card */}
+            <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05] space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 dark:text-white/80 flex items-center gap-1.5">
+                  <HiOutlineAcademicCap size={15} className="text-indigo-500" /> Maximum Student Limit
+                </label>
+                <span className="text-[11px] text-slate-500 dark:text-white/40 font-mono">
+                  Current: <strong className="text-slate-800 dark:text-white">{data?.quotas?.studentCount ?? 0}</strong> enrolled
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="-1"
+                  step="1"
+                  placeholder="Unlimited (No cap)"
+                  value={quotaForm.maxStudents}
+                  onChange={(e) => setQuotaForm(prev => ({ ...prev, maxStudents: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.1] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-white/30 mr-1">Presets:</span>
+                {[50, 100, 250, 500, 1000].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => setQuotaForm(prev => ({ ...prev, maxStudents: String(num) }))}
+                    className="text-[11px] font-medium px-2 py-0.5 rounded-lg bg-white dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-white/70 hover:border-indigo-500 hover:text-indigo-600 transition"
+                  >
+                    {num}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setQuotaForm(prev => ({ ...prev, maxStudents: '' }))}
+                  className="text-[11px] font-semibold px-2 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 transition"
+                >
+                  Unlimited
+                </button>
+              </div>
+            </div>
+
+            {/* Staff Limit Card */}
+            <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05] space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 dark:text-white/80 flex items-center gap-1.5">
+                  <HiOutlineUserGroup size={15} className="text-purple-500" /> Maximum Staff Limit
+                </label>
+                <span className="text-[11px] text-slate-500 dark:text-white/40 font-mono">
+                  Current: <strong className="text-slate-800 dark:text-white">{data?.quotas?.staffCount ?? 0}</strong> active
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="-1"
+                  step="1"
+                  placeholder="Unlimited (No cap)"
+                  value={quotaForm.maxStaff}
+                  onChange={(e) => setQuotaForm(prev => ({ ...prev, maxStaff: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.1] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-white/30 mr-1">Presets:</span>
+                {[10, 25, 50, 100].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => setQuotaForm(prev => ({ ...prev, maxStaff: String(num) }))}
+                    className="text-[11px] font-medium px-2 py-0.5 rounded-lg bg-white dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-white/70 hover:border-purple-500 hover:text-purple-600 transition"
+                  >
+                    {num}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setQuotaForm(prev => ({ ...prev, maxStaff: '' }))}
+                  className="text-[11px] font-semibold px-2 py-0.5 rounded-lg bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/40 text-purple-600 dark:text-purple-400 hover:bg-purple-100 transition"
+                >
+                  Unlimited
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
+            <input
+              type="text"
+              placeholder="Reason / Notes for audit log (optional)"
+              value={quotaForm.reason}
+              onChange={(e) => setQuotaForm(prev => ({ ...prev, reason: e.target.value }))}
+              className="flex-1 px-3.5 py-2 text-xs rounded-xl bg-slate-50 dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.08] text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+            <button
+              type="submit"
+              disabled={savingQuotas}
+              className="btn-primary px-6 py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+            >
+              {savingQuotas ? 'Updating Quotas...' : 'Save Quota Limits'}
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* ─── MODAL 1: ASSIGN PLAN ─────────────────────────────────────────── */}
