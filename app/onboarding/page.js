@@ -149,10 +149,11 @@ const ACADEMIC_PRESETS = [
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, updateUser } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [launching, setLaunching] = useState(false);
   const [currentStep, setCurrentStep] = useState('verify');
   const [stepsState, setStepsState] = useState({
     verify: 'done',
@@ -668,6 +669,38 @@ export default function OnboardingPage() {
       link.click();
       document.body.removeChild(link);
     } catch (err) { toast.error('Failed to download error audit report'); }
+  };
+
+  // ── Launch College Workspace ──
+  const handleLaunchDashboard = async () => {
+    try {
+      setLaunching(true);
+      const res = await api.post('/admin/onboarding/launch');
+      if (res.data?.success) {
+        // Update local college status in user object so AuthGuard allows /admin access
+        if (user && user.college) {
+          updateUser({
+            college: {
+              ...user.college,
+              status: 'active'
+            }
+          });
+        }
+        toast.success('🎉 College workspace launched successfully!');
+        router.push('/admin');
+      } else {
+        toast.error(res.data?.message || 'Failed to launch college workspace');
+      }
+    } catch (err) {
+      console.error('Launch workspace error:', err);
+      const msg = err.response?.data?.message || err.message || 'Failed to launch college workspace';
+      toast.error(msg);
+      if (err.response?.data?.missingRequired) {
+        toast.error(`Missing items: ${err.response.data.missingRequired.join(', ')}`, { duration: 6000 });
+      }
+    } finally {
+      setLaunching(false);
+    }
   };
 
   // ── Live Preview Data Object ──
@@ -1960,8 +1993,22 @@ export default function OnboardingPage() {
                     {/* Actions */}
                     <div className="flex flex-col sm:flex-row items-center gap-3">
                       <button type="button" onClick={() => handleNavigateStep('profile')} className="btn-secondary w-full sm:w-auto px-5 py-3 text-sm">Review & Edit Details</button>
-                      <button type="button" onClick={() => router.push('/admin')} className="btn-primary w-full sm:w-auto px-8 py-3.5 text-sm font-bold flex items-center justify-center gap-2">
-                        Launch Dashboard <HiArrowRight size={15} />
+                      <button
+                        type="button"
+                        onClick={handleLaunchDashboard}
+                        disabled={launching}
+                        className="btn-primary w-full sm:w-auto px-8 py-3.5 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60"
+                      >
+                        {launching ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Launching Workspace...
+                          </>
+                        ) : (
+                          <>
+                            Launch Dashboard <HiArrowRight size={15} />
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
