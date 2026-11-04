@@ -1,6 +1,12 @@
-'use client';
-
 import LegalLayout, { P, H3, UL, Note } from '@/components/common/LegalLayout';
+
+export const metadata = {
+  title: 'Privacy Policy',
+  description: 'Privacy policy and institutional data protection commitments of Collegeshub.',
+  alternates: {
+    canonical: '/privacy-policy',
+  },
+};
 
 const SECTIONS = [
   { id: 'introduction', title: 'Introduction', content: (<>

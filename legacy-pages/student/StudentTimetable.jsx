@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 /* ──────────────────── Constants ──────────────────── */
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -101,11 +102,8 @@ const StudentTimetable = () => {
 
   /* ──────────────────── Loading ──────────────────── */
   if (loading) return (
-    <div style={styles.loadingContainer}>
-      <div style={styles.loadingSpinner}>
-        <div style={styles.spinnerRing} className="animate-spin" />
-      </div>
-      <p style={styles.loadingText}>Loading your timetable...</p>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' }}>
+      <CollegesHubLoader size="md" text="Loading your class timetable…" minHeight="min-h-[220px]" />
     </div>
   );
 

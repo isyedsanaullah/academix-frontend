@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { HiOutlineX, HiOutlinePrinter, HiOutlineClock, HiOutlineReceiptTax } from 'react-icons/hi';
 import api from '@/services/api';
+import CollegesHubLoader from '@/components/common/CollegesHubLoader';
 
 export default function PaymentHistoryModal({ isOpen, onClose, fee, student, onPrintReceipt }) {
   const [payments, setPayments] = useState([]);
@@ -48,8 +49,8 @@ export default function PaymentHistoryModal({ isOpen, onClose, fee, student, onP
         {/* Modal Body */}
         <div className="p-5 overflow-y-auto flex-1 space-y-4">
           {loading ? (
-            <div className="flex justify-center py-10">
-              <div className="w-8 h-8 border-3 border-primary-500 border-t-transparent rounded-full animate-spin" />
+            <div className="py-8">
+              <CollegesHubLoader size="sm" text="Loading payment history..." minHeight="min-h-[120px]" />
             </div>
           ) : payments.length === 0 ? (
             <div className="text-center py-12 text-surface-500">

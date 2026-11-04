@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import CollegesHubLoader from './CollegesHubLoader';
 import { 
   HiOutlineCalendar, 
   HiOutlineChevronDown, 
@@ -78,10 +79,7 @@ const RecentAnnouncements = () => {
   if (loading) {
     return (
       <div className="glass-card p-6 flex items-center justify-center min-h-[160px]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Loading announcements...</span>
-        </div>
+        <CollegesHubLoader size="sm" text="Loading announcements..." minHeight="min-h-[120px]" />
       </div>
     );
   }

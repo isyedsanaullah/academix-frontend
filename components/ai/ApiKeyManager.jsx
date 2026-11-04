@@ -6,6 +6,7 @@ import {
   HiOutlineExclamation, HiOutlineRefresh, HiOutlineEye, HiOutlineEyeOff,
   HiOutlineExternalLink, HiOutlineChevronDown, HiOutlineChevronUp
 } from 'react-icons/hi';
+import CollegesHubLoader from '../common/CollegesHubLoader';
 
 /**
  * ApiKeyManager — Reusable component for managing Gemini API key
@@ -78,11 +79,8 @@ const ApiKeyManager = () => {
 
   if (loading) {
     return (
-      <div className="rounded-xl bg-[#0d1117] border border-white/[0.06] p-6">
-        <div className="flex items-center gap-3">
-          <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-white/40 text-sm">Loading API configuration...</span>
-        </div>
+      <div className="rounded-xl bg-[#0d1117] border border-white/[0.06] p-6 flex justify-center">
+        <CollegesHubLoader size="xs" text="Loading API configuration…" minHeight="min-h-[120px]" />
       </div>
     );
   }

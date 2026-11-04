@@ -1,10 +1,19 @@
 import { Suspense } from 'react';
 import Login from '@/legacy-pages/auth/Login';
+import CollegesHubLoader from '@/components/common/CollegesHubLoader';
+
+export const metadata = {
+  title: 'Sign In',
+  description: 'Sign in to your college administrative, faculty or student portal on Collegeshub.',
+  alternates: {
+    canonical: '/login',
+  },
+};
 
 function LoginFallback() {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-card">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+      <CollegesHubLoader size="lg" text="Loading CollegesHub sign-in…" />
     </div>
   );
 }

@@ -7,8 +7,8 @@ export default function CollegeDirectoryPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to the college directory section on root
-    router.replace('/#college-directory');
+    // Redirect to the dedicated colleges directory page
+    router.replace('/colleges');
   }, [router]);
 
   return (

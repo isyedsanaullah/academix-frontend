@@ -13,6 +13,7 @@ import {
   HiOutlineX,
   HiOutlineExclamation
 } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 export default function PracticalManagement() {
   const [activeTab, setActiveTab] = useState('sessions'); // sessions, marks, journals, stock, examiners
@@ -281,7 +282,13 @@ export default function PracticalManagement() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 font-medium">
-                {sessions.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center">
+                      <CollegesHubLoader size="sm" text="Loading practical sessions…" minHeight="min-h-[140px]" />
+                    </td>
+                  </tr>
+                ) : sessions.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-gray-400">
                       No practical sessions scheduled yet.
@@ -337,7 +344,13 @@ export default function PracticalManagement() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {marks.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center">
+                      <CollegesHubLoader size="sm" text="Loading practical evaluation marks…" minHeight="min-h-[140px]" />
+                    </td>
+                  </tr>
+                ) : marks.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-10 text-center text-gray-400">
                       No practical marks recorded yet.
@@ -387,7 +400,13 @@ export default function PracticalManagement() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {journals.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center">
+                      <CollegesHubLoader size="sm" text="Loading lab journal records…" minHeight="min-h-[140px]" />
+                    </td>
+                  </tr>
+                ) : journals.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-10 text-center text-gray-400">
                       No journal submission records found.
@@ -431,7 +450,13 @@ export default function PracticalManagement() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {stockItems.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center">
+                      <CollegesHubLoader size="sm" text="Loading laboratory apparatus & stock…" minHeight="min-h-[140px]" />
+                    </td>
+                  </tr>
+                ) : stockItems.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-10 text-center text-gray-400">
                       No stock items registered yet.
@@ -494,7 +519,13 @@ export default function PracticalManagement() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {examiners.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center">
+                      <CollegesHubLoader size="sm" text="Loading board practical examiners…" minHeight="min-h-[140px]" />
+                    </td>
+                  </tr>
+                ) : examiners.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-10 text-center text-gray-400">
                       No board practical examiners registered.

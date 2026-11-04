@@ -10,6 +10,7 @@ import FeeStructureModal from '@/components/fees/FeeStructureModal';
 import RecordPaymentModal from '@/components/fees/RecordPaymentModal';
 import PaymentHistoryModal from '@/components/fees/PaymentHistoryModal';
 import FeeReceiptModal from '@/components/fees/FeeReceiptModal';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const StudentDetail = () => {
   const { id } = useParams();
@@ -177,7 +178,11 @@ const StudentDetail = () => {
     }
   };
 
-  if (loading) return <div className="flex justify-center py-20"><div className="w-10 h-10 border-3 border-primary-500 border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return (
+    <div className="flex justify-center py-20">
+      <CollegesHubLoader size="md" text="Loading student file…" minHeight="min-h-[220px]" />
+    </div>
+  );
   if (!student) return <div className="text-center py-20 text-surface-500">Student not found</div>;
 
   const totalFee = fees.reduce((s, f) => s + (f.totalAmount || 0), 0);

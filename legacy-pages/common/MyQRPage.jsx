@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import MyQRCode from '../../components/common/MyQRCode';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const MyQRPage = () => {
   const { user } = useAuth();
@@ -30,7 +31,11 @@ const MyQRPage = () => {
     fetch();
   }, [user]);
 
-  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 240 }}><div className="animate-spin" style={{ width: 32, height: 32, border: '2px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1', borderRadius: '50%' }} /></div>;
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' }}>
+      <CollegesHubLoader size="md" text="Loading digital identity card…" minHeight="min-h-[220px]" />
+    </div>
+  );
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center' }}>

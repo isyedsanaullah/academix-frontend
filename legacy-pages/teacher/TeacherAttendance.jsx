@@ -3,6 +3,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import Pagination from '../../components/common/Pagination';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 import { 
   HiOutlineCalendar, 
   HiOutlineUserGroup, 
@@ -414,10 +415,7 @@ const TeacherAttendance = () => {
 
         {/* Loader or Table Data */}
         {loading ? (
-          <div className="flex flex-col justify-center items-center py-20 gap-3">
-            <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin shadow-lg" />
-            <span className="text-slate-400 text-xs font-semibold tracking-wider">Syncing roster from database...</span>
-          </div>
+          <CollegesHubLoader size="md" text="Syncing roster from database…" minHeight="min-h-[220px]" />
         ) : paginatedData.length === 0 ? (
           <div className="text-center py-16 text-slate-500 text-xs font-medium space-y-2">
             <div className="text-3xl">📭</div>

@@ -1,7 +1,6 @@
 // Server component wrapper for /setup/[token]
 // Static export: force-static so Next.js doesn't require generateStaticParams for real tokens.
 export const dynamic = 'force-static';
-export const dynamicParams = false;
 
 import SetupClient from './_client';
 

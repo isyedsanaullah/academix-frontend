@@ -3,6 +3,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlineLogout as HiCheckout, HiOutlineUserGroup, HiOutlineShieldCheck, HiOutlineSearch, HiOutlineRefresh } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const Visitors = () => {
   const { user } = useAuth();
@@ -124,9 +125,7 @@ const Visitors = () => {
       {activeTab === 'external' && (
         <div className="glass-card overflow-hidden">
           {loadingVisitors ? (
-            <div className="flex justify-center py-12">
-              <div className="w-8 h-8 border-3 border-primary-500 border-t-transparent rounded-full animate-spin" />
-            </div>
+            <CollegesHubLoader size="md" text="Loading campus visitors log…" minHeight="min-h-[200px]" />
           ) : visitors.length === 0 ? (
             <div className="text-center py-12 text-surface-400 text-sm">No external visitors logged recently.</div>
           ) : (
@@ -233,9 +232,7 @@ const Visitors = () => {
           {/* Internal Logs Grid */}
           <div className="glass-card overflow-hidden">
             {loadingInternal ? (
-              <div className="flex justify-center py-12">
-                <div className="w-8 h-8 border-3 border-primary-500 border-t-transparent rounded-full animate-spin" />
-              </div>
+              <CollegesHubLoader size="md" text="Loading internal movement logs…" minHeight="min-h-[200px]" />
             ) : internalLogs.length === 0 ? (
               <div className="text-center py-12 text-surface-400 text-sm">No internal movement recorded for this query.</div>
             ) : (

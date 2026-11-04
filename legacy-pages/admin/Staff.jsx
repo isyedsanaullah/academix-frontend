@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlineSearch } from 'react-icons/hi';
 import Pagination from '../../components/common/Pagination';
 import { useAuth } from '../../context/AuthContext';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const roleColors = {
   admin:      'bg-violet-500/10 text-violet-400 border-violet-500/20',
@@ -195,9 +196,7 @@ const Staff = () => {
       {/* Table */}
       <div className="glass-card overflow-hidden rounded-2xl shadow-2xl border border-white/5">
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"/>
-          </div>
+          <CollegesHubLoader size="md" text="Loading college staff roster…" minHeight="min-h-[220px]" />
         ) : users.length === 0 ? (
           <div className="text-center py-16 text-white/30 text-sm font-medium">No staff accounts found matching your filters</div>
         ) : (

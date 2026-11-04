@@ -19,6 +19,7 @@ import {
   HiOutlineReceiptTax
 } from 'react-icons/hi';
 import Pagination from '../../components/common/Pagination';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const Fees = () => {
   const navigate = useNavigate();
@@ -630,10 +631,7 @@ const Fees = () => {
       {/* Main Glass Table */}
       <div className="glass-card overflow-hidden bg-surface-900/40 border-white/[0.05]">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <div className="w-10 h-10 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-surface-400 text-xs font-medium">Fetching record sets from server...</p>
-          </div>
+          <CollegesHubLoader size="md" text="Fetching billing records…" minHeight="min-h-[220px]" />
         ) : fees.length === 0 ? (
           <div className="text-center py-20 text-surface-500 flex flex-col items-center gap-2">
             <p className="text-base font-semibold text-surface-300">No Fee Records Found</p>

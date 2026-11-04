@@ -7,6 +7,7 @@ import {
   HiOutlineBookOpen, HiOutlineSparkles, HiOutlineCheckCircle,
   HiOutlineAcademicCap, HiOutlineCalendar
 } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const StudentMaterials = () => {
   const [documents, setDocuments] = useState([]);
@@ -134,9 +135,7 @@ const StudentMaterials = () => {
 
       {/* Materials List / Cards */}
       {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-        </div>
+        <CollegesHubLoader size="md" text="Loading study materials…" minHeight="min-h-[200px]" />
       ) : filtered.length === 0 ? (
         <div className="glass-card p-12 text-center">
           <HiOutlineBookOpen className="mx-auto text-white/20 mb-3" size={44} />

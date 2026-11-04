@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlineCurrencyDollar, HiOutlinePlus, HiOutlineQrcode } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const categories = [
   { value: 'discipline', label: 'Discipline', icon: '⚖️' },
@@ -53,7 +54,11 @@ const FineStudent = () => {
   const unpaidFines = fines.filter(f => f.status === 'unpaid');
   const filteredStudents = search ? students.filter(s => s.name.toLowerCase().includes(search.toLowerCase()) || s.rollNumber?.includes(search)) : students;
 
-  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 240 }}><div className="animate-spin" style={{ width: 32, height: 32, border: '2px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1', borderRadius: '50%' }} /></div>;
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' }}>
+      <CollegesHubLoader size="md" text="Loading student disciplinary fines…" minHeight="min-h-[220px]" />
+    </div>
+  );
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>

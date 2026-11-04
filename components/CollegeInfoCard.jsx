@@ -4,6 +4,7 @@ import {
   HiOutlineOfficeBuilding, HiOutlineMail, HiOutlinePhone,
   HiOutlineLocationMarker, HiOutlineGlobe, HiOutlineUser
 } from 'react-icons/hi';
+import CollegesHubLoader from './common/CollegesHubLoader';
 
 const roleBadge = {
   admin:      { label: 'Administration', color: '#818cf8' },
@@ -24,8 +25,8 @@ const CollegeInfoCard = () => {
   }, []);
 
   if (loading) return (
-    <div className="glass-card" style={{ padding: '20px', display: 'flex', justifyContent: 'center' }}>
-      <div className="animate-spin" style={{ width: '20px', height: '20px', border: '2px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1', borderRadius: '50%' }} />
+    <div className="glass-card p-6 flex justify-center">
+      <CollegesHubLoader size="xs" text="Loading college profile…" minHeight="min-h-[120px]" />
     </div>
   );
 

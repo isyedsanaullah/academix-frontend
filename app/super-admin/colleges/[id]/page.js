@@ -1,12 +1,12 @@
 // Server component wrapper — required for Next.js static export.
-// generateStaticParams returns [] so no pages are pre-rendered;
-// the .htaccess SPA fallback handles all dynamic routes client-side.
+// generateStaticParams returns ["_"] so the static build only pre-renders the
+// placeholder; the .htaccess SPA fallback maps real UUIDs → _/index.html on prod.
+// dynamicParams = true allows the dev server to serve real IDs without a 404.
 export const dynamic = 'force-static';
-export const dynamicParams = false;
 import ClientPage from './_client';
 
 export function generateStaticParams() {
-  return [{"id":"_"}];
+  return [{ id: '_' }];
 }
 
 export default function Page(props) {

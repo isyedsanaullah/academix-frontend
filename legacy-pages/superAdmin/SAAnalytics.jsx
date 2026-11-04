@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -108,26 +109,7 @@ const SAAnalytics = () => {
   if (loading) {
     return (
       <div className="page" aria-busy="true">
-        <div className="page-head">
-          <div className="min-w-0 flex-1">
-            <div className="skeleton h-7 w-64 max-w-full" />
-            <div className="skeleton mt-2 h-4 w-80 max-w-full" />
-          </div>
-          <div className="skeleton h-10 w-36" />
-        </div>
-        <div className="grid grid-cols-2 gap-[var(--gap)] lg:grid-cols-5">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} className="skeleton h-[88px] last:col-span-2 lg:last:col-span-1" />
-          ))}
-        </div>
-        <div className="skeleton h-11 w-full" />
-        <div className="split split-even">
-          <div className="skeleton h-[300px]" />
-          <div className="skeleton h-[300px]" />
-        </div>
-        <p className="text-center text-xs font-medium text-fg-muted">
-          Aggregating platform telemetry and metrics...
-        </p>
+        <CollegesHubLoader size="md" text="Aggregating platform telemetry and metrics…" minHeight="min-h-[420px]" />
       </div>
     );
   }

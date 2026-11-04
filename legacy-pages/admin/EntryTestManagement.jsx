@@ -7,6 +7,7 @@ import {
   HiOutlineFilter, HiOutlineChartBar, HiOutlineCheckCircle, HiOutlineClock,
   HiOutlineInformationCircle, HiOutlineSparkles, HiOutlineTag
 } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const EntryTestManagement = () => {
   const [tab, setTab] = useState('mcq'); // 'mcq' | 'mocks' | 'calc' | 'tracker'
@@ -263,7 +264,9 @@ const EntryTestManagement = () => {
           {/* Question List */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {mcqLoading ? (
-              <p style={{ textAlign: 'center', padding: 40, color: 'var(--text-tertiary)' }}>Loading questions...</p>
+              <div style={{ padding: '24px 0' }}>
+                <CollegesHubLoader size="sm" text="Loading questions from bank…" minHeight="min-h-[140px]" />
+              </div>
             ) : questions.length === 0 ? (
               <div className="glass-card" style={{ padding: 40, textAlign: 'center', color: 'var(--text-tertiary)' }}>
                 No MCQ questions found in bank. Click "New MCQ Question" to add.

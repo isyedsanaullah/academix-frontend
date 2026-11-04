@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import api from '../../lib/api';
+import CollegesHubLoader from '@/components/common/CollegesHubLoader';
 import {
   HiOutlineClipboardCheck,
   HiOutlineExclamation,
@@ -316,8 +317,8 @@ export default function EligibilityManagement() {
             <tbody className="divide-y divide-gray-100 font-medium">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-gray-400">
-                    Loading eligibility records...
+                  <td colSpan={8} className="py-12">
+                    <CollegesHubLoader size="sm" text="Loading eligibility records..." minHeight="min-h-[140px]" />
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (

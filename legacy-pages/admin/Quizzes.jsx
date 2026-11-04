@@ -6,6 +6,7 @@ import ManualQuizBuilder from '@/components/quiz/ManualQuizBuilder';
 import AIQuizBuilder from '@/components/quiz/AIQuizBuilder';
 import TeacherQuizAnalytics from '@/components/quiz/TeacherQuizAnalytics';
 import QuestionBankView from '@/components/quiz/QuestionBankView';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const Quizzes = () => {
   const [activeTab, setActiveTab] = useState('quizzes'); // 'quizzes' | 'question-bank'
@@ -57,7 +58,7 @@ const Quizzes = () => {
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <CollegesHubLoader size="md" text="Loading quiz modules…" minHeight="min-h-[220px]" />
       </div>
     );
   }

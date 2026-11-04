@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import RecentActivityWidget from '../../components/activity/RecentActivityWidget';
 import OnboardingChecklistWidget from '../../components/admin/OnboardingChecklistWidget';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 import {
   HiOutlineAcademicCap, 
   HiOutlineUserGroup, 
@@ -72,8 +73,8 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[350px] w-full">
-        <div className="w-9 h-9 border-3 border-indigo-500/20 border-t-indigo-600 rounded-full animate-spin" />
+      <div className="flex items-center justify-center min-h-[380px] w-full p-6">
+        <CollegesHubLoader size="md" text="Loading college dashboard…" />
       </div>
     );
   }

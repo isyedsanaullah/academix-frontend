@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAuthStore } from '../../store/authStore';
 
 export default function ClientInitializer() {

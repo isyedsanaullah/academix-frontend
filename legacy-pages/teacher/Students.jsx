@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import Pagination from '../../components/common/Pagination';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 import { 
   HiOutlineSearch, 
   HiOutlineUserGroup, 
@@ -249,10 +250,7 @@ const TeacherStudents = () => {
 
         {/* Dynamic State: Loader, Empty, or Table */}
         {loading ? (
-          <div className="flex flex-col justify-center items-center py-24 gap-3">
-            <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin shadow-lg" />
-            <span className="text-slate-400 text-xs font-semibold tracking-wider">Loading student directory...</span>
-          </div>
+          <CollegesHubLoader size="md" text="Loading student directory…" minHeight="min-h-[220px]" />
         ) : students.length === 0 ? (
           <div className="text-center py-20 text-slate-500 text-xs font-medium space-y-2">
             <div className="text-4xl">📭</div>

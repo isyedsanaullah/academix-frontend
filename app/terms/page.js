@@ -1,6 +1,12 @@
-'use client';
-
 import LegalLayout, { P, H3, UL, Note } from '@/components/common/LegalLayout';
+
+export const metadata = {
+  title: 'Terms & Conditions',
+  description: 'Terms of service and subscription agreement for colleges and users on Collegeshub.',
+  alternates: {
+    canonical: '/terms',
+  },
+};
 
 const PLAN_ROWS = [
   ['Starter', '7,999', '79,990', '300', '20', '5 GB'],

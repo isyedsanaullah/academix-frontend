@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiPlus } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const Teachers = () => {
   const [teachers, setTeachers] = useState([]);
@@ -72,7 +73,11 @@ const Teachers = () => {
     } catch (err) { toast.error(err.response?.data?.message || 'Error'); }
   };
 
-  if (loading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return (
+    <div className="flex justify-center py-20">
+      <CollegesHubLoader size="md" text="Loading faculty members…" minHeight="min-h-[220px]" />
+    </div>
+  );
 
   const subjectsByGroup = allSubjects.reduce((acc, sub) => {
     const grp = sub.group || 'Common';

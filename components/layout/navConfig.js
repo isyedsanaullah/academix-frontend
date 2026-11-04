@@ -1,4 +1,4 @@
-import { HiOutlineViewGrid, HiOutlineAcademicCap, HiOutlineUserGroup, HiOutlineCurrencyDollar, HiOutlineClipboardCheck, HiOutlineDocumentText, HiOutlineChartBar, HiOutlineSpeakerphone, HiOutlineCog, HiOutlineLogout, HiOutlineOfficeBuilding, HiOutlineX, HiOutlineShieldCheck, HiOutlineExclamation, HiOutlineCalendar, HiOutlineBookOpen, HiOutlineCollection, HiOutlineBriefcase, HiOutlineDocumentDuplicate, HiOutlineClock, HiOutlineClipboardList, HiOutlineLibrary, HiOutlineCash, HiOutlineIdentification, HiOutlineSparkles, HiOutlineNewspaper, HiOutlineTemplate, HiOutlineCloudUpload, HiOutlineStar, HiOutlineUser, HiOutlineTrash, HiOutlineQrcode, HiOutlineBeaker } from 'react-icons/hi';
+import { HiOutlineViewGrid, HiOutlineAcademicCap, HiOutlineUserGroup, HiOutlineCurrencyDollar, HiOutlineCreditCard, HiOutlineClipboardCheck, HiOutlineDocumentText, HiOutlineChartBar, HiOutlineSpeakerphone, HiOutlineCog, HiOutlineLogout, HiOutlineOfficeBuilding, HiOutlineX, HiOutlineShieldCheck, HiOutlineExclamation, HiOutlineCalendar, HiOutlineBookOpen, HiOutlineCollection, HiOutlineBriefcase, HiOutlineDocumentDuplicate, HiOutlineClock, HiOutlineClipboardList, HiOutlineLibrary, HiOutlineCash, HiOutlineIdentification, HiOutlineSparkles, HiOutlineNewspaper, HiOutlineTemplate, HiOutlineCloudUpload, HiOutlineStar, HiOutlineUser, HiOutlineTrash, HiOutlineQrcode, HiOutlineBeaker } from 'react-icons/hi';
 export const NAV = {
   superAdmin: [
     { to: '/super-admin', icon: HiOutlineViewGrid, label: 'Dashboard' },
@@ -42,6 +42,7 @@ export const NAV = {
     { label: 'BOARD EXAMINATIONS', divider: true },
     { to: '/admin/board', icon: HiOutlineLibrary, label: 'Board Examination Portal', feature: 'board-registration' },
     { label: 'FINANCE & TREASURY', divider: true },
+    { to: '/admin/subscription', icon: HiOutlineCreditCard, label: 'Subscription & Billing' },
     { to: '/admin/treasury', icon: HiOutlineCurrencyDollar, label: 'Treasury & Ledger', feature: 'fees' },
     { to: '/admin/fees', icon: HiOutlineCurrencyDollar, label: 'Fee Management', feature: 'fees' },
     { to: '/accountant/payment-proofs', icon: HiOutlineClipboardCheck, label: 'Payment Proofs', feature: 'payment-proof' },
@@ -106,6 +107,7 @@ export const NAV = {
     { to: '/accountant', icon: HiOutlineViewGrid, label: 'Dashboard' },
     { label: 'TREASURY', divider: true },
     { to: '/accountant/treasury', icon: HiOutlineCurrencyDollar, label: 'Treasury', feature: 'fees' },
+    { to: '/accountant/subscription', icon: HiOutlineCreditCard, label: 'Subscription Billing' },
     { label: 'FEES', divider: true },
     { to: '/accountant/fees', icon: HiOutlineCurrencyDollar, label: 'Fee Collection', feature: 'fees' },
     { to: '/accountant/payment-proofs', icon: HiOutlineClipboardCheck, label: 'Payment Proofs', feature: 'payment-proof' },

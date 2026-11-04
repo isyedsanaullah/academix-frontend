@@ -3,10 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { resolveParam } from '@/lib/paramUtils';
+import CollegesHubLoader from '@/components/common/CollegesHubLoader';
 
 export default function DocumentVerificationPage() {
   const params = useParams();
-  const token = params?.token;
+  const token = resolveParam(params?.token, 'verify');
 
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
@@ -121,9 +123,8 @@ export default function DocumentVerificationPage() {
 
         {/* Loading State */}
         {loading && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-12 text-center">
-            <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-sm font-medium text-slate-600">Verifying security token against institutional database...</p>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-10 text-center">
+            <CollegesHubLoader size="md" text="Verifying security token against institutional database..." minHeight="min-h-[140px]" />
           </div>
         )}
 

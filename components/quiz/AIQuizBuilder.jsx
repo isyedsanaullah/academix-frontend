@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { HiOutlineSparkles, HiOutlineBookOpen, HiOutlineCheckCircle, HiOutlineClock } from 'react-icons/hi';
+import CollegesHubLoader from '@/components/common/CollegesHubLoader';
 
 export default function AIQuizBuilder({ onClose, onSuccess }) {
   const [step, setStep] = useState(1); // 1: Select Config, 2: Generating Progress, 3: Preview & Review
@@ -277,7 +278,9 @@ export default function AIQuizBuilder({ onClose, onSuccess }) {
               </h3>
 
               {loadingHierarchy ? (
-                <p className="text-xs text-white/40 animate-pulse">Loading study material hierarchy...</p>
+                <div className="py-3">
+                  <CollegesHubLoader size="xs" text="Loading study material hierarchy…" minHeight="min-h-[80px]" />
+                </div>
               ) : hierarchy.length === 0 ? (
                 <p className="text-xs text-white/40">No extracted chapters found for this subject. AI will generate using standard curriculum.</p>
               ) : (
@@ -337,11 +340,10 @@ export default function AIQuizBuilder({ onClose, onSuccess }) {
 
         {/* STEP 2: Background Job Progress */}
         {step === 2 && (
-          <div className="p-12 text-center space-y-6">
-            <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="p-8 text-center space-y-6">
+            <CollegesHubLoader size="md" text={jobStatus?.message || 'Searching question bank and vector index...'} minHeight="min-h-[140px]" />
             <div>
-              <h3 className="text-lg font-bold text-white mb-1">Generating AI Quiz Background Job</h3>
-              <p className="text-xs text-white/50">{jobStatus?.message || 'Searching question bank and vector index...'}</p>
+              <h3 className="text-base font-bold text-white mb-1">Generating AI Quiz</h3>
             </div>
 
             <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden max-w-md mx-auto">

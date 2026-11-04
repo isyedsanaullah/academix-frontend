@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import ApiKeyManager from '../../components/ai/ApiKeyManager';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 import { useAuthStore } from '../../store/authStore';
 import {
   HiOutlineUser,
@@ -474,8 +475,8 @@ const SAProfilePage = () => {
 
   // ── Loading state ────────────────────────────────────────────────────────────
   if (loading) return (
-    <div className="flex items-center justify-center h-60">
-      <div className="w-8 h-8 border-2 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
+    <div className="flex items-center justify-center py-16">
+      <CollegesHubLoader size="md" text="Loading administrator profile…" minHeight="min-h-[200px]" />
     </div>
   );
   if (!profile) return null;

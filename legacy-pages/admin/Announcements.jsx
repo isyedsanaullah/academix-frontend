@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const Announcements = () => {
   const [announcements, setAnnouncements] = useState([]);
@@ -39,8 +40,9 @@ const Announcements = () => {
       </div>
 
       <div className="space-y-4">
-        {loading ? <div className="flex justify-center py-12"><div className="w-8 h-8 border-3 border-primary-500 border-t-transparent rounded-full animate-spin" /></div>
-        : announcements.length === 0 ? <div className="text-center py-12 text-surface-500">No announcements</div>
+        {loading ? (
+          <CollegesHubLoader size="md" text="Loading campus announcements…" minHeight="min-h-[200px]" />
+        ) : announcements.length === 0 ? <div className="text-center py-12 text-surface-500">No announcements</div>
         : announcements.map(a => (
           <div key={a._id} className="glass-card p-5">
             <div className="flex justify-between items-start">

@@ -11,6 +11,7 @@ import {
   HiOutlineAcademicCap,
   HiOutlineBadgeCheck
 } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 export default function ExamAnalytics() {
   const [activeTab, setActiveTab] = useState('weak'); // 'weak' or 'comparison'
@@ -192,8 +193,8 @@ export default function ExamAnalytics() {
                 <tbody className="divide-y divide-gray-100 font-medium">
                   {loading ? (
                     <tr>
-                      <td colSpan={7} className="py-12 text-center text-gray-400">
-                        Analyzing test records...
+                      <td colSpan={7} className="py-12 text-center">
+                        <CollegesHubLoader size="sm" text="Analyzing academic examination records…" minHeight="min-h-[140px]" />
                       </td>
                     </tr>
                   ) : weakStudents.length === 0 ? (

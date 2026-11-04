@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiPlus, HiCheckCircle, HiCalendar, HiTrash } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const Sessions = () => {
   const [sessions, setSessions] = useState([]);
@@ -47,7 +48,11 @@ const Sessions = () => {
     } catch (err) { toast.error('Error deleting session'); }
   };
 
-  if (loading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return (
+    <div className="flex justify-center py-20">
+      <CollegesHubLoader size="md" text="Loading academic sessions…" minHeight="min-h-[220px]" />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

@@ -14,6 +14,7 @@ import {
 } from 'react-icons/hi';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import RecentActivityWidget from '../../components/activity/RecentActivityWidget';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const CustomChartTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -55,23 +56,8 @@ const SuperAdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="page" aria-busy="true">
-        <div className="page-head">
-          <div className="min-w-0 flex-1">
-            <div className="skeleton h-7 w-56 max-w-full" />
-            <div className="skeleton mt-2 h-4 w-72 max-w-full" />
-          </div>
-          <div className="skeleton h-10 w-40" />
-        </div>
-        <div className="stat-grid stat-grid-3">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="skeleton h-[88px]" />
-          ))}
-        </div>
-        <div className="split split-even">
-          <div className="skeleton h-[220px]" />
-          <div className="skeleton h-[220px]" />
-        </div>
+      <div className="page flex items-center justify-center min-h-[420px]" aria-busy="true">
+        <CollegesHubLoader size="md" text="Loading platform control center…" minHeight="min-h-[380px]" />
       </div>
     );
   }

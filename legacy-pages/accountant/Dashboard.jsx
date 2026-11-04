@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { HiOutlineCurrencyDollar, HiOutlineExclamation, HiOutlineArrowRight, HiOutlineChartBar, HiOutlineDocumentText, HiOutlineAcademicCap } from 'react-icons/hi';
 import RecentAnnouncements from '../../components/common/RecentAnnouncements';
 import RecentActivityWidget from '../../components/activity/RecentActivityWidget';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 
 const AccountantDashboard = () => {
@@ -36,6 +37,14 @@ const AccountantDashboard = () => {
     { label: 'Fee Defaulters',  icon: HiOutlineExclamation,    path: '/accountant/fees/defaulters', color: '#f87171', desc: 'Overdue payments' },
     { label: 'Announcements',   icon: HiOutlineDocumentText,   path: '/accountant/announcements',   color: '#fbbf24', desc: 'View notices' },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[380px] w-full p-6">
+        <CollegesHubLoader size="md" text="Loading financial dashboard…" />
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-in space-y-6">

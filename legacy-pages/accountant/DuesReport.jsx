@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlineExclamation, HiOutlinePrinter, HiOutlineFilter } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const DuesReport = () => {
   const [dues, setDues] = useState([]);
@@ -86,7 +87,11 @@ const DuesReport = () => {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={10} style={{ padding: 40, textAlign: 'center', color:'var(--text-tertiary)' }}>Loading...</td></tr>
+              <tr>
+                <td colSpan={10} style={{ padding: '40px 0', textAlign: 'center' }}>
+                  <CollegesHubLoader size="sm" text="Compiling dues report…" minHeight="min-h-[140px]" />
+                </td>
+              </tr>
             ) : dues.length === 0 ? (
               <tr><td colSpan={10} style={{ padding: 40, textAlign: 'center', color:'var(--text-tertiary)' }}>🎉 No dues found!</td></tr>
             ) : dues.map((d, i) => (

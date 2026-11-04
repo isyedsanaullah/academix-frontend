@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { apiGet, apiPut } from '@/lib/api';
+import CollegesHubLoader from '@/components/common/CollegesHubLoader';
 
 export default function PaymentProofsQueue() {
   const [proofs, setProofs] = useState([]);
@@ -174,9 +175,8 @@ export default function PaymentProofsQueue() {
       {/* Proofs Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-slate-500">
-            <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-            Loading verification queue...
+          <div className="p-12">
+            <CollegesHubLoader size="sm" text="Loading verification queue..." minHeight="min-h-[140px]" />
           </div>
         ) : proofs.length === 0 ? (
           <div className="p-12 text-center text-slate-500">

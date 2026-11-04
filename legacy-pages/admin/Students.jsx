@@ -12,6 +12,7 @@ import {
   HiOutlineX
 } from 'react-icons/hi';
 import Pagination from '../../components/common/Pagination';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const Students = () => {
   const navigate = useNavigate();
@@ -412,9 +413,7 @@ const Students = () => {
       {/* Student List Table */}
       <div className="glass-card overflow-hidden shadow-2xl border border-white/5 rounded-2xl">
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          </div>
+          <CollegesHubLoader size="md" text="Loading student records…" minHeight="min-h-[220px]" />
         ) : students.length === 0 ? (
           <div className="text-center py-12 text-white/30">
             <p className="text-sm font-semibold">No students found under this selection.</p>
@@ -584,9 +583,7 @@ const Students = () => {
                     </div>
 
                     {loadingGroupSubjects ? (
-                      <div className="flex justify-center py-4">
-                        <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                      </div>
+                      <CollegesHubLoader size="xs" text="Loading group subjects…" minHeight="min-h-[70px]" />
                     ) : groupSubjects.length === 0 ? (
                       <p className="text-xs text-white/40 italic">
                         No custom subject rules configured for this group. Standard syllabus will be used.

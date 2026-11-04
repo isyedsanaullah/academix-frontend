@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiPlus, HiPencil, HiTrash, HiCheckCircle, HiXCircle } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const ClassesAndSections = () => {
   const [classes, setClasses] = useState([]);
@@ -237,7 +238,7 @@ const ClassesAndSections = () => {
 
   if (loading) return (
     <div className="flex justify-center py-20">
-      <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin shadow-lg" />
+      <CollegesHubLoader size="md" text="Loading academic structure…" minHeight="min-h-[220px]" />
     </div>
   );
 

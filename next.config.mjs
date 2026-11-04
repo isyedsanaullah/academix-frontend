@@ -33,7 +33,13 @@ const nextConfig = {
         },
       }
     : {
-        turbopack: {},
+        turbopack: {
+          // Mirror the webpack alias so Turbopack also resolves react-router-dom
+          // to the Next.js-compatible shim in lib/react-router-dom-compat.js
+          resolveAlias: {
+            'react-router-dom': './lib/react-router-dom-compat.js',
+          },
+        },
         images: {
           remotePatterns: [
             { protocol: 'https', hostname: 'images.unsplash.com' },

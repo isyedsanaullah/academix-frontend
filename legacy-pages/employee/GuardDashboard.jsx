@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlineQrcode, HiOutlineUserGroup, HiOutlineRefresh, HiOutlineCamera, HiOutlineSearch } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const GuardDashboard = () => {
   const [logs, setLogs] = useState([]);
@@ -423,7 +424,9 @@ const GuardDashboard = () => {
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>📋 Today's Gate Log ({logs.length})</span>
         </div>
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center' }}><div className="animate-spin" style={{ width: 24, height: 24, border: '2px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1', borderRadius: '50%', margin: '0 auto' }} /></div>
+          <div style={{ padding: 30 }}>
+            <CollegesHubLoader size="sm" text="Loading gate logs..." minHeight="min-h-[120px]" />
+          </div>
         ) : logs.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>No gate logs today</div>
         ) : (

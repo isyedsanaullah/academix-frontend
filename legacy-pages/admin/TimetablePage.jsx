@@ -8,6 +8,7 @@ import {
 import TimingSetup from '../../components/timetable/TimingSetup';
 import SlotGrid from '../../components/timetable/SlotGrid';
 import TimetableViewer from '../../components/timetable/TimetableViewer';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const TimetablePage = () => {
   const [tab, setTab] = useState('view');
@@ -228,11 +229,8 @@ const TimetablePage = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-32">
-        <div className="relative">
-          <div className="w-12 h-12 border-3 border-indigo-200 dark:border-indigo-500/20 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin" />
-        </div>
-        <p className="mt-4 text-sm text-gray-500 dark:text-white/30">Loading timetable...</p>
+      <div className="flex flex-col items-center justify-center py-24">
+        <CollegesHubLoader size="md" text="Loading timetable schedule…" minHeight="min-h-[240px]" />
       </div>
     );
   }

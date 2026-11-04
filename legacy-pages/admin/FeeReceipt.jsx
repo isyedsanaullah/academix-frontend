@@ -4,6 +4,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { HiOutlineArrowLeft, HiOutlinePrinter } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const FeeReceipt = () => {
   const { id } = useParams();
@@ -47,8 +48,8 @@ const FeeReceipt = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-40">
-        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      <div className="flex justify-center items-center py-24">
+        <CollegesHubLoader size="md" text="Loading official fee receipt…" minHeight="min-h-[240px]" />
       </div>
     );
   }

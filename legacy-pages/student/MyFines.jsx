@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlineCurrencyDollar, HiOutlineExclamation } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const MyFines = () => {
   const [fines, setFines] = useState([]);
@@ -22,7 +23,11 @@ const MyFines = () => {
 
   const total = fines.reduce((s, f) => s + f.amount, 0);
 
-  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 240 }}><div className="animate-spin" style={{ width: 32, height: 32, border: '2px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1', borderRadius: '50%' }} /></div>;
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' }}>
+      <CollegesHubLoader size="md" text="Loading fines ledger…" minHeight="min-h-[220px]" />
+    </div>
+  );
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>

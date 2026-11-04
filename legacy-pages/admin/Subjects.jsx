@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiPlus, HiPencil, HiTrash } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const Subjects = () => {
   const [subjects, setSubjects] = useState([]);
@@ -91,7 +92,11 @@ const Subjects = () => {
 
   const groupColors = { 'Pre-Medical': 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20', 'Pre-Engineering': 'bg-blue-500/10 text-blue-400 border border-blue-500/20', 'Computer Science': 'bg-violet-500/10 text-violet-400 border border-violet-500/20', 'Common': 'bg-amber-500/10 text-amber-400 border border-amber-500/20' };
 
-  if (loading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return (
+    <div className="flex justify-center py-20">
+      <CollegesHubLoader size="md" text="Loading subjects list…" minHeight="min-h-[220px]" />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

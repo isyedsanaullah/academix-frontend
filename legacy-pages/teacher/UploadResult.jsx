@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 import { 
   HiOutlineCloudUpload, 
   HiOutlineDownload, 
@@ -531,8 +532,8 @@ const UploadResult = () => {
 
       {/* Steps Content Layout */}
       {loading ? (
-        <div className="flex items-center justify-center h-48">
-          <div className="animate-spin w-8 h-8 border-2 border-indigo-500/20 border-top-indigo-500 rounded-full" />
+        <div className="flex items-center justify-center py-16">
+          <CollegesHubLoader size="md" text="Loading result upload workspace…" minHeight="min-h-[200px]" />
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

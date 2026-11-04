@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlineCash, HiOutlineCheckCircle, HiOutlineClock, HiOutlineX } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const Payroll = () => {
   const [staff, setStaff] = useState([]);
@@ -41,7 +42,11 @@ const Payroll = () => {
   const net = payModal ? (payModal.salary || 0) + Number(payForm.allowances || 0) - Number(payForm.deductions || 0) + Number(payForm.bonus || 0) : 0;
   const roleColor = { teacher: '#818cf8', employee: '#fbbf24', principal: '#38bdf8', registrar: '#34d399', accountant: '#f97316' };
 
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="animate-spin" style={{ width: 28, height: 28, border: '3px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1', borderRadius: '50%' }} /></div>;
+  if (loading) return (
+    <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 16px' }}>
+      <CollegesHubLoader size="md" text="Loading payroll disbursement logs…" minHeight="min-h-[220px]" />
+    </div>
+  );
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>

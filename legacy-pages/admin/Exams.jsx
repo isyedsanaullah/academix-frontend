@@ -13,6 +13,7 @@ import {
   HiOutlineCheck,
   HiOutlineUserGroup
 } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const addDaysSkippingSundays = (startDateStr, daysToAdd) => {
   if (!startDateStr) return '';
@@ -333,8 +334,8 @@ const Exams = () => {
       {/* Grid listing */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {loading ? (
-          <div className="col-span-2 flex justify-center py-20">
-            <div className="w-10 h-10 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          <div className="col-span-2">
+            <CollegesHubLoader size="md" text="Loading examination schedules…" minHeight="min-h-[220px]" />
           </div>
         ) : exams.length === 0 ? (
           <div className="col-span-2 glass-card text-center py-20 text-white/30 border border-white/5 rounded-2xl shadow-lg">

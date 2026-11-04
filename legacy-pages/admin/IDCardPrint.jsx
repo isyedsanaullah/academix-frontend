@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { QRCodeSVG } from 'qrcode.react';
 import { HiOutlinePrinter, HiOutlineSearch, HiOutlineQrcode, HiOutlineFilter, HiOutlineRefresh, HiOutlineDownload } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const IDCardPrint = () => {
   const { user } = useAuth();
@@ -181,9 +182,7 @@ const IDCardPrint = () => {
 
       {/* Cards Grid (Screen + Print) */}
       {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-        </div>
+        <CollegesHubLoader size="md" text="Generating collegiate identity cards…" minHeight="min-h-[220px]" />
       ) : filteredItems.length === 0 ? (
         <div className="glass-card p-12 text-center text-surface-400 text-sm">
           No members found matching the selected criteria.

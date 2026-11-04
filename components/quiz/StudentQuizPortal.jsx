@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { HiOutlineClock, HiOutlineCheckCircle, HiOutlinePlay, HiOutlineCalendar } from 'react-icons/hi';
+import CollegesHubLoader from '@/components/common/CollegesHubLoader';
 import QuizPlayer from './QuizPlayer';
 
 export default function StudentQuizPortal() {
@@ -38,8 +39,8 @@ export default function StudentQuizPortal() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
-        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      <div className="py-20 flex justify-center">
+        <CollegesHubLoader size="md" text="Loading quizzes…" minHeight="min-h-[160px]" />
       </div>
     );
   }

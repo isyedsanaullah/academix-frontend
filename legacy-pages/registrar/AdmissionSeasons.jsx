@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlineCalendar, HiOutlinePlus, HiOutlinePencil, HiOutlineX, HiOutlineGlobe } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const STATUS_OPTIONS = [
   { value: 'draft', label: '📝 Draft — Not visible to public', desc: 'Season is being prepared. Students cannot see or apply yet.' },
@@ -99,7 +100,11 @@ const AdmissionSeasons = () => {
   const statusColor = { draft: '#94a3b8', open: '#4ade80', closed: '#f87171', completed: '#818cf8' };
   const statusLabel = { draft: 'Draft', open: 'Open — Live', closed: 'Closed', completed: 'Completed' };
 
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div className="animate-spin" style={{ width: 24, height: 24, border: '2px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1', borderRadius: '50%' }} /></div>;
+  if (loading) return (
+    <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 16px' }}>
+      <CollegesHubLoader size="md" text="Loading admission campaigns…" minHeight="min-h-[220px]" />
+    </div>
+  );
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>

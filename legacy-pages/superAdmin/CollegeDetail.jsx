@@ -45,6 +45,7 @@ import {
 } from 'react-icons/hi';
 import SubscriptionTab from '@/components/superAdmin/college/SubscriptionTab';
 import MessagesTab from '@/components/superAdmin/college/MessagesTab';
+import CollegesHubLoader from '@/components/common/CollegesHubLoader';
 
 // Dynamic Icon Map for Feature Registry
 const ICON_MAP = {
@@ -279,7 +280,21 @@ function computeReactiveFeatureMatrix(planId, baseRegistry, overrides) {
 const CollegeDetail = () => {
   const params = useParams();
   const router = useRouter();
-  const id = params?.id;
+
+  // In Apache static export, Next.js serves `/super-admin/colleges/_/index.html`
+  // for any real UUID. useParams().id therefore returns '_' instead of the real
+  // college ID. We read the true ID from window.location.pathname in that case.
+  const rawId = params?.id;
+  const id = (() => {
+    if (typeof window === 'undefined') return rawId;
+    if (rawId && rawId !== '_') return rawId;
+    const parts = window.location.pathname.split('/').filter(Boolean);
+    const idx = parts.indexOf('colleges');
+    if (idx !== -1 && parts[idx + 1] && parts[idx + 1] !== '_') {
+      return parts[idx + 1];
+    }
+    return rawId;
+  })();
 
   const [college, setCollege] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -311,6 +326,44 @@ const CollegeDetail = () => {
   const [overrideReason, setOverrideReason] = useState('');
   const [expandedFeatureKeys, setExpandedFeatureKeys] = useState({});
 
+  // Resend onboarding invite state
+  const [resendingInvite, setResendingInvite] = useState(false);
+  const [lastInviteData, setLastInviteData] = useState(null);
+
+  // Subdomain creation + live-check polling state
+  const [creatingSubdomain, setCreatingSubdomain] = useState(false);
+  const [subdomainResult,   setSubdomainResult]   = useState(null);
+  const [subdomainLive,     setSubdomainLive]      = useState(null);  // null=unknown, true=live, false=pending
+  const [subdomainVerifiedAt, setSubdomainVerifiedAt] = useState(null);
+  const [pollingSubdomain,  setPollingSubdomain]   = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // Start polling whenever we know the subdomain was just requested
+  // and it's not yet verified. Polls every 30 seconds.
+  useEffect(() => {
+    if (!id || !pollingSubdomain) return;
+    if (subdomainLive === true) { setPollingSubdomain(false); return; }
+
+    const poll = async () => {
+      try {
+        const { data } = await api.get(`/super-admin/colleges/${id}/subdomain/status`);
+        if (data.active) {
+          setSubdomainLive(true);
+          setSubdomainVerifiedAt(data.verifiedAt);
+          setPollingSubdomain(false);
+          if (data.justVerified) {
+            // refresh college data to get latest status
+            fetchCollege();
+          }
+        }
+      } catch { /* silently continue polling */ }
+    };
+
+    poll(); // immediate first check
+    const interval = setInterval(poll, 30000); // then every 30s
+    return () => clearInterval(interval);
+  }, [id, pollingSubdomain, subdomainLive]);
+
   useEffect(() => {
     if (id) fetchCollege();
   }, [id]);
@@ -325,6 +378,18 @@ const CollegeDetail = () => {
       const existingOverrides = c.subscription?.featureOverrides || {};
       setServerOverrides(existingOverrides);
       setLocalOverrides(existingOverrides);
+
+      // Restore subdomain live state from DB
+      if (c.subdomain_verified_at) {
+        setSubdomainLive(true);
+        setSubdomainVerifiedAt(c.subdomain_verified_at);
+        setPollingSubdomain(false);
+      } else if (c.slug) {
+        // Has slug but not yet verified → resume polling silently
+        setSubdomainLive(false);
+        // Only auto-resume polling if we haven't marked it live yet
+        setPollingSubdomain(prev => prev || false); // don't restart if user hasn't triggered it
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load college details');
     } finally {
@@ -584,9 +649,8 @@ const CollegeDetail = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col justify-center items-center py-32 space-y-4">
-        <div className="w-10 h-10 border-3 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-medium text-slate-500 dark:text-white/40">Loading college control center...</p>
+      <div className="flex flex-col justify-center items-center py-20 min-h-[380px]">
+        <CollegesHubLoader size="md" text="Loading college control center…" />
       </div>
     );
   }
@@ -1178,6 +1242,283 @@ const CollegeDetail = () => {
                 </button>
               </div>
             </div>
+
+            {/* Onboarding / Admin Registration Card */}
+            {(() => {
+              const onboardingDone = c.onboardingCompleted === true || c.onboardingStatus === 'completed';
+              const hasAdmin = !!(c.adminEmail || c.admin_email);
+              const showResend = !onboardingDone || !hasAdmin;
+              if (!showResend) return null;
+              return (
+                <div className="p-5 rounded-2xl bg-amber-50 dark:bg-amber-500/[0.07] border border-amber-200 dark:border-amber-500/20 shadow-sm space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                      <HiOutlineMail size={18} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-amber-900 dark:text-amber-300">
+                        {!hasAdmin ? 'Admin Not Yet Registered' : 'Onboarding Incomplete'}
+                      </h4>
+                      <p className="text-xs text-amber-700 dark:text-amber-400/80 mt-0.5 leading-relaxed">
+                        {!hasAdmin
+                          ? 'The college admin has not yet accepted the invitation and registered. Resend the onboarding email to give them a new setup link.'
+                          : 'The college admin has registered but has not completed onboarding setup. You can resend the invite if needed.'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    id="resend-onboarding-invite-btn"
+                    disabled={resendingInvite}
+                    onClick={async () => {
+                      setResendingInvite(true);
+                      try {
+                        const { data } = await api.post(`/super-admin/colleges/${id}/invite/resend`);
+                        if (data?.setupUrl || data?.directSetupUrl) {
+                          setLastInviteData(data);
+                        }
+                        if (data?.success !== false) {
+                          toast.success(data?.message || 'Onboarding invite resent successfully!');
+                        } else {
+                          toast.error(data?.message || 'Failed to dispatch email');
+                        }
+                      } catch (err) {
+                        const errData = err.response?.data;
+                        if (errData?.setupUrl || errData?.directSetupUrl) {
+                          setLastInviteData(errData);
+                        }
+                        toast.error(errData?.message || 'Failed to resend invite');
+                      } finally {
+                        setResendingInvite(false);
+                      }
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white shadow-sm transition"
+                  >
+                    {resendingInvite ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <HiOutlineMail size={15} />
+                    )}
+                    {resendingInvite ? 'Sending…' : 'Resend Onboarding Email'}
+                  </button>
+
+                  {lastInviteData && (lastInviteData.directSetupUrl || lastInviteData.setupUrl) && (
+                    <div className="pt-3 border-t border-amber-200/80 dark:border-amber-500/20 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-amber-900 dark:text-amber-300">
+                          Direct Setup Link:
+                        </span>
+                        <span className="text-[10px] text-amber-700/80 dark:text-amber-400/80">
+                          Expires in 7 days
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          readOnly
+                          value={lastInviteData.directSetupUrl || lastInviteData.setupUrl}
+                          className="w-full text-xs font-mono px-3 py-1.5 rounded-lg bg-white dark:bg-black/30 border border-amber-300 dark:border-amber-500/30 text-slate-900 dark:text-white select-all focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const url = lastInviteData.directSetupUrl || lastInviteData.setupUrl;
+                            navigator.clipboard.writeText(url);
+                            setCopiedLink(true);
+                            toast.success('Setup link copied to clipboard!');
+                            setTimeout(() => setCopiedLink(false), 2500);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-600 hover:bg-amber-700 text-white shrink-0 shadow-sm transition"
+                        >
+                          {copiedLink ? <HiOutlineCheck size={14} /> : <HiOutlineDocumentDuplicate size={14} />}
+                          {copiedLink ? 'Copied' : 'Copy'}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-amber-700 dark:text-amber-400/70">
+                        You can send this direct setup URL directly to the college administrator if they do not receive the email.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Subdomain Card ── */}
+            {c.slug && (() => {
+              const isVerified = subdomainLive === true || !!c.subdomain_verified_at;
+              const isPending  = !isVerified && (pollingSubdomain || subdomainLive === false);
+              const verifiedDate = subdomainVerifiedAt || c.subdomain_verified_at;
+              const domainUrl = `https://${c.slug}.collegeshub.org`;
+              return (
+                <div className={`p-5 rounded-2xl border shadow-sm space-y-3 transition-all duration-500 ${
+                  isVerified
+                    ? 'bg-green-50 dark:bg-green-500/[0.06] border-green-200 dark:border-green-500/20'
+                    : isPending
+                    ? 'bg-amber-50 dark:bg-amber-500/[0.06] border-amber-200 dark:border-amber-500/20'
+                    : 'bg-blue-50 dark:bg-blue-500/[0.06] border-blue-200 dark:border-blue-500/20'
+                }`}>
+
+                  {/* Header row */}
+                  <div className="flex items-start gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                      isVerified ? 'bg-green-500/15 text-green-600 dark:text-green-400'
+                      : isPending ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                      : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                    }`}>
+                      {isVerified ? (
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/>
+                        </svg>
+                      ) : (
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253"/>
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className={`text-sm font-bold ${isVerified ? 'text-green-900 dark:text-green-300' : isPending ? 'text-amber-900 dark:text-amber-300' : 'text-blue-900 dark:text-blue-300'}`}>
+                          Subdomain
+                        </h4>
+                        {/* Status pill */}
+                        {isVerified ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-500/15 text-green-700 dark:text-green-400 border border-green-500/25">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500"/>
+                            ACTIVE
+                          </span>
+                        ) : isPending ? (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"/>
+                            PROPAGATING
+                          </span>
+                        ) : null}
+                      </div>
+                      <a
+                        href={domainUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`text-xs font-mono hover:underline break-all ${isVerified ? 'text-green-700 dark:text-green-400' : isPending ? 'text-amber-700 dark:text-amber-400' : 'text-blue-700 dark:text-blue-400'}`}
+                      >
+                        {c.slug}.collegeshub.org
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Live status banner */}
+                  {isVerified && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green-500/10 border border-green-500/20">
+                      <svg className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/>
+                      </svg>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-green-700 dark:text-green-300">
+                          Subdomain Verified & Active
+                        </p>
+                        <p className="text-[11px] text-green-600/70 dark:text-green-400/60 font-mono mt-0.5">{domainUrl}</p>
+                      </div>
+                      <a
+                        href={domainUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 text-[10px] font-bold text-green-700 dark:text-green-400 hover:underline"
+                      >
+                        Visit →
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Pending / propagating banner */}
+                  {isPending && !isVerified && (
+                    <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                      <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin shrink-0 mt-0.5"/>
+                      <div>
+                        <p className="text-xs font-bold text-amber-700 dark:text-amber-400">
+                          Subdomain Not Active Yet
+                        </p>
+                        <p className="text-[11px] text-amber-600/70 dark:text-amber-400/60 leading-relaxed mt-0.5">
+                          DNS is propagating — this can take 2–15 minutes. Checking automatically every 30 seconds.
+                          The admin will receive a welcome email the moment it goes live.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action result message */}
+                  {subdomainResult && (
+                    <div className={`text-xs px-3 py-2 rounded-lg ${subdomainResult.success ? 'bg-green-500/10 text-green-700 dark:text-green-300 border border-green-500/20' : 'bg-red-500/10 text-red-700 dark:text-red-300 border border-red-500/20'}`}>
+                      {subdomainResult.message}
+                      {subdomainResult.firebase && (
+                        <div className="mt-1 text-[11px] opacity-75">{subdomainResult.firebase}</div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Create / Retry button */}
+                  <button
+                    disabled={creatingSubdomain}
+                    onClick={async () => {
+                      setCreatingSubdomain(true);
+                      setSubdomainResult(null);
+                      try {
+                        const { data } = await api.post(`/super-admin/colleges/${id}/subdomain`);
+                        setSubdomainResult({
+                          success: true,
+                          message: data.message || 'Subdomain request sent!',
+                          firebase: data.firebase || null
+                        });
+                        toast.success(data.message || 'Subdomain created!');
+                        // Start polling for live status
+                        setSubdomainLive(false);
+                        setPollingSubdomain(true);
+                      } catch (err) {
+                        const msg = err.response?.data?.message || 'Failed to create subdomain';
+                        setSubdomainResult({ success: false, message: msg });
+                        toast.error(msg);
+                      } finally {
+                        setCreatingSubdomain(false);
+                      }
+                    }}
+                    className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl disabled:opacity-60 text-white shadow-sm transition ${
+                      isVerified
+                        ? 'bg-slate-500 hover:bg-slate-600'
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
+                  >
+                    {creatingSubdomain ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>
+                    ) : (
+                      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d={isVerified ? 'M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99' : 'M12 4v16m8-8H4'}/>
+                      </svg>
+                    )}
+                    {creatingSubdomain ? 'Creating…' : isVerified ? 'Re-create / Retry Subdomain' : 'Create Subdomain on Hostinger'}
+                  </button>
+
+                  {/* Manual check button while polling */}
+                  {isPending && !isVerified && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          const { data } = await api.get(`/super-admin/colleges/${id}/subdomain/status`);
+                          if (data.active) {
+                            setSubdomainLive(true);
+                            setSubdomainVerifiedAt(data.verifiedAt);
+                            setPollingSubdomain(false);
+                            toast.success('🎉 Subdomain is now live!');
+                            fetchCollege();
+                          } else {
+                            toast('Still propagating… check again in a moment.', { icon: '⏳' });
+                          }
+                        } catch {
+                          toast.error('Could not check subdomain status.');
+                        }
+                      }}
+                      className="w-full text-[11px] text-amber-700 dark:text-amber-400 hover:underline py-1"
+                    >
+                      Check now manually
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -1584,9 +1925,8 @@ const CollegeDetail = () => {
           </div>
 
           {loadingAudit ? (
-            <div className="p-16 text-center rounded-2xl bg-white dark:bg-[#161b22] border border-slate-200/80 dark:border-white/[0.06]">
-              <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-xs text-slate-500 dark:text-white/40">Loading audit history...</p>
+            <div className="p-12 rounded-2xl bg-white dark:bg-[#161b22] border border-slate-200/80 dark:border-white/[0.06]">
+              <CollegesHubLoader size="sm" text="Loading audit history..." minHeight="min-h-[140px]" />
             </div>
           ) : auditLogs.length === 0 ? (
             <div className="p-16 text-center rounded-2xl bg-white dark:bg-[#161b22] border border-slate-200/80 dark:border-white/[0.06] space-y-2">

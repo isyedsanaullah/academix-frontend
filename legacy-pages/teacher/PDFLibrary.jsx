@@ -6,6 +6,7 @@ import {
   HiOutlineSearch, HiOutlineRefresh, HiOutlineCheckCircle,
   HiOutlineExclamation, HiOutlineClock
 } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const statusConfig = {
   ready:      { icon: HiOutlineCheckCircle, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', label: 'Ready' },
@@ -188,7 +189,7 @@ const PDFLibrary = () => {
 
       {/* Documents Table */}
       {loading ? (
-        <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>
+        <CollegesHubLoader size="md" text="Loading faculty PDF repository…" minHeight="min-h-[200px]" />
       ) : filtered.length > 0 && (
         <div className="glass-card overflow-hidden">
           <div className="overflow-x-auto">

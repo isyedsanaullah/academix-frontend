@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlineClock, HiOutlineCheck, HiOutlineX } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const PrincipalEarlyExit = () => {
   const [requests, setRequests] = useState([]);
@@ -42,7 +43,9 @@ const PrincipalEarlyExit = () => {
         ))}
       </div>
 
-      {loading ? <div style={{ textAlign: 'center', padding: 40 }}><div className="animate-spin" style={{ width: 28, height: 28, border: '2px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1', borderRadius: '50%', margin: '0 auto' }} /></div> : requests.length === 0 ? (
+      {loading ? (
+        <CollegesHubLoader size="md" text="Loading gate exit requests…" minHeight="min-h-[200px]" />
+      ) : requests.length === 0 ? (
         <div className="glass-card" style={{ padding: 40, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>No {filter} requests</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

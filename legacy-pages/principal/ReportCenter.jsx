@@ -8,6 +8,7 @@ import {
 } from 'react-icons/hi';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
+import CollegesHubLoader from '@/components/common/CollegesHubLoader';
 
 const REPORT_CATEGORIES = [
   {
@@ -322,9 +323,8 @@ export default function ReportCenter() {
           </div>
 
           {loadingPreview ? (
-            <div className="flex-1 flex flex-col items-center justify-center py-12 text-slate-400">
-              <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-              <p className="text-xs font-medium">Fetching real-time report data...</p>
+            <div className="flex-1 flex flex-col items-center justify-center py-12">
+              <CollegesHubLoader size="md" text="Fetching real-time report data…" minHeight="min-h-[200px]" />
             </div>
           ) : previewData && previewData.rows ? (
             <div className="flex-1 flex flex-col">

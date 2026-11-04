@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '../../store/authStore';
+import CollegesHubLoader from './CollegesHubLoader';
 
 export default function AuthGuard({ children, allowedRoles }) {
   const { user, loading, initialize } = useAuthStore();
@@ -48,8 +49,8 @@ export default function AuthGuard({ children, allowedRoles }) {
 
   if (loading || !user || (allowedRoles && !allowedRoles.includes(user.role))) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-10 h-10 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center min-h-screen bg-slate-900">
+        <CollegesHubLoader size="md" text="Verifying session…" />
       </div>
     );
   }

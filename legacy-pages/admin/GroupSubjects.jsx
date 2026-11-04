@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 import {
   HiOutlineBookOpen,
   HiOutlinePlus,
@@ -143,8 +144,8 @@ const GroupSubjects = () => {
 
   if (loading) {
     return (
-      <div className="py-20 text-center text-sm text-slate-500">
-        Loading subject combination center...
+      <div className="py-20 flex justify-center items-center">
+        <CollegesHubLoader size="md" text="Loading subject combination center…" minHeight="min-h-[220px]" />
       </div>
     );
   }
@@ -198,7 +199,9 @@ const GroupSubjects = () => {
         </div>
 
         {loadingSubjects ? (
-          <div className="p-16 text-center text-xs text-slate-400">Loading group subjects...</div>
+          <div className="py-12">
+            <CollegesHubLoader size="sm" text="Loading group subjects…" minHeight="min-h-[140px]" />
+          </div>
         ) : subjects.length === 0 ? (
           <div className="p-16 text-center space-y-2">
             <HiOutlineExclamation size={28} className="mx-auto text-slate-300 dark:text-white/20" />

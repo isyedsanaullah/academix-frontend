@@ -547,3 +547,67 @@ html.light, html.light [data-role] {
 .animate-logo-pulse path:nth-child(3n) { animation-delay: .6s; }
 
 @media print { .no-print, .shell-sidebar, .shell-header, .bottom-nav, .shell-footer { display: none !important; } .shell-content { padding: 0; } }
+
+/* ─── CollegesHub Official Animated Wordmark Loader ─── */
+.dark .chl-fill-blue {
+  fill: #ffffff !important;
+}
+
+.chl-letter {
+  animation: chl-rise 0.78s cubic-bezier(0.16, 0.84, 0.26, 1) both;
+  animation-delay: calc(0.12s + var(--i) * 0.085s);
+  transform-origin: center bottom;
+}
+
+.chl-pulse-dot {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: chl-beat 1.6s ease-in-out 1.2s infinite;
+}
+
+.chl-indeterminate-bar {
+  animation: chl-indeterminate 1.8s cubic-bezier(0.65, 0.815, 0.735, 0.395) infinite;
+}
+
+@keyframes chl-rise {
+  0% {
+    transform: translateY(160px);
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes chl-beat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.35);
+  }
+}
+
+@keyframes chl-indeterminate {
+  0% {
+    transform: translateX(-100%) scaleX(0.2);
+  }
+  50% {
+    transform: translateX(0%) scaleX(0.7);
+  }
+  100% {
+    transform: translateX(100%) scaleX(0.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chl-letter,
+  .chl-pulse-dot,
+  .chl-indeterminate-bar {
+    animation: none !important;
+  }
+}

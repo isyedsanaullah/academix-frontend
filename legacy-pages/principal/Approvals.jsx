@@ -6,6 +6,7 @@ import {
   HiOutlineAcademicCap, HiOutlineCash, HiOutlineUserAdd, HiOutlineUserRemove,
   HiOutlineFilter, HiOutlineRefresh
 } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const typeConfig = {
   student_admission: { icon: HiOutlineAcademicCap, color: '#818cf8', label: 'Student Admission' },
@@ -192,9 +193,7 @@ const Approvals = () => {
 
           {/* System Approvals List */}
           {loadingSystem ? (
-            <div className="flex justify-center py-12">
-              <div className="w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            </div>
+            <CollegesHubLoader size="md" text="Loading institutional approval requests…" minHeight="min-h-[200px]" />
           ) : approvals.length === 0 ? (
             <div className="glass-card p-12 text-center text-surface-400 text-sm">
               No {systemFilter} system approvals found.
@@ -277,9 +276,7 @@ const Approvals = () => {
 
           {/* Early Exit Requests List */}
           {loadingExit ? (
-            <div className="flex justify-center py-12">
-              <div className="w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            </div>
+            <CollegesHubLoader size="md" text="Loading student gate exit requests…" minHeight="min-h-[200px]" />
           ) : exitRequests.length === 0 ? (
             <div className="glass-card p-12 text-center text-surface-400 text-sm">
               No {exitFilter} early exit requests found.

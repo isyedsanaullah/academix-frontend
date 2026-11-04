@@ -7,6 +7,7 @@ import {
   HiOutlineSparkles, HiOutlineClipboardCopy, HiOutlineDownload,
   HiOutlineRefresh, HiOutlinePrinter
 } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 /**
  * AIGeneratorPage — Reusable page for all AI generation modules.
@@ -150,10 +151,7 @@ const AIGeneratorPage = ({ title, description, endpoint, fields, icon: Icon = Hi
 
           <div className="flex-1 overflow-y-auto max-h-[60vh]">
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="w-10 h-10 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3" />
-                <p className="text-white/30 text-sm">Generating with AI...</p>
-              </div>
+              <CollegesHubLoader size="md" text="Generating with AI intelligence…" minHeight="min-h-[220px]" />
             ) : result ? (
               <div className="prose-output prose-chat text-sm">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{result}</ReactMarkdown>

@@ -13,6 +13,7 @@ import {
   HiOutlineBan, 
   HiOutlineCheckCircle 
 } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const roleColors = {
   admin:      'bg-violet-500/10 text-violet-400 border-violet-500/20',
@@ -158,7 +159,7 @@ const StaffDetail = () => {
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <div className="w-10 h-10 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <CollegesHubLoader size="md" text="Loading staff dossier…" minHeight="min-h-[220px]" />
       </div>
     );
   }

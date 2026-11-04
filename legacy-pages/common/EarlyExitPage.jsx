@@ -3,6 +3,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlineClock, HiOutlineCheck, HiOutlineX, HiOutlinePlus } from 'react-icons/hi';
 import MyQRCode from '../../components/common/MyQRCode';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const EarlyExitPage = () => {
   const [requests, setRequests] = useState([]);
@@ -58,7 +59,9 @@ const EarlyExitPage = () => {
         </form>
       )}
 
-      {loading ? <div style={{ textAlign: 'center', padding: 40 }}><div className="animate-spin" style={{ width: 28, height: 28, border: '2px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1', borderRadius: '50%', margin: '0 auto' }} /></div> : (
+      {loading ? (
+        <CollegesHubLoader size="md" text="Loading early exit records…" minHeight="min-h-[200px]" />
+      ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {requests.length === 0 ? <div className="glass-card" style={{ padding: 40, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>No exit requests</div> :
             requests.map(r => (

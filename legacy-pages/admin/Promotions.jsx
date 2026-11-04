@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 import {
   HiOutlineAcademicCap,
   HiOutlineArrowRight,
@@ -111,7 +112,11 @@ const Promotions = () => {
   };
 
   if (loading) {
-    return <div className="py-20 text-center text-xs text-slate-400">Loading promotion engine...</div>;
+    return (
+      <div className="py-20 flex justify-center items-center">
+        <CollegesHubLoader size="md" text="Loading student promotion engine…" minHeight="min-h-[220px]" />
+      </div>
+    );
   }
 
   return (

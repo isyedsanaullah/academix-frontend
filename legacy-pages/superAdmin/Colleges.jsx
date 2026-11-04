@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 import {
   HiOutlinePlus,
   HiOutlineSearch,
@@ -458,10 +459,7 @@ const Colleges = () => {
           {/* Active Colleges Data Table */}
           <div className="glass-card overflow-hidden">
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/40">
-                <div className="w-9 h-9 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mb-3" />
-                <p className="text-xs font-medium">Loading colleges database...</p>
-              </div>
+              <CollegesHubLoader size="md" text="Loading colleges database..." minHeight="min-h-[220px]" />
             ) : filteredColleges.length === 0 ? (
               <div className="text-center py-16 px-4">
                 <HiOutlineOfficeBuilding size={40} className="mx-auto text-slate-300 dark:text-white/15 mb-3" />
@@ -615,10 +613,7 @@ const Colleges = () => {
       {tab === 'invitations' && (
         <div className="glass-card overflow-hidden">
           {invitesLoading ? (
-            <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/40">
-              <div className="w-9 h-9 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mb-3" />
-              <p className="text-xs font-medium">Loading invitation queue...</p>
-            </div>
+            <CollegesHubLoader size="md" text="Loading invitation queue..." minHeight="min-h-[220px]" />
           ) : invitations.length === 0 ? (
             <div className="text-center py-16 px-4">
               <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center justify-center mx-auto mb-3">

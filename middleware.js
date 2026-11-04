@@ -26,6 +26,12 @@ export function middleware(request) {
 
   // ─── 1. ROOT HOST (collegeshub.org, www, localhost) ──────────────────────
   if (hostType === 'root') {
+    // 308 Redirect non-www to www for production root domain
+    const cleanHost = host.split(':')[0].toLowerCase();
+    if (!isDev && cleanHost === ROOT_DOMAIN.toLowerCase() && !cleanHost.startsWith('www.')) {
+      return NextResponse.redirect(`https://www.${ROOT_DOMAIN}${pathname}${search}`, 308);
+    }
+
     // 308 Redirect for old /college/:slug to subdomain https://:slug.collegeshub.org/
     const collegeMatch = pathname.match(/^\/college\/([a-zA-Z0-9-]+)\/?$/);
     if (collegeMatch) {

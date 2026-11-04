@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { QRCodeSVG } from 'qrcode.react';
 import { HiOutlineClipboardCheck, HiOutlineCurrencyDollar, HiOutlineChartBar, HiOutlineCalendar, HiOutlineArrowRight, HiOutlineStar, HiOutlineAcademicCap, HiOutlineQrcode, HiOutlineX } from 'react-icons/hi';
 import RecentActivityWidget from '../../components/activity/RecentActivityWidget';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const StudentDashboard = () => {
   const { user } = useAuth();
@@ -62,8 +63,8 @@ const StudentDashboard = () => {
   const resChartData = data.results.slice(-6).map(r => ({ name: r.exam_id?.name || 'Exam', pct: r.percentage || 0, grade: r.grade }));
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '240px' }}>
-      <div className="animate-spin" style={{ width: '32px', height: '32px', border: '2px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1', borderRadius: '50%' }} />
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '340px' }}>
+      <CollegesHubLoader size="md" text="Loading student dashboard…" />
     </div>
   );
 

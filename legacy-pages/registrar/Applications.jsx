@@ -8,6 +8,7 @@ import {
   HiOutlinePlus, HiOutlineX, HiOutlineBeaker, HiOutlineDocumentText,
   HiOutlineSparkles, HiOutlineUserGroup, HiOutlineBadgeCheck
 } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const Applications = () => {
   const { user } = useAuth();
@@ -235,7 +236,11 @@ const Applications = () => {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} style={{ padding: 40, textAlign: 'center', color:'var(--text-tertiary)' }}>Loading...</td></tr>
+              <tr>
+                <td colSpan={9} style={{ padding: '30px 16px', textAlign: 'center' }}>
+                  <CollegesHubLoader size="md" text="Loading student applications…" minHeight="min-h-[180px]" />
+                </td>
+              </tr>
             ) : apps.length === 0 ? (
               <tr><td colSpan={9} style={{ padding: 40, textAlign: 'center', color:'var(--text-tertiary)' }}>No applications found</td></tr>
             ) : apps.map(a => {

@@ -5,6 +5,7 @@ import {
   HiOutlineCurrencyDollar, HiOutlineTrendingUp, HiOutlineTrendingDown,
   HiOutlineCalculator, HiOutlinePlus, HiOutlineX
 } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const Treasury = () => {
   const [data, setData] = useState(null);
@@ -48,7 +49,11 @@ const Treasury = () => {
     maintenance: '🔧 Maintenance', utilities: '💡 Utilities'
   };
 
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="animate-spin" style={{ width: 28, height: 28, border: '3px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1', borderRadius: '50%' }} /></div>;
+  if (loading) return (
+    <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 16px' }}>
+      <CollegesHubLoader size="md" text="Loading college treasury accounts…" minHeight="min-h-[220px]" />
+    </div>
+  );
 
   const displayBalance = includeOld
     ? (data?.balance || 0) + (data?.oldRemaining || 0)

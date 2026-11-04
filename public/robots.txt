@@ -1,0 +1,31 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+Disallow: /super-admin/
+Disallow: /admin/
+Disallow: /teacher/
+Disallow: /student/
+Disallow: /principal/
+Disallow: /registrar/
+Disallow: /accountant/
+Disallow: /employee/
+Disallow: /onboarding/
+Disallow: /setup/
+Disallow: /set-password/
+Disallow: /verify/
+Disallow: /verify-email
+Disallow: /api/
+Disallow: /_next/
+
+User-agent: Googlebot-Image
+Allow: /favicon.ico
+Allow: /favicon.svg
+Allow: /logo-mark.svg
+Allow: /logo.svg
+Allow: /logo-horizontal.svg
+Allow: /icon.svg
+Allow: /og-image.png
+Allow: /apple-touch-icon.png
+
+Sitemap: https://www.collegeshub.org/sitemap.xml
+Host: https://www.collegeshub.org

@@ -54,10 +54,12 @@ function SkeletonField() {
 
 // ── Main Component ────────────────────────────────────────────────────
 
+import { resolveParam } from '@/lib/paramUtils';
+
 export default function AcceptInvitationPage() {
   const params  = useParams();
   const router  = useRouter();
-  const token   = params.token;
+  const token   = resolveParam(params?.token, 'invitation');
 
   // Token verification
   const [verifying,   setVerifying]   = useState(true);

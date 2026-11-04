@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiPlus } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const Employees = () => {
   const [employees, setEmployees] = useState([]);
@@ -32,7 +33,11 @@ const Employees = () => {
 
   const deptColors = { security: 'bg-rose-500/10 text-rose-400', canteen: 'bg-amber-500/10 text-amber-400', administration: 'bg-indigo-500/10 text-indigo-400', accounts: 'bg-emerald-500/10 text-emerald-400', library: 'bg-violet-500/10 text-violet-400', lab: 'bg-blue-500/10 text-blue-400', other: 'bg-white/5 text-white/40' };
 
-  if (loading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return (
+    <div className="flex justify-center py-20">
+      <CollegesHubLoader size="md" text="Loading employee staff…" minHeight="min-h-[220px]" />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

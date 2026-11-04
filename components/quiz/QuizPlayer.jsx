@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { HiOutlineClock, HiOutlineShieldCheck, HiOutlineExclamation, HiOutlineCheckCircle } from 'react-icons/hi';
+import CollegesHubLoader from '@/components/common/CollegesHubLoader';
 
 export default function QuizPlayer({ quizId, onClose, onCompleted }) {
   const [loading, setLoading] = useState(true);
@@ -148,9 +149,8 @@ export default function QuizPlayer({ quizId, onClose, onCompleted }) {
   if (loading) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm text-white">
-        <div className="text-center">
-          <div className="w-10 h-10 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-xs text-white/50">Preparing secure quiz environment...</p>
+        <div className="bg-[#0d1117] border border-white/10 rounded-2xl p-10 max-w-sm w-full text-center">
+          <CollegesHubLoader size="md" text="Preparing secure quiz environment..." minHeight="min-h-[140px]" />
         </div>
       </div>
     );

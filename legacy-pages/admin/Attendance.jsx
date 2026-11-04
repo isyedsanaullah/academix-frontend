@@ -3,6 +3,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlineInformationCircle, HiOutlineUsers, HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineClock } from 'react-icons/hi';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const Attendance = () => {
   const [records, setRecords] = useState([]);
@@ -292,9 +293,7 @@ const Attendance = () => {
           <h3 className="text-sm font-bold text-white uppercase tracking-wider">Student Gate Log - {selectedSecName}</h3>
         </div>
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-3 border-primary-500 border-t-transparent rounded-full animate-spin" />
-          </div>
+          <CollegesHubLoader size="md" text="Loading attendance records…" minHeight="min-h-[200px]" />
         ) : students.length === 0 ? (
           <div className="text-center py-12 text-slate-500 text-xs">
             No students found registered in {selectedSecName}.

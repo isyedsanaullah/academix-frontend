@@ -4,6 +4,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { HiOutlinePlus, HiOutlinePrinter, HiOutlineSearch, HiOutlineCloudUpload } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const Results = () => {
   const navigate = useNavigate();
@@ -192,9 +193,7 @@ const Results = () => {
 
       <div className="glass-card overflow-hidden">
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-3 border-primary-500 border-t-transparent rounded-full animate-spin" />
-          </div>
+          <CollegesHubLoader size="md" text="Loading student examination results…" minHeight="min-h-[200px]" />
         ) : filteredResults.length === 0 ? (
           <div className="text-center py-12 text-surface-500">No results found</div>
         ) : (

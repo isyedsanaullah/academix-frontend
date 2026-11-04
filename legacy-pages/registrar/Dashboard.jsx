@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { HiOutlineAcademicCap, HiOutlinePlus, HiOutlineCollection, HiOutlineCalendar, HiOutlineArrowRight, HiOutlineIdentification, HiOutlineClipboardCheck } from 'react-icons/hi';
 import RecentActivityWidget from '../../components/activity/RecentActivityWidget';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const RegistrarDashboard = () => {
   const { user } = useAuth();
@@ -34,6 +35,14 @@ const RegistrarDashboard = () => {
     { label: 'Exam Schedule',     icon: HiOutlineIdentification,path: '/registrar/exams',       color: '#f87171', desc: 'Exams & schedule' },
     { label: 'Certificates',      icon: HiOutlineIdentification,path: '/registrar/certificates',color: '#a78bfa', desc: 'Issue certificates' },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[380px] w-full p-6">
+        <CollegesHubLoader size="md" text="Loading admissions & student data…" />
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-in space-y-6">

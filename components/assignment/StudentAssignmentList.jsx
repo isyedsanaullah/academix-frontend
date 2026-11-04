@@ -3,6 +3,7 @@ import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { HiOutlineClipboardList, HiOutlineClock, HiOutlineCheckCircle, HiOutlineUpload } from 'react-icons/hi';
 import StudentAssignmentPortal from './StudentAssignmentPortal';
+import CollegesHubLoader from '../common/CollegesHubLoader';
 
 export default function StudentAssignmentList() {
   const [assignments, setAssignments] = useState([]);
@@ -41,7 +42,7 @@ export default function StudentAssignmentList() {
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <CollegesHubLoader size="md" text="Loading course assignments…" minHeight="min-h-[200px]" />
       </div>
     );
   }

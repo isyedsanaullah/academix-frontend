@@ -8,14 +8,17 @@ import {
 } from 'react-icons/hi';
 import { auth, googleProvider } from '@/lib/firebase';
 import { signInWithPopup, signOut } from 'firebase/auth';
-import LottieLoader from '@/components/common/LottieLoader';
+import CollegesHubLoader from '@/components/common/CollegesHubLoader';
 
 const API = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) 
   ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api$/, '') 
   : '';
 
+import { resolveParam } from '@/lib/paramUtils';
+
 const PublicCollegePage = () => {
-  const { code } = useParams();
+  const params = useParams();
+  const code = resolveParam(params?.code, 'apply');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('info'); // info | apply | status
@@ -265,7 +268,11 @@ const PublicCollegePage = () => {
   const admissionsOpen = !!season && new Date() <= new Date(season.endDate);
   const showFileWarning = hasRestoredDraftFiles && (!files.photo || !files.sscDMC);
 
-  if (loading) return <LottieLoader fullScreen text="Loading College Portal..." />;
+  if (loading) return (
+    <div className="min-h-screen bg-[#080c12] flex items-center justify-center p-6">
+      <CollegesHubLoader size="lg" text="Loading College Portal…" />
+    </div>
+  );
 
   if (!data) return (
     <div style={{ minHeight: '100vh', background: '#080c12', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171', fontSize: 18 }}>

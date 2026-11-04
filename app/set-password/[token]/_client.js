@@ -4,11 +4,15 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import axios from 'axios';
+import CollegesHubLoader from '@/components/common/CollegesHubLoader';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '/api';
 
-export default function SetPasswordClient({ token }) {
+import { resolveParam } from '@/lib/paramUtils';
+
+export default function SetPasswordClient({ token: rawToken }) {
   const router = useRouter();
+  const token = resolveParam(rawToken, 'set-password');
 
   const [loading, setLoading] = useState(true);
   const [inviteData, setInviteData] = useState(null);
@@ -119,13 +123,8 @@ export default function SetPasswordClient({ token }) {
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md bg-[#131c2e] rounded-2xl border border-white/8 shadow-[0_20px_60px_rgba(0,0,0,0.5)] p-6 sm:p-8">
           {loading ? (
-            <div className="py-12 flex flex-col items-center justify-center text-center">
-              <svg className="w-10 h-10 animate-spin text-brand-blue mb-4" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              <h2 className="text-white font-semibold text-lg">Validating invitation...</h2>
-              <p className="text-white/40 text-sm mt-1">Please wait a moment while we verify your secure link.</p>
+            <div className="py-6">
+              <CollegesHubLoader size="md" text="Validating invitation link…" minHeight="min-h-[160px]" />
             </div>
           ) : errorStatus ? (
             <div className="py-6 text-center">

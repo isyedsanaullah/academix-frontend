@@ -4,6 +4,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { HiOutlinePrinter, HiOutlineArrowLeft } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const ResultCard = () => {
   const { id } = useParams();
@@ -24,7 +25,11 @@ const ResultCard = () => {
     fetch();
   }, [id]);
 
-  if (loading) return <div className="flex justify-center py-20"><div className="w-10 h-10 border-3 border-primary-500 border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return (
+    <div className="flex justify-center py-20">
+      <CollegesHubLoader size="md" text="Loading official transcript card…" minHeight="min-h-[220px]" />
+    </div>
+  );
   if (!result) return <div className="text-center py-20 text-surface-500">Result not found</div>;
 
   const collegeName = user?.college?.name || 'College';

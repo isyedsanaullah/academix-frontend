@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlineDocumentText, HiOutlineCheck, HiOutlineX, HiOutlineClock } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const statusColors = {
   pending: { bg: 'rgba(251,191,36,0.12)', color: '#fbbf24', label: 'Pending' },
@@ -72,7 +73,7 @@ const LeaveManagement = () => {
       </div>
 
       {loading ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 120 }}><div className="animate-spin" style={{ width: 28, height: 28, border: '2px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1', borderRadius: '50%' }} /></div>
+        <CollegesHubLoader size="md" text="Loading leave applications…" minHeight="min-h-[200px]" />
       ) : leaves.length === 0 ? (
         <div className="glass-card" style={{ padding: 40, textAlign: 'center' }}><HiOutlineDocumentText size={32} style={{ color: 'var(--text-tertiary)', margin: '0 auto 8px' }} /><p style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>No leave applications</p></div>
       ) : (

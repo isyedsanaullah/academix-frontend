@@ -9,6 +9,7 @@ import {
   HiOutlineEye,
   HiOutlineCheckCircle,
 } from 'react-icons/hi';
+import CollegesHubLoader from '@/components/common/CollegesHubLoader';
 
 const TEMPLATES = [
   {
@@ -228,9 +229,8 @@ export default function TemplatePreview() {
         {/* Live PDF Viewer */}
         <div className="w-full h-[680px] bg-surface-950 rounded-xl border border-white/[0.06] overflow-hidden flex items-center justify-center">
           {loading && (
-            <div className="text-center text-surface-400">
-              <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-sm font-medium">Generating PDF preview…</p>
+            <div className="w-full flex items-center justify-center p-8">
+              <CollegesHubLoader size="md" text="Rendering live document preview…" minHeight="min-h-[220px]" />
             </div>
           )}
           {!loading && error && (

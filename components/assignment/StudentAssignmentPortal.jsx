@@ -11,6 +11,7 @@ import {
   HiOutlinePaperClip
 } from 'react-icons/hi';
 import AssignmentDocumentViewer from './AssignmentDocumentViewer';
+import CollegesHubLoader from '../common/CollegesHubLoader';
 
 export default function StudentAssignmentPortal({ assignmentId }) {
   const [assignment, setAssignment] = useState(null);
@@ -99,7 +100,7 @@ export default function StudentAssignmentPortal({ assignmentId }) {
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <CollegesHubLoader size="md" text="Loading student assignment details…" minHeight="min-h-[200px]" />
       </div>
     );
   }

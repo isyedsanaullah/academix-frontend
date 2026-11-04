@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlineStar, HiOutlineCheckCircle, HiOutlineClock } from 'react-icons/hi';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const TeacherEvaluation = () => {
   const [teachers, setTeachers] = useState([]);
@@ -51,7 +52,11 @@ const TeacherEvaluation = () => {
   const answerColors = { good: '#4ade80', bad: '#f87171', neutral: '#fbbf24' };
   const answerLabels = { good: '👍 Good', bad: '👎 Bad', neutral: '😐 Neutral' };
 
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="animate-spin" style={{ width: 28, height: 28, border: '3px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1', borderRadius: '50%' }} /></div>;
+  if (loading) return (
+    <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 16px' }}>
+      <CollegesHubLoader size="md" text="Loading faculty evaluation portal…" minHeight="min-h-[220px]" />
+    </div>
+  );
 
   if (!season) return (
     <div className="animate-fade-in" style={{ textAlign: 'center', padding: '80px 20px' }}>

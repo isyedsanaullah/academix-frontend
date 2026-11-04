@@ -8,6 +8,7 @@ import {
   HiOutlineCurrencyDollar, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineShieldCheck
 } from 'react-icons/hi';
 import RecentActivityWidget from '../../components/activity/RecentActivityWidget';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const PrincipalDashboard = () => {
   const { user } = useAuth();
@@ -40,6 +41,14 @@ const PrincipalDashboard = () => {
     { label: 'Staff',          icon: HiOutlineUserGroup,      path: '/principal/staff',          color: '#a78bfa', desc: 'View all staff accounts' },
   ];
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[380px] w-full p-6">
+        <CollegesHubLoader size="md" text="Loading principal oversight center…" />
+      </div>
+    );
+  }
+
   const s = data?.stats || {};
 
   return (
@@ -67,8 +76,8 @@ const PrincipalDashboard = () => {
 
       {/* Stats */}
       {loading ? (
-        <div className="flex justify-center py-10">
-          <div className="w-7 h-7 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
+        <div className="py-10">
+          <CollegesHubLoader size="sm" text="Loading dashboard statistics…" minHeight="min-h-[140px]" />
         </div>
       ) : (
         <div className="space-y-6">

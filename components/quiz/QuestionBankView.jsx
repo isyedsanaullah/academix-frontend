@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { HiOutlineSearch, HiOutlineTag, HiOutlineDocumentText } from 'react-icons/hi';
+import CollegesHubLoader from '@/components/common/CollegesHubLoader';
 
 export default function QuestionBankView() {
   const [loading, setLoading] = useState(true);
@@ -59,8 +60,8 @@ export default function QuestionBankView() {
 
       {/* Question Cards */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <div className="py-12">
+          <CollegesHubLoader size="sm" text="Loading question bank…" minHeight="min-h-[140px]" />
         </div>
       ) : questions.length === 0 ? (
         <div className="text-center py-12 text-white/30 text-xs">No questions found in Question Bank.</div>

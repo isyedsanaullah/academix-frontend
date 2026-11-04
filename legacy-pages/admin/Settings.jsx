@@ -3,6 +3,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlineCog, HiOutlineKey, HiOutlineGlobe, HiOutlineClock } from 'react-icons/hi';
 import ApiKeyManager from '../../components/ai/ApiKeyManager';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 
 const TABS = [
   { id: 'general', label: 'General', icon: HiOutlineCog },
@@ -43,8 +44,8 @@ const Settings = () => {
   };
 
   if (loading) return (
-    <div className="flex justify-center py-12">
-      <div className="w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+    <div className="flex justify-center py-20">
+      <CollegesHubLoader size="md" text="Loading college configuration…" minHeight="min-h-[220px]" />
     </div>
   );
 

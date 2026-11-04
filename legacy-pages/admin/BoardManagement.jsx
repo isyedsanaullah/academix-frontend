@@ -11,6 +11,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
+import CollegesHubLoader from '../../components/common/CollegesHubLoader';
 import {
   HiOutlineAcademicCap,
   HiOutlineDocumentText,
@@ -406,9 +407,7 @@ const BoardManagement = () => {
           {/* Forms Table */}
           <div className="glass-card overflow-hidden shadow-2xl border border-white/5 rounded-2xl">
             {loadingForms ? (
-              <div className="flex justify-center py-16">
-                <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-              </div>
+              <CollegesHubLoader size="md" text="Loading board examination forms…" minHeight="min-h-[220px]" />
             ) : forms.length === 0 ? (
               <div className="text-center py-16 text-white/40 space-y-2">
                 <p className="text-sm font-semibold">No board forms generated under this selection.</p>
@@ -559,9 +558,7 @@ const BoardManagement = () => {
           </div>
 
           {loadingDatesheets ? (
-            <div className="flex justify-center py-12">
-              <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            </div>
+            <CollegesHubLoader size="md" text="Loading official board datesheets…" minHeight="min-h-[220px]" />
           ) : datesheets.length === 0 ? (
             <div className="glass-card text-center py-12 text-white/40 rounded-2xl">
               <p className="text-sm font-semibold">No datesheets defined yet for {selectedBoard}.</p>
@@ -639,9 +636,7 @@ const BoardManagement = () => {
           {/* Results Table */}
           <div className="glass-card overflow-hidden shadow-2xl border border-white/5 rounded-2xl">
             {loadingResults ? (
-              <div className="flex justify-center py-16">
-                <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-              </div>
+              <CollegesHubLoader size="md" text="Loading board examination results…" minHeight="min-h-[220px]" />
             ) : results.length === 0 ? (
               <div className="text-center py-16 text-white/40 space-y-2">
                 <p className="text-sm font-semibold">No board results recorded yet for {selectedBoard}.</p>
@@ -724,9 +719,7 @@ const BoardManagement = () => {
           </div>
 
           {loadingAnalytics ? (
-            <div className="flex justify-center py-16">
-              <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            </div>
+            <CollegesHubLoader size="md" text="Loading board performance telemetry…" minHeight="min-h-[220px]" />
           ) : !analytics ? (
             <div className="glass-card text-center py-16 text-white/40 rounded-2xl">
               <p className="text-sm font-semibold">No performance data available.</p>

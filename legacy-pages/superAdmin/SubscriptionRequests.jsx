@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
+import CollegesHubLoader from '@/components/common/CollegesHubLoader';
 import {
   HiOutlineSearch,
   HiOutlineMail,
@@ -467,13 +468,11 @@ export default function SubscriptionRequests() {
             </thead>
             <tbody>
               {loading ? (
-                Array.from({ length: 4 }).map((_, i) => (
-                  <tr key={i}>
-                    <td colSpan={6} className="p-4">
-                      <div className="skeleton h-8 w-full rounded" />
-                    </td>
-                  </tr>
-                ))
+                <tr>
+                  <td colSpan={6} className="p-8">
+                    <CollegesHubLoader size="md" text="Loading subscription requests…" minHeight="min-h-[180px]" />
+                  </td>
+                </tr>
               ) : requests.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center p-12">
@@ -577,9 +576,9 @@ export default function SubscriptionRequests() {
       {/* Mobile Card List View (<768px) */}
       <div className="md:hidden space-y-3">
         {loading ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="card p-4 skeleton h-32 rounded-xl" />
-          ))
+          <div className="card p-6">
+            <CollegesHubLoader size="sm" text="Loading subscription requests…" minHeight="min-h-[160px]" />
+          </div>
         ) : requests.length === 0 ? (
           <div className="card p-8 text-center">
             <HiOutlineDocumentText className="w-8 h-8 text-muted mx-auto mb-2" />
