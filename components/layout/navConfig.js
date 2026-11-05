@@ -4,6 +4,7 @@ export const NAV = {
     { to: '/super-admin', icon: HiOutlineViewGrid, label: 'Dashboard' },
     { to: '/super-admin/colleges', icon: HiOutlineOfficeBuilding, label: 'Colleges' },
     { to: '/super-admin/subscription-requests', icon: HiOutlineClipboardList, label: 'Sub Requests' },
+    { to: '/super-admin/billing', icon: HiOutlineCreditCard, label: 'Billing Queue' },
     { label: 'ANALYTICS', divider: true },
     { to: '/super-admin/analytics', icon: HiOutlineChartBar, label: 'Analytics' },
     { label: 'AI', divider: true },
