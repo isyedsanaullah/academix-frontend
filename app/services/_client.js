@@ -229,11 +229,21 @@ export default function ServicesClient() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // Fetch data from backend
+  // Fetch data from backend with resilient path fallback
   useEffect(() => {
     let mounted = true;
-    apiGet('/public/services-catalog')
-      .then(d => {
+    const fetchCatalog = async () => {
+      try {
+        let d = null;
+        try {
+          d = await apiGet('/public/services-catalog');
+        } catch (e1) {
+          try {
+            d = await apiGet('/services-catalog');
+          } catch (e2) {
+            d = await apiGet('/services');
+          }
+        }
         if (!mounted) return;
         if (d?.success && d?.data) {
           setAllServices(d.data.services || []);
@@ -242,13 +252,13 @@ export default function ServicesClient() {
         } else {
           setError('Failed to load services catalog.');
         }
-      })
-      .catch(() => {
+      } catch (err) {
         if (mounted) setError('Could not reach the server. Please try again.');
-      })
-      .finally(() => {
+      } finally {
         if (mounted) setLoading(false);
-      });
+      }
+    };
+    fetchCatalog();
     return () => { mounted = false; };
   }, []);
 

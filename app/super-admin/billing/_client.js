@@ -45,7 +45,7 @@ export default function SuperAdminBillingClient() {
     try {
       setLoading(true);
       setError(null);
-      const res = await axios.get('/api/super-admin/billing/pending');
+      const res = await axios.get('/super-admin/billing/pending');
       setPendingPayments(res.data.payments || []);
     } catch (err) {
       console.error('Failed to load pending payments:', err);
@@ -61,7 +61,7 @@ export default function SuperAdminBillingClient() {
       setError(null);
       const params = {};
       if (historyFilterStatus) params.status = historyFilterStatus;
-      const res = await axios.get('/api/super-admin/billing/all', { params });
+      const res = await axios.get('/super-admin/billing/all', { params });
       setHistoryPayments(res.data.payments || []);
     } catch (err) {
       console.error('Failed to load payment history:', err);
@@ -78,12 +78,12 @@ export default function SuperAdminBillingClient() {
         setLoading(true);
         setError(null);
         if (activeTab === 'pending') {
-          const res = await axios.get('/api/super-admin/billing/pending');
+          const res = await axios.get('/super-admin/billing/pending');
           if (isMounted) setPendingPayments(res.data.payments || []);
         } else {
           const params = {};
           if (historyFilterStatus) params.status = historyFilterStatus;
-          const res = await axios.get('/api/super-admin/billing/all', { params });
+          const res = await axios.get('/super-admin/billing/all', { params });
           if (isMounted) setHistoryPayments(res.data.payments || []);
         }
       } catch (err) {
@@ -101,7 +101,7 @@ export default function SuperAdminBillingClient() {
     setProofUrl('');
     setLoadingProof(true);
     try {
-      const res = await axios.get(`/api/super-admin/billing/receipt/${payment.id}`);
+      const res = await axios.get(`/super-admin/billing/receipt/${payment.id}`);
       setProofUrl(res.data.url || payment.screenshotUrl);
     } catch (e) {
       setProofUrl(payment.screenshotUrl);
@@ -127,7 +127,7 @@ export default function SuperAdminBillingClient() {
     try {
       setSubmittingApprove(true);
       setError(null);
-      await axios.post(`/api/super-admin/billing/approve/${approveModal.id}`, {
+      await axios.post(`/super-admin/billing/approve/${approveModal.id}`, {
         verifiedAmountOverride: Number(verifiedAmount),
         overrideNote: overrideNote.trim()
       });
@@ -151,7 +151,7 @@ export default function SuperAdminBillingClient() {
     try {
       setSubmittingReject(true);
       setError(null);
-      await axios.post(`/api/super-admin/billing/reject/${rejectModal.id}`, {
+      await axios.post(`/super-admin/billing/reject/${rejectModal.id}`, {
         reason: rejectReason.trim()
       });
       setSuccessMsg(`Payment ${rejectModal.transactionId} marked as REJECTED.`);

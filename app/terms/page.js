@@ -9,10 +9,10 @@ export const metadata = {
 };
 
 const PLAN_ROWS = [
-  ['Starter', '7,999', '79,990', '300', '20', '5 GB'],
-  ['Standard', '19,999', '199,990', '1,000', '60', '20 GB'],
-  ['Premium', '44,999', '449,990', '2,500', '150', '75 GB'],
-  ['Enterprise', '119,999', '1,199,990', '5,000', '400', '300 GB'],
+  ['Starter', '2,999', '32,989', '300', '20', '5 GB'],
+  ['Standard', '5,999', '65,989', '750', '50', '25 GB'],
+  ['Premium', '10,999', '120,989', '1,500', '100', '100 GB'],
+  ['Enterprise', '17,999', '197,989', '3,000', '200', '300 GB'],
 ];
 
 const SECTIONS = [
@@ -26,7 +26,7 @@ const SECTIONS = [
     <P>Each college’s administrator manages access in its workspace: inviting staff and students, maintaining accounts and keeping sign-in details secure. The college is responsible for all activity in its workspace.</P>
   </>) },
   { id: 'plans', title: 'Plans, prices and billing', content: (<>
-    <P>Prices are in Pakistani rupees (PKR) and exclude sales tax, which is confirmed before invoicing. Yearly billing charges 10 months for 12.</P>
+    <P>Prices are in Pakistani rupees (PKR) and exclude sales tax, which is confirmed before invoicing. Yearly billing includes 1 Month FREE (11 months billed for 12 months access).</P>
     <div className="mt-5 overflow-x-auto rounded-xl border border-[#DDE6F0]">
       <table className="w-full min-w-[560px] border-collapse text-left text-sm">
         <caption className="sr-only">CollegesHub plans and prices</caption>
@@ -43,27 +43,32 @@ const SECTIONS = [
         </tbody>
       </table>
     </div>
-    <H3>Extras</H3>
+    <H3>Extras & Add-On Catalog</H3>
     <UL items={[
-      'Extra students: PKR 18 (Standard), PKR 14 (Premium) or PKR 12 (Enterprise) per student per month above the included number. Starter does not sell extra students.',
-      'Extra storage on any plan: PKR 150 per 10 GB per month, rounded up to the next 10 GB.',
-      'Enterprise only: extra AI tokens at PKR 450 per 1 million tokens after the shared 100M tokens a month are used, and PKR 15,000 per month for each campus beyond 3.',
-      'SMS and WhatsApp alerts use prepaid credits at the provider’s rate plus a margin. Online payment gateway fees are passed to the college. Both are separate from the plan price.',
-      'Custom plans start from a platform fee of PKR 5,999 plus one pack per chosen service, and never below PKR 7,999. Ask us for a quote.',
+      'Extra students: PKR 15 (Standard), PKR 12 (Premium) or PKR 8 (Enterprise) per student per month (+50% dynamic cap on Standard and Premium; unlimited on Enterprise). Starter does not sell extra students.',
+      'Extra staff accounts: PKR 120 (Standard), PKR 100 (Premium) or PKR 80 (Enterprise) per staff per month (+50% dynamic cap).',
+      'Extra administrator accounts: PKR 400 (Standard, max 2 extra), PKR 350 (Premium, max 5 extra), or PKR 250 (Enterprise, unlimited).',
+      'Extra storage: PKR 600 (Starter, max 10 GB), PKR 500 (Standard, max 20 GB), PKR 450 (Premium, max 100 GB), or PKR 400 (Enterprise, unlimited) per 10 GB block per month.',
+      'Online application packs (25 applications / yr): PKR 2,500 (Standard, max 2 packs), PKR 2,000 (Premium, max 6 packs), or PKR 1,500 (Enterprise, unlimited).',
+      'Modular operational add-ons: Library Management (N35) and Canteen POS (#98) at PKR 800/mo on Standard (included free on Premium and Enterprise). Transport Management (N36) and Hostel Management (N37) at PKR 1,200/mo on Standard and Premium (included free on Enterprise).',
+      'AI credit packs: 1M credits at PKR 500; 5M credits at PKR 2,000 (Premium) or PKR 1,500 (Enterprise). Standard includes AI Lite (1M credits/mo), Premium includes AI Plus (5M credits/mo), Enterprise includes AI Full (40M credits/mo).',
+      'Multi-campus slots: Starter and Standard are strictly 1 campus. Premium includes 2 campuses. Enterprise includes 3 campuses, with additional campuses available at PKR 3,000/mo each.',
+      'SMS and WhatsApp alerts use prepaid credits at provider gateway cost plus margin when carrier integrations are connected. Online payment gateway fees are passed directly to the college.',
+      '14-Day Free Trial: Every tier includes a 14-day free trial with full tier features enabled.',
     ]} />
     <P>Payment is due at the start of each billing period. We may change prices with reasonable advance notice.</P>
   </>) },
   { id: 'limits', title: 'Limits and upgrades', content: (<>
-    <P>Each plan has limits for students, staff accounts, storage, online admission applications, audit log history and campuses. A college with more than 300 students needs Standard or higher. A college can move to a higher plan at any time.</P>
-    <P>Please contact the developer to discuss your capacity before choosing a plan.</P>
+    <P>Each plan has limits for students, staff accounts, storage, online admission applications, audit log history and campuses. A college with more than 300 students needs Standard or higher. A college can move to a higher plan at any time with immediate pro-rated credit for unused days.</P>
+    <P>Please contact the developer or use the in-app subscription portal to discuss your capacity before choosing a plan.</P>
   </>) },
   { id: 'service-status', title: 'What is ready and what is coming', content: (<>
-    <P>Every service in our plans is marked as available now, being completed or coming soon. Most Standard, Premium and Enterprise services are still being built. Services that are coming soon or in development are listed so you can see our direction. They are not promised for any particular date.</P>
-    <P>When a service is released, it appears automatically for colleges on a plan that includes it. No migration is needed.</P>
-    <Note>Choose a plan based on the services marked “Available now”. Starter is the plan we recommend today.</Note>
+    <P>155 academic, financial, operational, and AI services are live and active today across 13 implementation phases. Only 6 hardware and external carrier integrations (#79 Biometrics, #82 Payment Gateway, #84 SMS, #85 WhatsApp, N12 Custom Domain, N14 SSO) remain on the roadmap.</P>
+    <P>When an upcoming integration or service is released, it appears automatically for colleges on a plan that includes it. No manual migration is needed.</P>
+    <Note>Starter, Standard, Premium and Enterprise all run fully live today on the central high-performance cloud infrastructure.</Note>
   </>) },
   { id: 'plan-changes', title: 'Changing plans and your data', content: (<>
-    <P>Changing plans never deletes your existing data. After a downgrade, services above your new plan become read-only for 30 days, and your data is kept for 90 days.</P>
+    <P>Changing plans never deletes your existing data. After a downgrade, services above your new plan become read-only for 30 days, and your data is kept safe in cold archives for 90 days.</P>
   </>) },
   { id: 'late-payment', title: 'Late payment and suspension', content: (<>
     <P>If a payment is late, you keep full access for 7 days, then read-only access for 14 days. After that, the workspace is suspended.</P>
@@ -91,11 +96,11 @@ export default function TermsPage() {
   return (
     <LegalLayout
       title="Terms & Conditions"
-      updated="October 23, 2026"
+      updated="November 6, 2026"
       summary={[
-        'Four monthly plans, from PKR 7,999. Yearly billing is 10 months for 12.',
-        'Every service is labelled available now, being completed or coming soon.',
-        'Changing plans never deletes your data.',
+        'Four monthly plans, from PKR 2,999. Yearly billing includes 1 Month FREE (11 months billed for 12 months access).',
+        '155 live services available today across 13 complete implementation phases.',
+        'Changing plans never deletes your data; 30-day grace and 90-day archive retention.',
       ]}
       sections={SECTIONS}
       other={{ href: '/privacy', label: 'Privacy Policy' }}
