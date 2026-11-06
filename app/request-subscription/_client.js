@@ -72,6 +72,31 @@ const FALLBACK_PLANS = [
 
 const SERVICE_COUNTS = { starter: 33, standard: 88, premium: 141, enterprise: 162 };
 
+const CANONICAL_PLAN_PRICES = {
+  starter: { monthly: 2999, yearly: 32989 },
+  standard: { monthly: 5999, yearly: 65989 },
+  premium: { monthly: 10999, yearly: 120989 },
+  enterprise: { monthly: 17999, yearly: 197989 },
+};
+
+function getPlanPrice(plan, cycle) {
+  if (!plan) return 0;
+  const pid = (plan.planId || plan.id || '').toLowerCase();
+  const canonical = CANONICAL_PLAN_PRICES[pid] || { monthly: 0, yearly: 0 };
+  const fallback = FALLBACK_PLANS.find(fp => fp.planId === pid);
+
+  const mRaw = plan.monthlyPrice ?? plan.priceMonthlyPkr ?? plan.price?.monthly ?? fallback?.monthlyPrice ?? canonical.monthly;
+  const yRaw = plan.yearlyPrice ?? plan.priceYearlyPkr ?? plan.price?.yearly ?? fallback?.yearlyPrice ?? canonical.yearly;
+
+  const m = Number(mRaw) || 0;
+  const y = Number(yRaw) || (m * 11);
+
+  if (cycle === 'yearly') {
+    return y || (m * 11);
+  }
+  return m || (y ? Math.round(y / 11) : 0);
+}
+
 const AI_TIERS = {
   starter: { label: 'None', color: 'text-fg-muted' },
   standard: { label: 'AI Lite', color: 'text-sky-600 dark:text-sky-400' },
@@ -156,7 +181,8 @@ function BillingToggle({ cycle, onChange }) {
 function PlanCard({ plan, cycle, counts, isSelected, onSelect }) {
   const pid = plan.planId;
   const theme = PLAN_THEME[pid] || PLAN_THEME.starter;
-  const price = cycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice;
+  const price = getPlanPrice(plan, cycle);
+  const monthlyEquivalent = cycle === 'yearly' ? Math.round(price / 11) : price;
   const isMostPopular = pid === 'standard';
   const isBestValue = pid === 'enterprise';
   const serviceCount = counts[pid] || SERVICE_COUNTS[pid] || '?';
@@ -207,12 +233,12 @@ function PlanCard({ plan, cycle, counts, isSelected, onSelect }) {
       {/* Price */}
       <div className="mb-4">
         <div className="flex items-baseline gap-1">
-          <span className="text-2xl font-black text-fg">PKR {price?.toLocaleString()}</span>
+          <span className="text-2xl font-black text-fg">PKR {Number(price || 0).toLocaleString()}</span>
           <span className="text-xs text-fg-muted font-semibold">/{cycle === 'yearly' ? 'yr' : 'mo'}</span>
         </div>
         {cycle === 'yearly' && (
           <p className="text-[11px] text-fg-muted mt-0.5">
-            ~PKR {Math.round(price / 11).toLocaleString()}/mo · billed annually
+            ~PKR {Number(monthlyEquivalent || 0).toLocaleString()}/mo · billed annually
           </p>
         )}
         <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
@@ -328,12 +354,15 @@ function AddonsSection({ addons, cycle }) {
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {rows.map(r => {
-                    const price = cycle === 'yearly' ? r.unitPriceYearlyPkr : r.unitPriceMonthlyPkr;
+                    const rawPrice = cycle === 'yearly'
+                      ? (r.unitPriceYearlyPkr ?? (r.unitPriceMonthlyPkr ? r.unitPriceMonthlyPkr * 11 : 0))
+                      : (r.unitPriceMonthlyPkr ?? (r.unitPriceYearlyPkr ? Math.round(r.unitPriceYearlyPkr / 11) : 0));
+                    const price = Number(rawPrice) || 0;
                     return (
                       <div key={r.id || `${r.addonType}-${r.planId}`} className="rounded-xl border border-line bg-card-2 p-3">
                         <p className="text-xs font-semibold text-fg">{r.name}</p>
                         <p className="text-sm font-black text-[#0A4D94] dark:text-brand-blue-400 mt-1">
-                          PKR {price?.toLocaleString()}<span className="text-xs font-semibold text-fg-muted">/{cycle === 'yearly' ? 'yr' : 'mo'}</span>
+                          PKR {price.toLocaleString()}<span className="text-xs font-semibold text-fg-muted">/{cycle === 'yearly' ? 'yr' : 'mo'}</span>
                         </p>
                         <p className="text-[11px] text-fg-muted mt-0.5">From {r.planId?.charAt(0).toUpperCase() + r.planId?.slice(1)} plan</p>
                       </div>
@@ -393,7 +422,23 @@ function SubscriptionRequestContent() {
       .then(d => {
         if (!mounted) return;
         if (d?.success && d?.data) {
-          if (Array.isArray(d.data.plans) && d.data.plans.length > 0) setPlans(d.data.plans);
+          if (Array.isArray(d.data.plans) && d.data.plans.length > 0) {
+            const normalized = d.data.plans.map(p => {
+              const pid = (p.planId || p.id || '').toLowerCase();
+              const fallback = FALLBACK_PLANS.find(fp => fp.planId === pid);
+              const m = Number(p.monthlyPrice ?? p.priceMonthlyPkr ?? p.price?.monthly ?? fallback?.monthlyPrice ?? CANONICAL_PLAN_PRICES[pid]?.monthly ?? 0);
+              const y = Number(p.yearlyPrice ?? p.priceYearlyPkr ?? p.price?.yearly ?? fallback?.yearlyPrice ?? CANONICAL_PLAN_PRICES[pid]?.yearly ?? (m * 11));
+              return {
+                ...fallback,
+                ...p,
+                planId: pid,
+                monthlyPrice: m,
+                yearlyPrice: y,
+                limits: { ...(fallback?.limits || {}), ...(p.limits || {}) },
+              };
+            });
+            setPlans(normalized);
+          }
           if (Array.isArray(d.data.addons)) setAddons(d.data.addons);
           if (d.data.counts) setCounts({ ...SERVICE_COUNTS, ...d.data.counts });
         }
@@ -448,7 +493,7 @@ function SubscriptionRequestContent() {
     }
   };
 
-  const currentPrice = billingCycle === 'yearly' ? currentPlan.yearlyPrice : currentPlan.monthlyPrice;
+  const currentPrice = getPlanPrice(currentPlan, billingCycle);
 
   return (
     <div className="min-h-dvh bg-app text-fg">
@@ -512,7 +557,7 @@ function SubscriptionRequestContent() {
                 </div>
                 <div className="text-right shrink-0">
                   <span className="text-xl font-extrabold text-white">
-                    PKR {currentPrice?.toLocaleString() || '—'}
+                    PKR {Number(currentPrice || 0).toLocaleString()}
                   </span>
                   <span className="block text-[10px] uppercase font-bold tracking-wider text-white/50">
                     / {billingCycle === 'yearly' ? 'year' : 'month'}
@@ -674,7 +719,7 @@ function SubscriptionRequestContent() {
                         const pid = plan.planId;
                         const isSelected = pid === selectedPlanId;
                         const theme = PLAN_THEME[pid] || PLAN_THEME.starter;
-                        const price = billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice;
+                        const price = getPlanPrice(plan, billingCycle);
                         return (
                           <button
                             key={pid}
@@ -693,7 +738,7 @@ function SubscriptionRequestContent() {
                             )}
                             <p className="text-xs font-bold text-fg pr-4">{plan.name}</p>
                             <p className="mt-1 text-[11px] font-extrabold text-[#0A4D94] dark:text-brand-blue-400">
-                              PKR {price?.toLocaleString()}/{billingCycle === 'yearly' ? 'yr' : 'mo'}
+                              PKR {Number(price || 0).toLocaleString()}/{billingCycle === 'yearly' ? 'yr' : 'mo'}
                             </p>
                           </button>
                         );
