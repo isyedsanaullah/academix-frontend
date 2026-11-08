@@ -1,21 +1,30 @@
-'use strict';
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { HiOutlineExclamation, HiOutlineClock, HiOutlineBan, HiOutlineX } from 'react-icons/hi';
+import Icon from '../Icon';
 
 export default function SubscriptionExpiryBanner() {
   const { user } = useAuth();
   const [dismissed, setDismissed] = useState(false);
 
   const college = user?.college;
-  const status = college?.subscription_status || college?.subscription?.status || 'active';
-  const isSuspended = status === 'suspended' || college?.status === 'suspended' || college?.subscriptionSuspended;
+  const status =
+    college?.subStatus ||
+    college?.subscription_status ||
+    college?.subscription?.status ||
+    'active';
+  const isSuspended =
+    status === 'suspended' ||
+    status === 'expired' ||
+    college?.status === 'suspended' ||
+    college?.subscriptionSuspended ||
+    college?.forceReadOnly ||
+    college?.isReadOnly;
   const isGrace = status === 'grace';
 
   // Calculate days left
-  const periodEnd = college?.subscription?.periodEnd;
+  const periodEnd = college?.periodEnd || college?.subscription?.periodEnd;
   let daysLeft = null;
   if (periodEnd) {
     const diff = new Date(periodEnd).getTime() - Date.now();
@@ -45,12 +54,18 @@ export default function SubscriptionExpiryBanner() {
 
   if (isSuspended) {
     return (
-      <div className="w-full bg-rose-600 text-white px-4 py-3 text-xs sm:text-sm font-medium shadow-md flex items-center justify-between gap-3 sticky top-0 z-40">
-        <div className="flex items-center gap-2 max-w-4xl mx-auto">
-          <HiOutlineBan size={18} className="shrink-0 text-white" />
+      <div
+        data-app-banner="suspended"
+        className="no-print w-full bg-primary-03 text-white px-4 py-3 text-body-2 font-medium shadow-widget flex items-center justify-between gap-3 sticky top-0 z-30"
+      >
+        <div className="flex items-center gap-2.5 max-w-4xl mx-auto">
+          <Icon name="ban" className="!size-5 shrink-0 fill-white" />
           <span>
             <strong>Subscription Expired:</strong> Access to institutional features is suspended. Non-admin staff and students are currently blocked. Please contact{' '}
-            <a href="mailto:support@collegeshub.org" className="underline font-bold hover:text-rose-100">
+            <a
+              href="mailto:support@collegeshub.org"
+              className="underline font-bold hover:opacity-90"
+            >
               support@collegeshub.org
             </a>{' '}
             to restore your subscription immediately.
@@ -61,14 +76,22 @@ export default function SubscriptionExpiryBanner() {
   }
 
   if (isGrace) {
-    const graceUntil = college?.grace_until ? new Date(college.grace_until).toLocaleDateString() : '7 days';
+    const graceUntil = college?.grace_until
+      ? new Date(college.grace_until).toLocaleDateString()
+      : '7 days';
     return (
-      <div className="w-full bg-amber-500 text-slate-950 px-4 py-2.5 text-xs sm:text-sm font-semibold shadow-md flex items-center justify-between gap-3 sticky top-0 z-40">
-        <div className="flex items-center gap-2 max-w-4xl mx-auto">
-          <HiOutlineExclamation size={18} className="shrink-0 text-slate-950" />
+      <div
+        data-app-banner="grace"
+        className="no-print w-full bg-primary-05 text-[#0F1B2D] px-4 py-2.5 text-body-2 font-semibold shadow-widget flex items-center justify-between gap-3 sticky top-0 z-30"
+      >
+        <div className="flex items-center gap-2.5 max-w-4xl mx-auto">
+          <Icon name="alert" className="!size-5 shrink-0 fill-[#0F1B2D]" />
           <span>
             <strong>Grace Period Active:</strong> Your subscription has expired and is in a temporary grace period until {graceUntil}. Contact{' '}
-            <a href="mailto:support@collegeshub.org" className="underline font-bold hover:text-slate-800">
+            <a
+              href="mailto:support@collegeshub.org"
+              className="underline font-bold hover:opacity-80"
+            >
               support@collegeshub.org
             </a>{' '}
             to renew before service suspension.
@@ -80,23 +103,35 @@ export default function SubscriptionExpiryBanner() {
 
   // 30-day expiry warning window
   return (
-    <div className="w-full bg-indigo-900/90 text-indigo-100 border-b border-indigo-700/50 px-4 py-2 text-xs font-medium flex items-center justify-between gap-3">
+    <div
+      data-app-banner="expiring"
+      className="no-print w-full bg-b-surface2 border-b border-s-stroke2 text-t-primary px-4 py-2.5 text-caption font-medium flex items-center justify-between gap-3"
+    >
       <div className="flex items-center gap-2 max-w-4xl mx-auto">
-        <HiOutlineClock size={16} className="shrink-0 text-indigo-300" />
+        <Icon name="clock" className="!size-4 shrink-0 fill-primary-01" />
         <span>
-          Your Collegeshub subscription expires in <strong>{daysLeft} day{daysLeft === 1 ? '' : 's'}</strong> ({new Date(periodEnd).toLocaleDateString()}). Contact administration or{' '}
-          <a href="mailto:support@collegeshub.org" className="underline font-bold text-white hover:text-indigo-200">
+          Your Collegeshub subscription expires in{' '}
+          <strong>
+            {daysLeft} day{daysLeft === 1 ? '' : 's'}
+          </strong>{' '}
+          ({new Date(periodEnd).toLocaleDateString()}). Contact administration or{' '}
+          <a
+            href="mailto:support@collegeshub.org"
+            className="underline font-bold text-t-blue hover:opacity-80"
+          >
             support@collegeshub.org
           </a>{' '}
           to renew.
         </span>
       </div>
       <button
+        type="button"
         onClick={handleDismiss}
-        className="text-indigo-300 hover:text-white p-1 rounded transition"
+        aria-label="Dismiss subscription expiry notice for today"
+        className="text-t-secondary hover:text-t-primary p-1.5 rounded-full hover:bg-b-surface1 transition"
         title="Dismiss for today"
       >
-        <HiOutlineX size={15} />
+        <Icon name="close" className="!size-4 fill-current" />
       </button>
     </div>
   );

@@ -1,4 +1,39 @@
-import { HiOutlineViewGrid, HiOutlineAcademicCap, HiOutlineUserGroup, HiOutlineCurrencyDollar, HiOutlineCreditCard, HiOutlineClipboardCheck, HiOutlineDocumentText, HiOutlineChartBar, HiOutlineSpeakerphone, HiOutlineCog, HiOutlineLogout, HiOutlineOfficeBuilding, HiOutlineX, HiOutlineShieldCheck, HiOutlineExclamation, HiOutlineCalendar, HiOutlineBookOpen, HiOutlineCollection, HiOutlineBriefcase, HiOutlineDocumentDuplicate, HiOutlineClock, HiOutlineClipboardList, HiOutlineLibrary, HiOutlineCash, HiOutlineIdentification, HiOutlineSparkles, HiOutlineNewspaper, HiOutlineTemplate, HiOutlineCloudUpload, HiOutlineStar, HiOutlineUser, HiOutlineTrash, HiOutlineQrcode, HiOutlineBeaker } from 'react-icons/hi';
+import { createIcon } from '../Icon';
+
+const HiOutlineViewGrid = createIcon('dashboard');
+const HiOutlineAcademicCap = createIcon('graduation-cap');
+const HiOutlineUserGroup = createIcon('profile-2');
+const HiOutlineCurrencyDollar = createIcon('dollar-circle');
+const HiOutlineCreditCard = createIcon('wallet');
+const HiOutlineClipboardCheck = createIcon('clipboard-check');
+const HiOutlineDocumentText = createIcon('file-text');
+const HiOutlineChartBar = createIcon('chart');
+const HiOutlineSpeakerphone = createIcon('megaphone');
+const HiOutlineCog = createIcon('gear');
+const HiOutlineLogout = createIcon('logout');
+const HiOutlineOfficeBuilding = createIcon('building');
+const HiOutlineX = createIcon('close');
+const HiOutlineShieldCheck = createIcon('shield-check');
+const HiOutlineExclamation = createIcon('alert');
+const HiOutlineCalendar = createIcon('calendar');
+const HiOutlineBookOpen = createIcon('book-open');
+const HiOutlineCollection = createIcon('layers');
+const HiOutlineBriefcase = createIcon('briefcase');
+const HiOutlineDocumentDuplicate = createIcon('copy-files');
+const HiOutlineClock = createIcon('clock');
+const HiOutlineClipboardList = createIcon('clipboard-list');
+const HiOutlineLibrary = createIcon('landmark');
+const HiOutlineCash = createIcon('banknote');
+const HiOutlineIdentification = createIcon('id-card');
+const HiOutlineSparkles = createIcon('sparkles');
+const HiOutlineNewspaper = createIcon('newspaper');
+const HiOutlineTemplate = createIcon('layout-template');
+const HiOutlineCloudUpload = createIcon('upload');
+const HiOutlineStar = createIcon('star-stroke');
+const HiOutlineUser = createIcon('profile');
+const HiOutlineTrash = createIcon('trash');
+const HiOutlineQrcode = createIcon('qr-code');
+const HiOutlineBeaker = createIcon('flask-conical');
 export const NAV = {
   superAdmin: [
     { to: '/super-admin', icon: HiOutlineViewGrid, label: 'Dashboard' },

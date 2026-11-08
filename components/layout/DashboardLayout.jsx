@@ -1,62 +1,46 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { usePathname, useRouter } from 'next/navigation';
-import Image from 'next/image';
+import Link from 'next/link';
 import Sidebar from './Sidebar';
-import {
-  HiOutlineMenu, HiOutlineBell, HiOutlineSearch, HiOutlineLogout, HiOutlineUser,
-  HiOutlineCog, HiOutlineX, HiOutlineSpeakerphone,
-  HiOutlineChevronRight, HiOutlineSun, HiOutlineMoon
-} from 'react-icons/hi';
-import { useAuthStore } from '../../store/authStore';
-import api from '../../lib/api';
+import MobileBottomBar, { isFullscreenStudentPlayer } from './MobileBottomBar';
+import Icon from '../Icon';
+import PlanBadge from '../common/PlanBadge';
 import SubscriptionExpiryBanner from '../common/SubscriptionExpiryBanner';
 import CollegesHubLoader from '../common/CollegesHubLoader';
+import { useAuthStore } from '../../store/authStore';
+import { useTheme } from '../../providers/ThemeProvider';
+import { getAppPortalRoot } from '../../lib/portal';
+import api from '../../lib/api';
 
-// --- Theme Context (light/dark) ---
-const getInitialTheme = () => {
-  if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('ui-theme');
-    if (saved === 'light' || saved === 'dark') return saved;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  }
-  return 'dark';
-};
-
-const setThemeClass = (theme) => {
-  if (typeof document !== 'undefined') {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-    } else {
-      document.documentElement.classList.add('light');
-      document.documentElement.classList.remove('dark');
-    }
-  }
-};
-
-/* ── Helper: get page title (unchanged) ── */
+/* ── Helper: get page title (unchanged route map) ── */
 const getPageTitle = (pathname) => {
   const map = {
     // Super Admin
-    '/super-admin': 'Dashboard',
+    '/super-admin': 'Platform Command Center',
     '/super-admin/colleges': 'College Management',
     '/super-admin/subscription-requests': 'Subscription Requests',
+    '/super-admin/billing': 'Billing Queue',
     '/super-admin/analytics': 'Platform Analytics',
     '/super-admin/ai/chat': 'AI Reports',
+    '/super-admin/activity-log': 'Activity Log',
+    '/super-admin/trash': 'Trash',
     '/super-admin/settings': 'Profile & Settings',
     // Admin
     '/admin': 'Dashboard',
     '/admin/sessions': 'Academic Sessions',
     '/admin/classes': 'Classes & Sections',
     '/admin/subjects': 'Subjects',
+    '/admin/academic': 'Academic Management',
     '/admin/students': 'Students',
     '/admin/applications': 'Admission Applications',
     '/admin/admission-seasons': 'Admission Seasons',
     '/admin/staff': 'Manage Accounts',
     '/admin/teachers': 'Teachers',
     '/admin/employees': 'Employees',
+    '/admin/subscription': 'Subscription & Billing',
     '/admin/treasury': 'Treasury & Cashflow Ledger',
     '/admin/fees': 'Fee Management',
     '/admin/fees/defaulters': 'Fee Defaulters',
@@ -73,6 +57,11 @@ const getPageTitle = (pathname) => {
     '/admin/results/entry': 'Enter Results',
     '/admin/results/upload': 'Bulk Upload Marks',
     '/admin/evaluations': 'Teacher Evaluations',
+    '/admin/eligibility': 'Send-Up & Eligibility',
+    '/admin/exam-analytics': 'Weak Students & Analysis',
+    '/admin/practicals': 'Practicals & Labs',
+    '/admin/entry-test': 'Entry-Test & MDCAT',
+    '/admin/board': 'Board Examination Portal',
     '/admin/reports': 'Report Center (PDF)',
     '/admin/assignments': 'Assignments',
     '/admin/quizzes': 'Quizzes',
@@ -83,6 +72,10 @@ const getPageTitle = (pathname) => {
     '/admin/visitors': 'Visitor Log',
     '/admin/id-cards': 'Member ID Cards',
     '/admin/certificates': 'Certificates',
+    '/admin/templates': 'Document Templates',
+    '/admin/guidance': 'Parents & Guidance',
+    '/admin/activity-log': 'Activity Log',
+    '/admin/trash': 'Trash',
     '/admin/settings': 'Settings',
     // Profile & Settings
     '/admin/profile': 'My Profile & Settings',
@@ -94,6 +87,8 @@ const getPageTitle = (pathname) => {
     '/employee/settings': 'Profile & Settings',
     // Registrar
     '/registrar': 'Registrar Dashboard',
+    '/registrar/applications': 'Admission Applications',
+    '/registrar/admission-seasons': 'Admission Seasons',
     '/registrar/students': 'Student Registration',
     '/registrar/sessions': 'Academic Sessions',
     '/registrar/classes': 'Classes & Sections',
@@ -104,13 +99,24 @@ const getPageTitle = (pathname) => {
     '/registrar/timetable': 'Timetable',
     '/registrar/certificates': 'Certificates',
     '/registrar/announcements': 'Announcements',
+    '/registrar/activity-log': 'Activity Log',
+    '/registrar/trash': 'Trash',
     // Accountant
     '/accountant': 'Accountant Dashboard',
+    '/accountant/treasury': 'Treasury & Cashflow',
+    '/accountant/subscription': 'Subscription Billing',
     '/accountant/fees': 'Fee Collection',
+    '/accountant/payment-proofs': 'Payment Proofs',
     '/accountant/fees/defaulters': 'Fee Defaulters',
+    '/accountant/dues': 'Dues Report',
+    '/accountant/payroll': 'Employee Payroll',
     '/accountant/announcements': 'Announcements',
+    '/accountant/activity-log': 'Activity Log',
+    '/accountant/trash': 'Trash',
     // Principal
     '/principal': 'Principal Dashboard',
+    '/principal/approvals': 'Central Approvals',
+    '/principal/evaluations': 'Teacher Evaluations',
     '/principal/students': 'Students Overview',
     '/principal/attendance': 'Attendance Overview',
     '/principal/results': 'Results Overview',
@@ -120,16 +126,22 @@ const getPageTitle = (pathname) => {
     '/principal/announcements': 'Announcements',
     '/principal/early-exit': 'Early Exit Approvals',
     '/principal/gate-logs': 'Gate Logs',
+    '/principal/activity-log': 'Activity Log',
+    '/principal/trash': 'Trash',
     // Teacher
     '/teacher': 'Dashboard',
     '/teacher/students': 'Students',
     '/teacher/attendance': 'Attendance',
     '/teacher/results': 'Student Results',
+    '/teacher/results/upload': 'Upload Results',
     '/teacher/assignments': 'Assignments',
     '/teacher/quizzes': 'Quizzes',
+    '/teacher/timetable': 'My Timetable',
     '/teacher/fines': 'Fine Student',
     '/teacher/my-qr': 'My QR Code',
     '/teacher/early-exit': 'Early Exit Request',
+    '/teacher/activity-log': 'Activity Log',
+    '/teacher/trash': 'Trash',
     // Student
     '/student': 'Dashboard',
     '/student/attendance': 'My Attendance',
@@ -140,8 +152,11 @@ const getPageTitle = (pathname) => {
     '/student/quizzes': 'Quizzes',
     '/student/timetable': 'Timetable',
     '/student/leave': 'Leave Application',
+    '/student/evaluation': 'Teacher Evaluation',
     '/student/my-qr': 'My QR Code',
     '/student/early-exit': 'Early Exit Request',
+    '/student/activity-log': 'Activity Log',
+    '/student/trash': 'Trash',
     // Employee
     '/employee': 'Dashboard',
     '/employee/visitors': 'Visitors',
@@ -150,7 +165,7 @@ const getPageTitle = (pathname) => {
     '/employee/early-exit': 'Early Exit',
     // AI (shared across roles)
     ...Object.fromEntries(
-      ['admin', 'teacher', 'student', 'principal'].flatMap(role => [
+      ['admin', 'teacher', 'student', 'principal', 'registrar', 'accountant'].flatMap((role) => [
         [`/${role}/ai/chat`, 'AI Chat'],
         [`/${role}/ai/pdf-library`, 'PDF Knowledge Library'],
         [`/${role}/ai/quiz`, 'AI Quiz Generator'],
@@ -162,20 +177,22 @@ const getPageTitle = (pathname) => {
       ])
     ),
   };
+  if (!pathname) return 'CollegesHub';
   if (pathname.match(/\/super-admin\/colleges\/.+/)) return 'College Details';
   if (pathname.match(/\/(admin|registrar|principal)\/students\/.+/)) return 'Student Profile';
   if (pathname.match(/\/(admin|accountant)\/fees\/receipt\/.+/)) return 'Fee Receipt';
   if (pathname.startsWith('/admin/results/card/')) return 'Result Card';
-  return map[pathname] || 'Collegeshub';
+  return map[pathname] || 'CollegesHub';
 };
 
-/* ── Build searchable nav items (unchanged) ── */
+/* ── Build searchable nav items (unchanged business data) ── */
 const buildSearchItems = (role) => {
   const map = {
     admin: [
       { to: '/admin', label: 'Dashboard' },
       { to: '/admin/applications', label: 'Admission Applications' },
       { to: '/admin/admission-seasons', label: 'Admission Seasons' },
+      { to: '/admin/academic', label: 'Academic Management' },
       { to: '/admin/sessions', label: 'Academic Sessions' },
       { to: '/admin/classes', label: 'Classes & Sections' },
       { to: '/admin/subjects', label: 'Subjects' },
@@ -183,6 +200,7 @@ const buildSearchItems = (role) => {
       { to: '/admin/staff', label: 'Manage Accounts' },
       { to: '/admin/teachers', label: 'Teachers' },
       { to: '/admin/employees', label: 'Employees' },
+      { to: '/admin/subscription', label: 'Subscription & Billing' },
       { to: '/admin/treasury', label: 'Treasury & Cashflow Ledger' },
       { to: '/admin/fees', label: 'Fee Management' },
       { to: '/admin/fees/defaulters', label: 'Fee Defaulters' },
@@ -200,6 +218,11 @@ const buildSearchItems = (role) => {
       { to: '/admin/results/entry', label: 'Enter Results' },
       { to: '/admin/results/upload', label: 'Bulk Upload Marks' },
       { to: '/admin/evaluations', label: 'Teacher Evaluations' },
+      { to: '/admin/eligibility', label: 'Send-Up & Eligibility' },
+      { to: '/admin/exam-analytics', label: 'Weak Students & Analysis' },
+      { to: '/admin/practicals', label: 'Practicals & Labs' },
+      { to: '/admin/entry-test', label: 'Entry-Test & MDCAT' },
+      { to: '/admin/board', label: 'Board Examination Portal' },
       { to: '/admin/reports', label: 'Report Center (PDF)' },
       { to: '/admin/assignments', label: 'Assignments' },
       { to: '/admin/quizzes', label: 'Quizzes' },
@@ -209,6 +232,8 @@ const buildSearchItems = (role) => {
       { to: '/admin/visitors', label: 'Visitor Log' },
       { to: '/admin/id-cards', label: 'Member ID Cards & QR' },
       { to: '/admin/certificates', label: 'Certificates' },
+      { to: '/admin/templates', label: 'Document Templates' },
+      { to: '/admin/guidance', label: 'Parents & Guidance' },
       { to: '/admin/settings', label: 'Settings' },
       { to: '/admin/profile', label: 'My Profile' },
       { to: '/admin/ai/chat', label: 'AI Chat' },
@@ -229,6 +254,7 @@ const buildSearchItems = (role) => {
       { to: '/teacher/results', label: 'Results' },
       { to: '/teacher/assignments', label: 'Assignments' },
       { to: '/teacher/quizzes', label: 'Quizzes' },
+      { to: '/teacher/timetable', label: 'My Timetable' },
       { to: '/teacher/fines', label: 'Fine Student' },
       { to: '/teacher/ai/chat', label: 'AI Chat' },
       { to: '/teacher/ai/quiz', label: 'AI Quiz Generator' },
@@ -254,36 +280,50 @@ const buildSearchItems = (role) => {
       { to: '/super-admin', label: 'Dashboard' },
       { to: '/super-admin/colleges', label: 'Colleges' },
       { to: '/super-admin/subscription-requests', label: 'Subscription Requests' },
+      { to: '/super-admin/billing', label: 'Billing Queue' },
+      { to: '/super-admin/analytics', label: 'Analytics' },
+      { to: '/super-admin/ai/chat', label: 'AI Reports' },
+      { to: '/super-admin/activity-log', label: 'Activity Log' },
+      { to: '/super-admin/trash', label: 'Trash' },
+      { to: '/super-admin/settings', label: 'Profile & Settings' },
     ],
     registrar: [
       { to: '/registrar', label: 'Dashboard' },
+      { to: '/registrar/applications', label: 'Applications' },
+      { to: '/registrar/admission-seasons', label: 'Admission Seasons' },
       { to: '/registrar/students', label: 'Students' },
-      { to: '/registrar/sessions', label: 'Sessions' },
-      { to: '/registrar/classes', label: 'Classes' },
-      { to: '/registrar/subjects', label: 'Subjects' },
-      { to: '/registrar/attendance', label: 'Attendance' },
+      { to: '/registrar/certificates', label: 'Certificates' },
+      { to: '/registrar/timetable', label: 'Timetable' },
       { to: '/registrar/announcements', label: 'Announcements' },
       { to: '/registrar/settings', label: 'Profile & Settings' },
     ],
     accountant: [
       { to: '/accountant', label: 'Dashboard' },
+      { to: '/accountant/treasury', label: 'Treasury' },
+      { to: '/accountant/subscription', label: 'Subscription Billing' },
       { to: '/accountant/fees', label: 'Fee Collection' },
+      { to: '/accountant/payment-proofs', label: 'Payment Proofs' },
       { to: '/accountant/fees/defaulters', label: 'Defaulters' },
+      { to: '/accountant/dues', label: 'Dues Report' },
+      { to: '/accountant/payroll', label: 'Employee Payroll' },
       { to: '/accountant/settings', label: 'Profile & Settings' },
     ],
     principal: [
       { to: '/principal', label: 'Dashboard' },
+      { to: '/principal/approvals', label: 'Approvals' },
+      { to: '/principal/evaluations', label: 'Teacher Evaluations' },
       { to: '/principal/students', label: 'Students' },
       { to: '/principal/attendance', label: 'Attendance' },
       { to: '/principal/results', label: 'Results' },
       { to: '/principal/exams', label: 'Exams' },
       { to: '/principal/fees', label: 'Fees' },
       { to: '/principal/staff', label: 'Staff' },
-      { to: '/principal/ai/chat', label: 'AI Advisor' },
       { to: '/principal/settings', label: 'Profile & Settings' },
     ],
     employee: [
       { to: '/employee', label: 'Dashboard' },
+      { to: '/employee/gate', label: 'Gate Scanner' },
+      { to: '/employee/gate-logs', label: 'Gate Logs' },
       { to: '/employee/visitors', label: 'Visitors' },
       { to: '/employee/settings', label: 'Profile & Settings' },
     ],
@@ -291,7 +331,7 @@ const buildSearchItems = (role) => {
   return map[role] || [];
 };
 
-/* ── Spotlight Search Modal ── */
+/* ── Core 2.0 Spotlight Search Modal (Portaled inside #app-portal-root) ── */
 const SpotlightSearch = ({ open, onClose, role }) => {
   const [query, setQuery] = useState('');
   const router = useRouter();
@@ -299,153 +339,245 @@ const SpotlightSearch = ({ open, onClose, role }) => {
   const items = buildSearchItems(role);
 
   const filtered = query.trim()
-    ? items.filter(i => i.label.toLowerCase().includes(query.toLowerCase()))
+    ? items.filter((i) => i.label.toLowerCase().includes(query.toLowerCase()))
     : items;
 
   useEffect(() => {
-    if (open) { setQuery(''); setTimeout(() => inputRef.current?.focus(), 50); }
+    if (open) {
+      setQuery('');
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
   }, [open]);
 
   useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    const handler = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
     if (open) window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [open, onClose]);
 
   if (!open) return null;
 
-  const handleSelect = (to) => { router.push(to); onClose(); };
+  const handleSelect = (to) => {
+    router.push(to);
+    onClose();
+  };
 
-  return (
+  const portalRoot = getAppPortalRoot();
+  const content = (
     <div
-      className="fixed inset-0 z-[999] flex items-start justify-center px-3 pt-[10vh] sm:pt-[15vh]"
+      className="fixed inset-0 z-[105] flex items-start justify-center px-3 pt-[10vh] sm:pt-[14vh]"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label="Search pages"
     >
-      <div className="fixed inset-0 bg-app/75 backdrop-blur-sm" />
+      <div className="fixed inset-0 bg-b-surface1/75 backdrop-blur-sm" />
       <div
-        onClick={e => e.stopPropagation()}
-        className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-line bg-card shadow-2xl animate-slide-up"
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-xl overflow-hidden rounded-4xl border border-s-subtle bg-b-surface2 p-3 shadow-dropdown animate-slide-up"
       >
-        <div className="flex items-center gap-3 border-b border-line px-4 py-3">
-          <HiOutlineSearch size={18} className="shrink-0 text-fg-faint" aria-hidden="true" />
+        <div className="relative flex items-center gap-3 rounded-3xl bg-b-surface1 px-4 h-12 border border-s-subtle focus-within:border-s-focus focus-within:bg-b-surface2 transition-all">
+          <Icon name="search" className="!size-5 shrink-0 fill-t-secondary" />
           <input
             ref={inputRef}
             value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search pages, features..."
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search pages, modules, or tools..."
             aria-label="Search pages and features"
-            className="min-w-0 flex-1 bg-transparent text-base text-fg outline-none placeholder:text-fg-faint sm:text-sm"
+            className="min-w-0 flex-1 bg-transparent text-body-2 text-t-primary outline-none placeholder:text-t-tertiary"
           />
-          <kbd className="hidden shrink-0 items-center rounded bg-card-2 px-1.5 py-0.5 font-mono text-[10px] text-fg-muted sm:inline-flex">ESC</kbd>
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              aria-label="Clear search query"
+              className="p-1 rounded-full text-t-tertiary hover:text-t-primary"
+            >
+              <Icon name="close" className="!size-4 fill-current" />
+            </button>
+          )}
+          <kbd className="hidden shrink-0 items-center rounded-lg bg-b-surface2 px-2 py-1 font-mono text-[10px] font-semibold text-t-secondary border border-s-subtle sm:inline-flex">
+            ESC
+          </kbd>
         </div>
 
-        <div className="max-h-[60vh] overflow-y-auto py-1 sm:max-h-72">
+        <div className="mt-2 max-h-[55vh] overflow-y-auto px-1 py-1 sm:max-h-80">
+          <div className="px-3 py-2 text-caption font-semibold text-t-tertiary uppercase tracking-wider">
+            {query.trim() ? 'Matching Pages' : 'Quick Navigation'}
+          </div>
           {filtered.length === 0 ? (
-            <p className="py-6 text-center text-sm text-fg-faint">No results found</p>
+            <p className="py-8 text-center text-body-2 text-t-tertiary">
+              No matching pages found
+            </p>
           ) : (
             filtered.map((item) => (
               <button
                 key={item.to}
+                type="button"
                 onClick={() => handleSelect(item.to)}
-                className="group flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-card-2 focus-visible:bg-card-2 focus-visible:outline-none"
+                className="group relative flex w-full items-center gap-3 rounded-2xl px-3.5 py-2.5 text-left transition hover:bg-b-highlight focus-visible:bg-b-highlight focus-visible:outline-none cursor-pointer"
               >
-                <HiOutlineChevronRight size={12} className="shrink-0 text-fg-faint transition group-hover:text-accent" aria-hidden="true" />
-                <span className="min-w-0 truncate text-sm text-fg-muted transition group-hover:text-fg">{item.label}</span>
-                <span className="ml-auto hidden max-w-32 truncate font-mono text-[10px] text-fg-faint sm:inline">{item.to}</span>
+                <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-b-surface1 border border-s-subtle group-hover:border-s-highlight transition-colors">
+                  <Icon
+                    name="arrow"
+                    className="!size-4 fill-t-secondary transition group-hover:fill-[var(--accent,var(--primary-01))]"
+                  />
+                </div>
+                <span className="min-w-0 truncate text-sub-title-2 text-t-secondary transition group-hover:text-t-primary">
+                  {item.label}
+                </span>
+                <span className="ml-auto hidden max-w-40 truncate font-mono text-caption text-t-tertiary sm:inline">
+                  {item.to}
+                </span>
               </button>
             ))
           )}
         </div>
-
-        <div className="hidden items-center gap-4 border-t border-line px-4 py-2 text-[10px] text-fg-faint sm:flex">
-          <span>↑↓ Navigate</span>
-          <span>↵ Select</span>
-          <span>ESC Close</span>
-        </div>
       </div>
     </div>
   );
+
+  return portalRoot ? createPortal(content, portalRoot) : content;
 };
 
-/* ── Notifications Dropdown ── */
-const NotificationsDropdown = ({ open, onClose }) => {
+/* ── Core 2.0 Notifications Slide-Over / Popover (Portaled inside #app-portal-root) ── */
+const NotificationsDrawer = ({ open, onClose, role }) => {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
-  const dropRef = useRef(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || role === 'superAdmin') return;
     setLoading(true);
-    api.get('/announcements?limit=5&sort=-createdAt')
+    api
+      .get('/announcements?limit=5&sort=-createdAt')
       .then(({ data }) => setAnnouncements(data.data?.slice(0, 5) || []))
       .catch(() => setAnnouncements([]))
       .finally(() => setLoading(false));
-  }, [open]);
+  }, [open, role]);
 
   useEffect(() => {
     if (!open) return;
-    const handler = (e) => { if (dropRef.current && !dropRef.current.contains(e.target)) onClose(); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    const handler = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, [open, onClose]);
 
   if (!open) return null;
 
-  return (
-    <div
-      ref={dropRef}
-      className="absolute right-0 top-full z-50 mt-2 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-line bg-card shadow-2xl animate-slide-up"
-    >
-      <div className="flex items-center justify-between border-b border-line px-4 py-3">
-        <div className="flex items-center gap-2">
-          <HiOutlineBell size={16} className="text-accent" aria-hidden="true" />
-          <h4 className="text-xs font-bold text-fg">Notifications</h4>
-        </div>
-        <button
-          onClick={onClose}
-          aria-label="Close notifications"
-          className="rounded-md p-1 text-fg-faint transition hover:bg-card-2 hover:text-fg"
-        >
-          <HiOutlineX size={16} />
-        </button>
-      </div>
+  const announcementsHref =
+    role && ['admin', 'registrar', 'accountant', 'principal'].includes(role)
+      ? `/${role}/announcements`
+      : null;
 
-      <div className="max-h-72 overflow-y-auto">
-        {loading ? (
-          <div className="py-4">
-            <CollegesHubLoader size="xs" text="Loading notifications…" minHeight="min-h-[80px]" />
+  const portalRoot = getAppPortalRoot();
+  const content = (
+    <div
+      className="fixed inset-0 z-[105] flex justify-end"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Notifications panel"
+    >
+      <div
+        className="fixed inset-0 bg-b-surface1/70 backdrop-blur-xs transition-opacity"
+        onClick={onClose}
+      />
+      <div className="relative z-10 flex flex-col w-108 max-md:w-[calc(100vw-1.5rem)] m-3 rounded-4xl bg-b-surface2 border border-s-subtle shadow-dropdown overflow-hidden animate-slide-up">
+        <div className="flex items-center justify-between h-20 px-7 border-b border-s-subtle">
+          <div className="flex items-center gap-2.5">
+            <Icon name="bell" className="!size-5 fill-[var(--accent,var(--primary-01))]" />
+            <h3 className="text-h5 text-t-primary">Notifications</h3>
           </div>
-        ) : announcements.length === 0 ? (
-          <div className="py-8 text-center">
-            <HiOutlineSpeakerphone size={24} className="mx-auto mb-2 text-fg-faint" aria-hidden="true" />
-            <p className="text-xs text-fg-muted">No recent announcements</p>
-          </div>
-        ) : (
-          announcements.map((a, i) => (
-            <div key={a._id || i} className="border-b border-line px-4 py-3 transition last:border-b-0 hover:bg-card-2">
-              <p className="truncate text-xs font-semibold text-fg">{a.title}</p>
-              <p className="mt-0.5 line-clamp-2 text-[11px] text-fg-muted">
-                {(a.message || a.content || '').replace(/<p[^>]*>/gi, '').replace(/<\/p>/gi, ' ').replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>/g, '').trim()}
-              </p>
-              <p className="mt-1 text-[10px] tabular-nums text-fg-faint">
-                {a.createdAt ? new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close notifications"
+            className="flex items-center justify-center w-10 h-10 rounded-full bg-b-surface1 text-t-secondary hover:text-t-primary transition-colors cursor-pointer"
+          >
+            <Icon name="close" className="!size-5 fill-current" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {loading ? (
+            <div className="py-12">
+              <CollegesHubLoader
+                size="xs"
+                text="Loading notifications…"
+                minHeight="min-h-[120px]"
+              />
+            </div>
+          ) : announcements.length === 0 ? (
+            <div className="py-14 px-6 text-center">
+              <div className="mx-auto mb-3 flex items-center justify-center w-12 h-12 rounded-2xl bg-b-surface1 text-t-tertiary">
+                <Icon name="megaphone" className="!size-6 fill-t-tertiary" />
+              </div>
+              <p className="text-sub-title-1 text-t-primary">All caught up</p>
+              <p className="mt-1 text-body-2 text-t-secondary">
+                No recent institutional announcements right now.
               </p>
             </div>
-          ))
+          ) : (
+            announcements.map((a, i) => (
+              <div
+                key={a._id || i}
+                className="group relative flex items-start gap-3.5 p-4 rounded-3xl hover:bg-b-highlight border border-transparent hover:border-s-subtle transition-all"
+              >
+                <div className="flex shrink-0 items-center justify-center w-11 h-11 rounded-full bg-b-surface1 text-primary-01 border border-s-subtle">
+                  <Icon name="megaphone" className="!size-5 fill-primary-01" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sub-title-2 text-t-primary">
+                    {a.title}
+                  </p>
+                  <p className="mt-1 line-clamp-2 text-body-2 text-t-secondary">
+                    {(a.message || a.content || '')
+                      .replace(/<p[^>]*>/gi, '')
+                      .replace(/<\/p>/gi, ' ')
+                      .replace(/<br\s*\/?>/gi, ' ')
+                      .replace(/<[^>]*>/g, '')
+                      .trim()}
+                  </p>
+                  <p className="mt-1.5 text-caption text-t-tertiary tabular-nums">
+                    {a.createdAt
+                      ? new Date(a.createdAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })
+                      : ''}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {announcementsHref && (
+          <div className="p-4 border-t border-s-subtle bg-b-surface2">
+            <Link
+              href={announcementsHref}
+              onClick={onClose}
+              className="btn-primary w-full flex items-center justify-center"
+            >
+              All announcements
+            </Link>
+          </div>
         )}
       </div>
     </div>
   );
+
+  return portalRoot ? createPortal(content, portalRoot) : content;
 };
 
-/* ── User Profile Dropdown ── */
-const ProfileDropdown = ({ open, onClose, user }) => {
+/* ── Core 2.0 User Profile Dropdown (Portaled or Anchored inside [data-app]) ── */
+const ProfileDropdown = ({ open, onClose, user, plan, subStatus }) => {
   const { logout } = useAuthStore();
   const router = useRouter();
-  const dropRef = useRef(null);
 
   const roleLabels = {
     superAdmin: 'Super Admin',
@@ -461,10 +593,14 @@ const ProfileDropdown = ({ open, onClose, user }) => {
 
   useEffect(() => {
     if (!open) return;
-    const handler = (e) => { if (dropRef.current && !dropRef.current.contains(e.target)) onClose(); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    const handler = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, [open, onClose]);
+
+  if (!open) return null;
 
   const handleLogout = () => {
     logout();
@@ -472,97 +608,195 @@ const ProfileDropdown = ({ open, onClose, user }) => {
     onClose();
   };
 
-  const profilePath = user?.role === 'superAdmin'
-    ? '/super-admin/settings'
-    : user?.role === 'admin'
-    ? '/admin/profile'
-    : user?.role ? `/${user.role}/settings` : null;
+  const profilePath =
+    user?.role === 'superAdmin'
+      ? '/super-admin/settings'
+      : user?.role === 'admin'
+        ? '/admin/profile'
+        : user?.role
+          ? `/${user.role}/settings`
+          : null;
 
   const collegeSettingsPath = user?.role === 'admin' ? '/admin/settings' : null;
+  const subscriptionPath =
+    user?.role === 'admin'
+      ? '/admin/subscription'
+      : user?.role === 'accountant'
+        ? '/accountant/subscription'
+        : null;
 
-  if (!open) return null;
+  const portalRoot = getAppPortalRoot();
+  const content = (
+    <div className="fixed inset-0 z-[105]" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        role="menu"
+        aria-label="User profile menu"
+        className="fixed top-20 right-6 max-md:right-3 z-[106] w-72 max-w-[calc(100vw-1.5rem)] p-3 rounded-4xl bg-b-surface2 border border-s-subtle shadow-dropdown animate-slide-up"
+      >
+        <div className="p-3 mb-2 rounded-3xl bg-b-surface1 border border-s-subtle">
+          <div className="flex items-center gap-3">
+            <div
+              className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border-2"
+              style={{ borderColor: 'var(--accent, var(--primary-01))' }}
+            >
+              {user?.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user?.name || 'User'}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div
+                  className="flex h-full w-full items-center justify-center text-sm font-bold"
+                  style={{
+                    background: 'var(--accent, var(--primary-01))',
+                    color: 'var(--accent-fg, #FFFFFF)',
+                  }}
+                >
+                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p
+                className="truncate text-sub-title-1 text-t-primary"
+                title={user?.name}
+              >
+                {user?.name || 'Account'}
+              </p>
+              <p
+                className="truncate text-caption text-t-secondary"
+                title={user?.email}
+              >
+                {user?.email}
+              </p>
+            </div>
+          </div>
 
-  return (
-    <div
-      ref={dropRef}
-      className="absolute right-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-line bg-card shadow-2xl animate-slide-up"
-    >
-      <div className="border-b border-line px-4 py-3.5">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line">
-            {user?.avatar
-              ? <img src={user.avatar} alt={user?.name || 'User'} className="h-full w-full object-cover" />
-              : <div className="flex h-full w-full items-center justify-center bg-accent text-sm font-bold text-accent-fg">{user?.name?.charAt(0)?.toUpperCase() || 'U'}</div>
-            }
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <span className="label label-blue !h-6 !px-2.5 !text-[11px] uppercase tracking-wider">
+              {roleLabel}
+            </span>
+            {user?.role !== 'superAdmin' && (
+              <PlanBadge
+                plan={plan || user?.college?.planId || 'starter'}
+                status={
+                  subStatus === 'suspended' || subStatus === 'expired'
+                    ? subStatus
+                    : undefined
+                }
+              />
+            )}
           </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-fg" title={user?.name}>{user?.name}</p>
-            <p className="truncate text-[11px] text-fg-muted" title={user?.email}>{user?.email}</p>
-          </div>
+          {user?.college && (
+            <p
+              className="mt-2 truncate text-caption text-t-tertiary"
+              title={user.college.name}
+            >
+              {user.college.name}
+            </p>
+          )}
         </div>
-        <span className="badge badge-primary mt-2 uppercase tracking-wider">{roleLabel}</span>
-        {user?.college && (
-          <p className="mt-1 truncate text-[11px] text-fg-faint" title={user.college.name}>{user.college.name}</p>
-        )}
-      </div>
 
-      <div className="py-1">
-        {profilePath && (
-          <button
-            onClick={() => { router.push(profilePath); onClose(); }}
-            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-fg-muted transition hover:bg-card-2 hover:text-fg"
-          >
-            <HiOutlineUser size={16} aria-hidden="true" /> My Profile & Settings
-          </button>
-        )}
-        {collegeSettingsPath && (
-          <button
-            onClick={() => { router.push(collegeSettingsPath); onClose(); }}
-            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-fg-muted transition hover:bg-card-2 hover:text-fg"
-          >
-            <HiOutlineCog size={16} aria-hidden="true" /> College Settings
-          </button>
-        )}
+        <div className="space-y-1">
+          {profilePath && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                router.push(profilePath);
+                onClose();
+              }}
+              className="group flex w-full items-center gap-3 h-11 px-3.5 rounded-2xl text-button text-t-secondary hover:bg-b-highlight hover:text-t-primary transition-colors cursor-pointer"
+            >
+              <Icon
+                name="profile"
+                className="!size-5 fill-t-secondary group-hover:fill-t-primary"
+              />
+              <span>My Profile & Settings</span>
+            </button>
+          )}
+          {collegeSettingsPath && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                router.push(collegeSettingsPath);
+                onClose();
+              }}
+              className="group flex w-full items-center gap-3 h-11 px-3.5 rounded-2xl text-button text-t-secondary hover:bg-b-highlight hover:text-t-primary transition-colors cursor-pointer"
+            >
+              <Icon
+                name="gear"
+                className="!size-5 fill-t-secondary group-hover:fill-t-primary"
+              />
+              <span>College Settings</span>
+            </button>
+          )}
+          {subscriptionPath && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                router.push(subscriptionPath);
+                onClose();
+              }}
+              className="group flex w-full items-center gap-3 h-11 px-3.5 rounded-2xl text-button text-t-secondary hover:bg-b-highlight hover:text-t-primary transition-colors cursor-pointer"
+            >
+              <Icon
+                name="wallet"
+                className="!size-5 fill-t-secondary group-hover:fill-t-primary"
+              />
+              <span>Subscription & Billing</span>
+            </button>
+          )}
+        </div>
+
+        <div className="my-2 h-px bg-s-subtle" />
+
         <button
+          type="button"
+          role="menuitem"
           onClick={handleLogout}
-          className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-fg-muted transition hover:bg-bad/10 hover:text-bad"
+          className="group flex w-full items-center gap-3 h-11 px-3.5 rounded-2xl text-button text-t-secondary hover:bg-primary-03/10 hover:text-primary-03 transition-colors cursor-pointer"
         >
-          <HiOutlineLogout size={16} aria-hidden="true" /> Sign Out
+          <Icon
+            name="logout"
+            className="!size-5 fill-t-secondary group-hover:fill-primary-03"
+          />
+          <span>Sign Out</span>
         </button>
       </div>
     </div>
   );
+
+  return portalRoot ? createPortal(content, portalRoot) : content;
 };
 
-/* ── Dashboard Layout with Theme Toggle ── */
+/* ── Core 2.0 DashboardLayout Shell ── */
 const DashboardLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  // Theme state
-  const [theme, setTheme] = useState(getInitialTheme);
+
   const { user } = useAuthStore();
+  const { theme, toggleTheme, plan, subStatus } = useTheme();
   const pathname = usePathname();
   const pageTitle = getPageTitle(pathname);
 
-  // Apply theme class to html element
   useEffect(() => {
-    setThemeClass(theme);
-    localStorage.setItem('ui-theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
-  };
-
-  useEffect(() => { setSidebarOpen(false); setNotifOpen(false); setProfileOpen(false); }, [pathname]);
+    setSidebarOpen(false);
+    setNotifOpen(false);
+    setProfileOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     const handler = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        setSearchOpen(prev => !prev);
+        setSearchOpen((prev) => !prev);
       }
     };
     window.addEventListener('keydown', handler);
@@ -572,113 +806,259 @@ const DashboardLayout = ({ children }) => {
   const pathSegment = pathname?.split('/')[1] || '';
   const roleFromPath = pathSegment === 'super-admin' ? 'superAdmin' : pathSegment;
   const activeRole = user?.role || roleFromPath || 'admin';
+  const isSuperAdmin = activeRole === 'superAdmin';
+  const appType = isSuperAdmin ? 'platform' : 'college';
 
-  const iconBtn =
-    'flex h-10 w-10 items-center justify-center rounded-lg text-fg-muted transition hover:bg-card-2 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent';
+  // Determine whether notifications endpoint is supported for current role
+  const effectiveFeatures =
+    user?.college?.effectiveFeatures || user?.college?.subscription?.features || null;
+  const showNotifications =
+    !isSuperAdmin &&
+    (!effectiveFeatures || effectiveFeatures.includes('announcements'));
+
+  // Determine whether student MobileBottomBar is visible (for content bottom padding)
+  const hasMobileBottomBar =
+    activeRole === 'student' && !isFullscreenStudentPlayer(pathname);
 
   return (
-    <div data-role={activeRole} className="flex h-screen overflow-hidden bg-app transition-colors duration-200">
-      <div className="hidden lg:flex lg:shrink-0">
-        <Sidebar mobileOpen={false} onClose={() => { }} role={activeRole} />
-      </div>
+    <div
+      data-app={appType}
+      data-theme={theme}
+      data-plan={!isSuperAdmin ? plan || 'starter' : undefined}
+      data-sub-status={subStatus}
+      data-role={activeRole}
+      className="min-h-screen bg-b-surface1 text-t-primary font-inter transition-colors duration-200 xl:pl-85 max-4xl:xl:pl-70 max-3xl:xl:pl-60"
+    >
+      {/* Fixed Core 2.0 Sidebar */}
+      <Sidebar
+        mobileOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        role={activeRole}
+      />
 
+      {/* Mobile Sidebar Backdrop */}
       {sidebarOpen && (
-        <>
-          <div className="fixed inset-0 z-40 bg-app/75 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
-          <div className="fixed inset-y-0 left-0 z-50 flex lg:hidden animate-slide-right">
-            <Sidebar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-          </div>
-        </>
+        <div
+          className="no-print fixed inset-0 z-30 bg-b-surface1/75 backdrop-blur-xs xl:hidden transition-opacity"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex shrink-0 items-center gap-2 border-b border-line bg-card/90 px-3 py-2 backdrop-blur-md transition-colors duration-200 sm:gap-3 sm:px-4 lg:px-6">
-          {/* Mobile: hamburger + logo */}
-          <button
-            onClick={() => setSidebarOpen(true)}
-            aria-label="Open navigation menu"
-            className={`${iconBtn} lg:hidden`}
-          >
-            <HiOutlineMenu size={20} />
-          </button>
-          <div className="flex shrink-0 items-center gap-2 lg:hidden">
-            <div className="relative h-6 w-6">
-              <Image src="/logo.svg" alt="Collegeshub" fill className="object-contain" priority />
+      {/* Fixed Core 2.0 Header (h-22 desktop / h-18 mobile) */}
+      <header className="no-print fixed top-0 right-0 left-0 xl:left-85 max-4xl:xl:left-70 max-3xl:xl:left-60 z-20 bg-b-surface1/95 backdrop-blur-md border-b border-s-subtle transition-colors duration-200">
+        {/* Top Plan Accent / Superadmin Command Center Gradient Hairline */}
+        <div
+          className="h-[3px] w-full"
+          style={{
+            background: isSuperAdmin
+              ? 'linear-gradient(90deg, #0B4D94 0%, #4C94E8 50%, #3DBE63 100%)'
+              : 'var(--header-strip)',
+          }}
+          aria-hidden="true"
+        />
+
+        <div className="center-with-sidebar flex items-center justify-between h-22 max-md:h-18 gap-3">
+          {/* Left: Mobile Logo + Sidebar Toggle + Page Title */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex xl:hidden items-center gap-2.5 shrink-0">
+              <Link
+                href={isSuperAdmin ? '/super-admin' : `/${activeRole}`}
+                className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-b-surface2 border border-s-subtle shadow-widget"
+                aria-label="CollegesHub Home"
+              >
+                <img
+                  src="/logo-mark.svg"
+                  alt="CollegesHub"
+                  className="w-6 h-6 object-contain"
+                />
+              </Link>
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                aria-label="Open navigation menu"
+                className="flex items-center justify-center w-11 h-11 rounded-full bg-b-surface2 border border-s-subtle text-t-secondary hover:text-t-primary shadow-widget transition-colors cursor-pointer"
+              >
+                <Icon name="menu" className="!size-5 fill-current" />
+              </button>
             </div>
-            <span className="hidden text-sm font-extrabold tracking-tight text-fg min-[420px]:inline">Collegeshub</span>
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-2.5">
+                <h1 className="truncate text-h4 max-lg:text-h5 max-md:text-h6 text-t-primary">
+                  {pageTitle}
+                </h1>
+                {!isSuperAdmin && (
+                  <div className="hidden sm:inline-flex">
+                    <PlanBadge
+                      plan={plan || user?.college?.planId || 'starter'}
+                      status={
+                        subStatus === 'suspended' || subStatus === 'expired'
+                          ? subStatus
+                          : undefined
+                      }
+                    />
+                  </div>
+                )}
+                {isSuperAdmin && (
+                  <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-primary-01/12 text-t-blue border border-primary-01/25">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary-02" />
+                    Platform HQ
+                  </span>
+                )}
+              </div>
+              {user?.college && !isSuperAdmin && (
+                <p className="truncate text-caption text-t-secondary hidden sm:block">
+                  {user.college.name}
+                </p>
+              )}
+            </div>
           </div>
 
-          {/* Desktop page title */}
-          <div className="hidden min-w-0 flex-1 lg:block">
-            <h2 className="truncate text-sm font-semibold text-fg">{pageTitle}</h2>
-            {user?.college && <p className="truncate text-[11px] text-fg-muted">{user.college.name}</p>}
-          </div>
-
-          {/* Mobile page title */}
-          <div className="min-w-0 flex-1 text-right lg:hidden">
-            <h2 className="truncate text-xs font-semibold text-fg-muted">{pageTitle}</h2>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5">
-            {/* Theme Toggle Button */}
+          {/* Right: Core 2.0 Global Search Pill + Theme Toggle + Notifications + Avatar */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            {/* Desktop Search Trigger Pill (Core 2.0 w-79 h-12 rounded-3xl) */}
             <button
-              onClick={toggleTheme}
-              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-              className={iconBtn}
-            >
-              {theme === 'dark' ? <HiOutlineSun size={18} /> : <HiOutlineMoon size={18} />}
-            </button>
-
-            <button
+              type="button"
               onClick={() => setSearchOpen(true)}
-              aria-label="Search"
-              className="flex h-10 items-center justify-center gap-2 rounded-lg border border-transparent px-2.5 text-xs text-fg-muted transition hover:bg-card-2 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:border-line"
+              aria-label="Search pages and features (Ctrl+K)"
+              className="hidden md:flex items-center gap-3 w-72 lg:w-79 h-12 px-4.5 rounded-3xl bg-b-surface2 border border-s-subtle text-body-2 text-t-secondary hover:border-s-highlight hover:text-t-primary shadow-widget transition-all cursor-pointer"
             >
-              <HiOutlineSearch size={16} aria-hidden="true" />
-              <span className="hidden sm:inline">Search</span>
-              <kbd className="ml-1 hidden items-center rounded bg-card-2 px-1 py-0.5 font-mono text-[9px] text-fg-faint sm:inline-flex">Ctrl+K</kbd>
+              <Icon name="search" className="!size-5 fill-t-secondary shrink-0" />
+              <span className="truncate">Search anything...</span>
+              <kbd className="ml-auto inline-flex items-center rounded-lg bg-b-surface1 px-2 py-0.5 font-mono text-[11px] font-medium text-t-tertiary border border-s-subtle">
+                Ctrl K
+              </kbd>
             </button>
 
-            <div className="relative">
+            {/* Mobile Search Icon Button */}
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              aria-label="Search pages and features"
+              className="md:hidden flex items-center justify-center w-11 h-11 rounded-full bg-b-surface2 border border-s-subtle text-t-secondary hover:text-t-primary shadow-widget transition-colors cursor-pointer"
+            >
+              <Icon name="search" className="!size-5 fill-current" />
+            </button>
+
+            {/* Header Theme Toggle Button */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={
+                theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
+              }
+              className="flex items-center justify-center w-12 h-12 max-md:w-11 max-md:h-11 rounded-full bg-b-surface2 border border-s-subtle text-t-secondary hover:text-t-primary hover:border-s-highlight shadow-widget transition-all cursor-pointer"
+            >
+              <Icon
+                name={theme === 'dark' ? 'sun' : 'moon'}
+                className="!size-5 fill-current"
+              />
+            </button>
+
+            {/* Notifications Button (College panels only — hidden on Superadmin per backend support rule) */}
+            {showNotifications && (
               <button
-                onClick={() => { setNotifOpen(!notifOpen); setProfileOpen(false); }}
-                aria-label="Notifications"
+                type="button"
+                onClick={() => {
+                  setNotifOpen((prev) => !prev);
+                  setProfileOpen(false);
+                }}
+                aria-label="Open notifications"
                 aria-expanded={notifOpen}
-                className={`${iconBtn} relative`}
+                className="relative flex items-center justify-center w-12 h-12 max-md:w-11 max-md:h-11 rounded-full bg-b-surface2 border border-s-subtle text-t-secondary hover:text-t-primary hover:border-s-highlight shadow-widget transition-all cursor-pointer"
               >
-                <HiOutlineBell size={18} />
-                <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
+                <Icon name="bell" className="!size-5 fill-current" />
+                <span
+                  className="absolute right-3 top-3 w-2 h-2 rounded-full"
+                  style={{ background: 'var(--accent, var(--primary-01))' }}
+                  aria-hidden="true"
+                />
               </button>
-              <NotificationsDropdown open={notifOpen} onClose={() => setNotifOpen(false)} />
-            </div>
+            )}
 
-            <div className="relative">
-              <button
-                onClick={() => { setProfileOpen(!profileOpen); setNotifOpen(false); }}
-                aria-label="Open profile menu"
-                aria-expanded={profileOpen}
-                className="ml-1 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-accent/40 transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                {user?.avatar
-                  ? <img src={user.avatar} alt={user?.name || 'User'} className="h-full w-full object-cover" />
-                  : <div className="flex h-full w-full items-center justify-center bg-accent text-sm font-bold text-accent-fg">{user?.name?.charAt(0)?.toUpperCase() || 'U'}</div>
-                }
-              </button>
-              <ProfileDropdown open={profileOpen} onClose={() => setProfileOpen(false)} user={user} />
-            </div>
+            {/* User Profile Avatar Button with Plan Accent Ring */}
+            <button
+              type="button"
+              onClick={() => {
+                setProfileOpen((prev) => !prev);
+                setNotifOpen(false);
+              }}
+              aria-label="Open user profile menu"
+              aria-expanded={profileOpen}
+              className="relative flex items-center justify-center w-12 h-12 max-md:w-11 max-md:h-11 rounded-full p-0.5 transition-transform active:scale-95 cursor-pointer"
+              style={{
+                background: isSuperAdmin
+                  ? 'linear-gradient(135deg, #4C94E8, #3DBE63)'
+                  : 'var(--accent, var(--primary-01))',
+              }}
+            >
+              <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-b-surface2 border-2 border-b-surface2">
+                {user?.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user?.name || 'User'}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span
+                    className="flex h-full w-full items-center justify-center text-sub-title-1 font-bold"
+                    style={{
+                      background: 'var(--accent-soft, rgba(11,77,148,0.12))',
+                      color: 'var(--accent-text, var(--primary-01))',
+                    }}
+                  >
+                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </span>
+                )}
+              </div>
+            </button>
           </div>
-        </header>
+        </div>
+      </header>
 
+      {/* Main Content Area (pt-22 desktop / pt-18 mobile + pb-24 on student mobile) */}
+      <div
+        className={`pt-22 max-md:pt-18 ${
+          hasMobileBottomBar ? 'max-lg:pb-24 pb-8' : 'pb-8'
+        }`}
+      >
         <SubscriptionExpiryBanner />
 
-        <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full min-w-0 px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
-            {children}
-          </div>
+        <main className="center-with-sidebar pt-5 max-md:pt-3">
+          {children}
         </main>
       </div>
 
-      <SpotlightSearch open={searchOpen} onClose={() => setSearchOpen(false)} role={user?.role} />
+      {/* Student Mobile Bottom Tab Bar (< 1024px) */}
+      <MobileBottomBar
+        role={activeRole}
+        onOpenMore={() => setSidebarOpen(true)}
+      />
+
+      {/* Portal Root INSIDE [data-app] so all Modals, Slide-Overs, Dropdowns, Select Popovers, and Tooltips inherit theme, plan, and CSS variables */}
+      <div id="app-portal-root" className="relative z-[100]" />
+
+      {/* Portaled Overlays */}
+      <SpotlightSearch
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        role={activeRole}
+      />
+      {showNotifications && (
+        <NotificationsDrawer
+          open={notifOpen}
+          onClose={() => setNotifOpen(false)}
+          role={activeRole}
+        />
+      )}
+      <ProfileDropdown
+        open={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        user={user}
+        plan={plan}
+        subStatus={subStatus}
+      />
     </div>
   );
 };
