@@ -1,14 +1,16 @@
+'use client';
+
 import { useState, useEffect } from 'react';
-import { HiOutlineChevronLeft, HiOutlineChevronRight } from 'react-icons/hi';
+import Icon from '../Icon';
 
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   const [jumpInput, setJumpInput] = useState('');
 
   useEffect(() => {
-    setJumpInput(currentPage.toString());
+    setJumpInput(currentPage?.toString() || '1');
   }, [currentPage]);
 
-  if (totalPages <= 1) return null;
+  if (!totalPages || totalPages <= 1) return null;
 
   const handlePrev = () => {
     if (currentPage > 1) onPageChange(currentPage - 1);
@@ -28,17 +30,15 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
     }
   };
 
-  // Generate page numbers array with ellipses (e.g., [1, '...', 4, 5, 6, '...', 10])
   const getPageNumbers = () => {
     const pages = [];
-    const maxVisible = 5; // how many number buttons to show around current page
+    const maxVisible = 5;
 
     if (totalPages <= maxVisible + 2) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
     } else {
-      // Always show first page
       pages.push(1);
 
       let start = Math.max(2, currentPage - 1);
@@ -62,7 +62,6 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
         pages.push('...');
       }
 
-      // Always show last page
       pages.push(totalPages);
     }
 
@@ -70,42 +69,47 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   };
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-950/40 border border-white/5 p-4 rounded-2xl shadow-xl backdrop-blur-md mt-6">
-      {/* Desktop and Mobile text summary */}
-      <div className="text-xs text-slate-400 font-medium">
-        Page <span className="text-indigo-400 font-bold">{currentPage}</span> of{' '}
-        <span className="text-white font-bold">{totalPages}</span>
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-b-surface2 border border-s-subtle px-5 py-3.5 rounded-3xl shadow-widget mt-5">
+      <div className="text-caption text-t-secondary font-medium">
+        Page <span className="text-t-blue font-bold tabular-nums">{currentPage}</span> of{' '}
+        <span className="text-t-primary font-bold tabular-nums">{totalPages}</span>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Previous Button */}
+      <div className="flex flex-wrap items-center gap-2">
         <button
+          type="button"
           onClick={handlePrev}
           disabled={currentPage === 1}
-          className="flex items-center justify-center p-2 rounded-xl border border-white/10 bg-slate-900/60 text-slate-300 transition hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900/60"
+          aria-label="Previous page"
           title="Previous Page"
+          className="flex items-center justify-center w-9 h-9 rounded-full border border-s-stroke2 bg-b-surface1 text-t-secondary transition hover:text-t-primary hover:border-s-highlight disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
         >
-          <HiOutlineChevronLeft size={16} />
+          <Icon name="chevron-left" className="!size-4.5 fill-current" />
         </button>
 
-        {/* Page numbers: visible on larger screens, compact view on mobile */}
-        <div className="hidden md:flex items-center gap-1.5">
+        <div className="hidden md:flex items-center gap-1">
           {getPageNumbers().map((p, idx) => {
             if (p === '...') {
               return (
-                <span key={`ellipsis-${idx}`} className="px-2 text-slate-500 font-mono text-xs select-none">
+                <span
+                  key={`ellipsis-${idx}`}
+                  className="px-2 text-t-tertiary font-mono text-caption select-none"
+                >
                   ...
                 </span>
               );
             }
+            const isCurrent = currentPage === p;
             return (
               <button
                 key={`page-${p}`}
+                type="button"
                 onClick={() => onPageChange(p)}
-                className={`w-8 h-8 rounded-xl text-xs font-bold font-mono transition-all duration-200 border ${
-                  currentPage === p
-                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white border-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.4)]'
-                    : 'bg-slate-900/40 border-white/5 text-slate-400 hover:text-white hover:border-white/20'
+                aria-current={isCurrent ? 'page' : undefined}
+                className={`w-9 h-9 rounded-full text-caption font-bold tabular-nums transition-all cursor-pointer border ${
+                  isCurrent
+                    ? 'bg-primary-01 text-t-light border-primary-01 shadow-widget'
+                    : 'bg-b-surface1 border-s-subtle text-t-secondary hover:text-t-primary hover:border-s-highlight'
                 }`}
               >
                 {p}
@@ -114,30 +118,36 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
           })}
         </div>
 
-        {/* Next Button */}
         <button
+          type="button"
           onClick={handleNext}
           disabled={currentPage === totalPages}
-          className="flex items-center justify-center p-2 rounded-xl border border-white/10 bg-slate-900/60 text-slate-300 transition hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900/60"
+          aria-label="Next page"
           title="Next Page"
+          className="flex items-center justify-center w-9 h-9 rounded-full border border-s-stroke2 bg-b-surface1 text-t-secondary transition hover:text-t-primary hover:border-s-highlight disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
         >
-          <HiOutlineChevronRight size={16} />
+          <Icon name="chevron-right" className="!size-4.5 fill-current" />
         </button>
 
-        {/* Custom page input selector (Quick Jump) */}
-        <form onSubmit={handleJumpSubmit} className="flex items-center gap-1.5 ml-2 border-l border-white/10 pl-3">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Go to</span>
+        <form
+          onSubmit={handleJumpSubmit}
+          className="flex items-center gap-1.5 ml-2 border-l border-s-subtle pl-3"
+        >
+          <span className="text-[11px] uppercase font-bold tracking-wider text-t-tertiary">
+            Go to
+          </span>
           <input
             type="number"
             min={1}
             max={totalPages}
             value={jumpInput}
             onChange={(e) => setJumpInput(e.target.value)}
-            className="w-12 h-8 text-center text-xs font-bold font-mono bg-slate-950/60 border border-white/10 rounded-lg text-white focus:outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            aria-label="Jump to page number"
+            className="w-13 h-9 text-center text-caption font-bold tabular-nums bg-b-surface1 border border-s-stroke2 rounded-full text-t-primary focus:outline-none focus:border-s-focus [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
           <button
             type="submit"
-            className="px-2.5 h-8 text-[10px] font-extrabold uppercase tracking-wider bg-slate-900 border border-white/10 text-indigo-400 hover:bg-slate-800 transition rounded-lg"
+            className="px-3 h-9 text-[11px] font-bold uppercase tracking-wider bg-b-surface1 border border-s-stroke2 text-t-blue hover:bg-b-highlight transition rounded-full cursor-pointer"
           >
             Jump
           </button>

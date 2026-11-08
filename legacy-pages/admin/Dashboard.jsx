@@ -6,29 +6,44 @@ import { useAuth } from '../../context/AuthContext';
 import RecentActivityWidget from '../../components/activity/RecentActivityWidget';
 import OnboardingChecklistWidget from '../../components/admin/OnboardingChecklistWidget';
 import CollegesHubLoader from '../../components/common/CollegesHubLoader';
+import PlanBadge from '../../components/common/PlanBadge';
+import Card from '../../components/ui/Card';
+import Button from '../../components/ui/Button';
+import OverviewTabsCard from '../../components/ui/OverviewTabsCard';
+import Percentage from '../../components/ui/Percentage';
+import Icon from '../../components/Icon';
 import {
-  HiOutlineAcademicCap, 
-  HiOutlineUserGroup, 
-  HiOutlineClipboardCheck,
-  HiOutlineCurrencyDollar, 
-  HiOutlineChartBar, 
-  HiOutlineArrowRight,
-  HiOutlineSpeakerphone, 
-  HiOutlineCalendar, 
-  HiOutlineShieldCheck,
-  HiOutlineExclamation
-} from 'react-icons/hi';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+  BarChart,
+  Bar,
+  Cell,
+  LabelList,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 
 const CustomChartTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white dark:bg-[#0f1721] p-3 rounded-xl border border-slate-200 dark:border-white/10 shadow-xl text-xs">
-        <p className="font-semibold text-slate-600 dark:text-white/70 mb-1">{label}</p>
+      <div className="rounded-2xl border border-s-stroke2 bg-b-surface2 p-3.5 text-caption shadow-depth">
+        <p className="font-semibold text-t-secondary mb-1">{label}</p>
         {payload.map((entry, index) => (
-          <p key={`item-${index}`} className="font-bold text-slate-800 dark:text-white flex items-center justify-between gap-3">
-            <span style={{ color: entry.fill || entry.color }}>{entry.name}:</span>
-            <span>{typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}</span>
+          <p
+            key={`item-${index}`}
+            className="font-bold text-t-primary flex items-center justify-between gap-4"
+          >
+            <span className="flex items-center gap-1.5">
+              <span
+                className="w-2.5 h-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: entry.payload?.fill || entry.color }}
+              />
+              {entry.name}:
+            </span>
+            <span className="tabular-nums">
+              {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
+            </span>
           </p>
         ))}
       </div>
@@ -42,26 +57,27 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeMetricId, setActiveMetricId] = useState('students');
 
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
         const { data: res } = await api.get('/colleges/dashboard');
         setData(res.data);
-      } catch { 
-        toast.error('Failed to load dashboard'); 
-      } finally { 
-        setLoading(false); 
+      } catch {
+        toast.error('Failed to load dashboard');
+      } finally {
+        setLoading(false);
       }
     };
     fetchDashboard();
   }, []);
 
-  const today = new Date().toLocaleDateString('en-US', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
   });
 
   const getGreeting = () => {
@@ -81,7 +97,9 @@ const AdminDashboard = () => {
 
   const s = data?.stats || {};
   const attendMap = {};
-  (data?.attendanceToday || []).forEach(a => { attendMap[a._id] = a.count; });
+  (data?.attendanceToday || []).forEach((a) => {
+    attendMap[a._id] = a.count;
+  });
   const totalPresent = attendMap.present || 0;
   const totalAbsent = attendMap.absent || 0;
   const totalLate = attendMap.late || 0;
@@ -89,223 +107,347 @@ const AdminDashboard = () => {
   const totalMarked = totalPresent + totalAbsent + totalLate + totalLeave;
   const attPct = totalMarked > 0 ? Math.round((totalPresent / totalMarked) * 100) : 0;
 
-  const statCards = [
-    { 
-      label: 'Total Students', 
-      value: s.totalStudents || 0, 
-      icon: HiOutlineAcademicCap, 
-      color: 'text-indigo-600 dark:text-indigo-400', 
-      bg: 'bg-indigo-50 dark:bg-indigo-500/12 border-indigo-100 dark:border-indigo-500/20', 
-      link: '/admin/students' 
+  const activeRate =
+    s.totalStudents > 0 ? Math.round(((s.activeStudents || 0) / s.totalStudents) * 100) : 100;
+
+  const overviewTabs = [
+    {
+      id: 'students',
+      label: 'Total Students',
+      icon: 'graduation-cap',
+      value: (s.totalStudents || 0).toLocaleString(),
+      percentage: activeRate,
+      subtitle: 'enrolled in current session',
+      onClick: () => navigate('/admin/students'),
     },
-    { 
-      label: 'Active Students', 
-      value: s.activeStudents || 0, 
-      icon: HiOutlineAcademicCap, 
-      color: 'text-emerald-600 dark:text-emerald-400', 
-      bg: 'bg-emerald-50 dark:bg-emerald-500/12 border-emerald-100 dark:border-emerald-500/20', 
-      link: '/admin/students' 
+    {
+      id: 'active-students',
+      label: 'Active Students',
+      icon: 'check-circle',
+      value: (s.activeStudents || 0).toLocaleString(),
+      percentage: activeRate,
+      subtitle: 'verified active roster',
+      onClick: () => navigate('/admin/students'),
     },
-    { 
-      label: 'Total Teachers', 
-      value: s.totalTeachers || 0, 
-      icon: HiOutlineUserGroup, 
-      color: 'text-sky-600 dark:text-sky-400', 
-      bg: 'bg-sky-50 dark:bg-sky-500/12 border-sky-100 dark:border-sky-500/20', 
-      link: '/admin/staff' 
+    {
+      id: 'teachers',
+      label: 'Total Teachers',
+      icon: 'users',
+      value: (s.totalTeachers || 0).toLocaleString(),
+      subtitle: 'faculty across departments',
+      onClick: () => navigate('/admin/staff'),
     },
-    { 
-      label: 'Employees & Staff', 
-      value: s.totalEmployees || 0, 
-      icon: HiOutlineUserGroup, 
-      color: 'text-amber-600 dark:text-amber-400', 
-      bg: 'bg-amber-50 dark:bg-amber-500/12 border-amber-100 dark:border-amber-500/20', 
-      link: '/admin/staff' 
+    {
+      id: 'employees',
+      label: 'Employees & Staff',
+      icon: 'briefcase',
+      value: (s.totalEmployees || 0).toLocaleString(),
+      subtitle: 'campus support personnel',
+      onClick: () => navigate('/admin/staff'),
     },
   ];
 
-  // Prepare Recharts dataset for Attendance Overview
+  // Colour-blind-safe max-4 series palette with direct labels
   const attendanceChartData = [
-    { status: 'Present', count: totalPresent, fill: '#10b981' },
-    { status: 'Absent',  count: totalAbsent,  fill: '#f43f5e' },
-    { status: 'Late',    count: totalLate,    fill: '#f59e0b' },
-    { status: 'Leave',   count: totalLeave,   fill: '#0284c7' },
+    { status: 'Present', count: totalPresent, fill: 'var(--chart-2)' },
+    { status: 'Late', count: totalLate, fill: 'var(--chart-3)' },
+    { status: 'Leave', count: totalLeave, fill: 'var(--chart-1)' },
+    { status: 'Absent', count: totalAbsent, fill: 'var(--chart-4)' },
   ];
+
+  const collegePlan =
+    data?.college?.subscription?.plan || user?.college?.subscription?.plan || 'standard';
+  const collegeSubStatus =
+    data?.college?.subscription?.status || user?.college?.subscription?.status || 'active';
 
   return (
-    <div className="animate-fade-in flex flex-col gap-6 w-full max-w-full pb-8">
+    <div className="page">
+      {/* Optional Setup Checklist */}
+      <OnboardingChecklistWidget />
 
-      {/* ── 1. Top Header ────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
+      {/* 1. Top Header */}
+      <div className="page-head">
         <div>
-          <div className="flex items-center gap-2.5 flex-wrap mb-1">
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              {getGreeting()}, {user?.name?.split(' ')[0]} 👋
+          <div className="flex items-center gap-3 flex-wrap mb-1.5">
+            <h1 className="page-title">
+              {getGreeting()}, {user?.name?.split(' ')[0] || 'Admin'}
             </h1>
             {data?.college && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200/80 dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-500/20">
-                {data.college.name} ({data.college.code}) · <span className="capitalize">{data.college.subscription?.plan || 'Standard'}</span> Plan
-              </span>
+              <div className="inline-flex items-center gap-2 rounded-full border border-s-stroke2 bg-b-surface2 px-3.5 py-1 text-caption font-semibold text-t-secondary">
+                <Icon name="building" size={14} className="fill-[var(--brand-blue)]" />
+                <span className="text-t-primary font-bold">{data.college.name}</span>
+                <span className="font-mono text-t-tertiary">({data.college.code})</span>
+                <PlanBadge plan={collegePlan} status={collegeSubStatus} />
+              </div>
             )}
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-white/50 font-medium">
-            <HiOutlineCalendar size={14} className="text-indigo-500" />
+          <div className="flex items-center gap-2 text-caption text-t-secondary">
+            <Icon name="calendar" size={15} className="fill-[var(--brand-blue)]" />
             <span>{today}</span>
           </div>
         </div>
 
-        <button 
-          onClick={() => navigate('/admin/students')} 
-          className="btn-primary self-start sm:self-auto px-5 py-2.5 shadow-md shadow-indigo-600/20 hover:shadow-indigo-600/30 flex items-center justify-center gap-2 text-xs sm:text-sm font-bold active:scale-98 transition-all"
-        >
-          <HiOutlineAcademicCap size={18} />
-          <span>Manage Students</span>
-        </button>
+        <div className="page-actions">
+          <Button
+            isStroke
+            icon="clipboard-check"
+            onClick={() => navigate('/admin/attendance')}
+          >
+            Mark Attendance
+          </Button>
+          <Button
+            isPrimary
+            icon="graduation-cap"
+            onClick={() => navigate('/admin/students')}
+          >
+            Manage Students
+          </Button>
+        </div>
       </div>
 
-      {/* ── 2. Stat Cards Grid ───────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full">
-        {statCards.map((c, i) => {
-          const IconComp = c.icon;
-          return (
-            <div 
-              key={i} 
-              onClick={() => navigate(c.link)}
-              className="glass-card p-4 sm:p-5 bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.06] rounded-2xl shadow-xs dark:shadow-none flex flex-col justify-between gap-3 hover:border-indigo-500/30 hover:-translate-y-0.5 cursor-pointer transition-all duration-200"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-white/45 uppercase tracking-wider truncate">
-                  {c.label}
-                </span>
-                <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl ${c.bg} border flex items-center justify-center shrink-0`}>
-                  <IconComp className={`text-base sm:text-lg ${c.color}`} />
-                </div>
-              </div>
+      {/* 2. Core 2.0 Segmented Overview Tray */}
+      <OverviewTabsCard
+        title="Campus Overview"
+        tabs={overviewTabs}
+        activeId={activeMetricId}
+        onSelect={(id) => {
+          setActiveMetricId(id);
+          const item = overviewTabs.find((t) => t.id === id);
+          if (item?.onClick) item.onClick();
+        }}
+        headRight={
+          <div className="flex items-center gap-2">
+            <span className="label label-green">Live Session</span>
+          </div>
+        }
+      />
 
-              <div className="mt-1">
-                <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-none tracking-tight">
-                  {typeof c.value === 'number' ? c.value.toLocaleString() : c.value}
-                </p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* ── 3. Operations Overview Grid ───────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 w-full">
-
-        {/* Today's Attendance Card */}
-        <div className="glass-card p-5 sm:p-6 bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.06] rounded-2xl shadow-xs dark:shadow-none flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100 dark:border-white/[0.04]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-500/12 border border-indigo-100 dark:border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
-                  <HiOutlineClipboardCheck size={18} />
-                </div>
-                <div>
-                  <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
-                    Today's Attendance
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-white/40 font-medium">
-                    {totalMarked > 0 ? `${attPct}% total presence rate` : 'Attendance pending for today'}
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={() => navigate('/admin/attendance')} 
-                className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1 transition-colors"
+      {/* 3. Operations & Analytics Row (Core 2.0 ColLeft / ColRight rhythm) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 w-full">
+        {/* Left 7 Cols: Today's Attendance + Distribution Chart */}
+        <div className="lg:col-span-7 flex flex-col gap-3">
+          <Card
+            title="Today's Attendance"
+            subtitle={
+              totalMarked > 0
+                ? `${attPct}% total presence rate across ${totalMarked} marked records`
+                : 'Attendance marking is in progress for today'
+            }
+            headContent={
+              <Button
+                isStroke
+                size="sm"
+                icon="arrow"
+                onClick={() => navigate('/admin/attendance')}
               >
-                <span>Mark now</span>
-                <HiOutlineArrowRight size={13} />
-              </button>
+                Mark Now
+              </Button>
+            }
+          >
+            {/* Progress Bar */}
+            <div className="mb-5">
+              <div className="flex items-center justify-between text-caption mb-2">
+                <span className="font-semibold text-t-secondary">Overall Presence Rate</span>
+                <Percentage value={attPct || 0} />
+              </div>
+              <div className="progress">
+                <i style={{ width: `${Math.max(attPct, 4)}%` }} />
+              </div>
             </div>
 
-            {/* Attendance Progress Bar */}
-            {totalMarked > 0 && (
-              <div className="h-2.5 w-full bg-slate-100 dark:bg-white/[0.06] rounded-full overflow-hidden mb-4">
-                <div 
-                  className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 rounded-full transition-all duration-700 ease-out" 
-                  style={{ width: `${attPct}%` }}
-                />
-              </div>
-            )}
-
-            {/* Status Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            {/* 4-Status Pills */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
               {[
-                { label: 'Present', count: totalPresent, color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/12 border-emerald-100 dark:border-emerald-500/20' },
-                { label: 'Absent',  count: totalAbsent,  color: 'text-rose-700 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-500/12 border-rose-100 dark:border-rose-500/20' },
-                { label: 'Late',    count: totalLate,    color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/12 border-amber-100 dark:border-amber-500/20' },
-                { label: 'Leave',   count: totalLeave,   color: 'text-sky-700 dark:text-sky-400', bg: 'bg-sky-50 dark:bg-sky-500/12 border-sky-100 dark:border-sky-500/20' },
-              ].map(a => (
-                <div key={a.label} className={`p-3 rounded-xl ${a.bg} border text-center flex flex-col justify-center`}>
-                  <p className={`text-xl font-black ${a.color} leading-none`}>{a.count}</p>
-                  <p className="text-[11px] font-semibold text-slate-600 dark:text-white/60 mt-1">{a.label}</p>
+                {
+                  label: 'Present',
+                  count: totalPresent,
+                  badge: 'label-green',
+                  dot: 'bg-[var(--chart-2)]',
+                },
+                {
+                  label: 'Late',
+                  count: totalLate,
+                  badge: 'label-yellow',
+                  dot: 'bg-[var(--chart-3)]',
+                },
+                {
+                  label: 'On Leave',
+                  count: totalLeave,
+                  badge: 'label-blue',
+                  dot: 'bg-[var(--chart-1)]',
+                },
+                {
+                  label: 'Absent',
+                  count: totalAbsent,
+                  badge: 'label-red',
+                  dot: 'bg-[var(--chart-4)]',
+                },
+              ].map((a) => (
+                <div
+                  key={a.label}
+                  className="p-4 rounded-3xl bg-b-surface1 border border-s-subtle flex flex-col justify-between gap-2"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-caption font-semibold text-t-secondary">{a.label}</span>
+                    <span className={`w-2.5 h-2.5 rounded-full ${a.dot}`} />
+                  </div>
+                  <p className="text-h4 font-mono text-t-primary tabular-nums">{a.count}</p>
                 </div>
               ))}
             </div>
-          </div>
+
+            {/* Colour-blind-safe 4-series Bar Chart */}
+            <div className="pt-4 border-t border-s-subtle">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sub-title-2 text-t-primary">
+                  Attendance Breakdown (Colour-Blind-Safe Palette)
+                </span>
+                <span className="text-caption text-t-tertiary">Direct bar values enabled</span>
+              </div>
+              <div className="h-56 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={attendanceChartData}
+                    margin={{ top: 20, right: 12, left: -12, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--chart-grid)"
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="status"
+                      tick={{ fontSize: 12, fill: 'var(--chart-axis)', fontWeight: 600 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: 'var(--chart-axis)' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      content={<CustomChartTooltip />}
+                      cursor={{ fill: 'var(--backgrounds-highlight)', opacity: 0.5 }}
+                    />
+                    <Bar dataKey="count" radius={[10, 10, 0, 0]} name="Students" maxBarSize={56}>
+                      {attendanceChartData.map((entry, idx) => (
+                        <Cell key={`cell-${idx}`} fill={entry.fill} />
+                      ))}
+                      <LabelList
+                        dataKey="count"
+                        position="top"
+                        style={{
+                          fill: 'var(--text-primary)',
+                          fontSize: 12,
+                          fontWeight: 700,
+                        }}
+                      />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </Card>
+
+          {/* Gate & Campus Security */}
+          <Card
+            title="Gate & Campus Security"
+            subtitle="Real-time campus entries and visitor records"
+            headContent={
+              <Button
+                isStroke
+                size="sm"
+                icon="arrow"
+                onClick={() => navigate('/admin/visitors')}
+              >
+                Visitor Logs
+              </Button>
+            }
+          >
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                {
+                  label: 'Students Inside',
+                  count: s.currentlyInsideStudents || 0,
+                  sub: 'Active on campus',
+                  icon: 'graduation-cap',
+                },
+                {
+                  label: 'Staff Inside',
+                  count: s.currentlyInsideStaff || 0,
+                  sub: 'Faculty & personnel',
+                  icon: 'users',
+                },
+                {
+                  label: 'Entries / Exits',
+                  count: `${s.todayEntries || 0} / ${s.todayExits || 0}`,
+                  sub: 'Total scanned today',
+                  icon: 'qrcode',
+                },
+                {
+                  label: 'Visitors Logged',
+                  count: s.todayVisitors || 0,
+                  sub: 'Guest registrations',
+                  icon: 'shield',
+                },
+              ].map((item, idx) => (
+                <div
+                  key={idx}
+                  className="p-4 rounded-3xl bg-b-surface1 border border-s-subtle flex flex-col justify-between gap-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="w-9 h-9 rounded-2xl bg-b-surface2 border border-s-subtle flex items-center justify-center text-[var(--brand-blue)]">
+                      <Icon name={item.icon} size={18} className="fill-current" />
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-h5 font-mono text-t-primary tabular-nums">{item.count}</p>
+                    <p className="text-sub-title-2 text-t-primary mt-0.5">{item.label}</p>
+                    <p className="text-caption text-t-tertiary">{item.sub}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
         </div>
 
-        {/* Fee Overview Card */}
-        <div className="glass-card p-5 sm:p-6 bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.06] rounded-2xl shadow-xs dark:shadow-none flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100 dark:border-white/[0.04]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-500/12 border border-emerald-100 dark:border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
-                  <HiOutlineCurrencyDollar size={18} />
-                </div>
-                <div>
-                  <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
-                    Fee Collection Status
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-white/40 font-medium">
-                    Current billing cycle overview
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={() => navigate('/admin/fees')} 
-                className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1 transition-colors"
-              >
-                <span>View details</span>
-                <HiOutlineArrowRight size={13} />
-              </button>
-            </div>
-
+        {/* Right 5 Cols: Fee Collection + Quick Actions + Recent Activity */}
+        <div className="lg:col-span-5 flex flex-col gap-3">
+          {/* Fee Collection Status */}
+          <Card
+            title="Fee Collection Status"
+            subtitle="Current billing cycle overview"
+            headContent={
+              <Button isStroke size="sm" icon="arrow" onClick={() => navigate('/admin/fees')}>
+                View Fees
+              </Button>
+            }
+          >
             {(data?.feeStats || []).length === 0 ? (
-              <div className="py-8 text-center text-slate-500 dark:text-white/40 text-xs">
-                No fee records found for current cycle
-              </div>
+              <div className="empty py-8">No fee records found for current cycle</div>
             ) : (
-              <div className="space-y-2.5">
-                {data.feeStats.map(f => {
-                  const statusColors = {
-                    paid: 'bg-emerald-500',
-                    partial: 'bg-amber-500',
-                    unpaid: 'bg-rose-500'
-                  };
-                  const statusText = {
-                    paid: 'text-emerald-700 dark:text-emerald-400',
-                    partial: 'text-amber-700 dark:text-amber-400',
-                    unpaid: 'text-rose-700 dark:text-rose-400'
+              <div className="flex flex-col gap-2.5">
+                {data.feeStats.map((f) => {
+                  const statusBadge = {
+                    paid: 'label-green',
+                    partial: 'label-yellow',
+                    unpaid: 'label-red',
                   };
                   return (
-                    <div 
-                      key={f._id} 
-                      className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/70 dark:border-white/[0.04] hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors"
+                    <div
+                      key={f._id}
+                      className="flex items-center justify-between p-4 rounded-3xl bg-b-surface1 border border-s-subtle hover:border-s-stroke2 transition-colors"
                     >
-                      <div className="flex items-center gap-2.5">
-                        <span className={`w-2.5 h-2.5 rounded-full ${statusColors[f._id] || 'bg-slate-400'} shrink-0`} />
-                        <span className={`text-xs font-extrabold capitalize ${statusText[f._id] || 'text-slate-700'}`}>
+                      <div className="flex items-center gap-3">
+                        <span className={`label capitalize ${statusBadge[f._id] || 'label-gray'}`}>
                           {f._id}
                         </span>
-                        <span className="text-[11px] font-medium text-slate-500 dark:text-white/40">
-                          ({f.count} students)
+                        <span className="text-caption font-medium text-t-secondary">
+                          {f.count} students
                         </span>
                       </div>
-                      <span className="text-xs font-black text-slate-900 dark:text-white">
+                      <span className="text-sub-title-1 font-mono text-t-primary tabular-nums">
                         Rs. {(f.total || 0).toLocaleString()}
                       </span>
                     </div>
@@ -313,133 +455,72 @@ const AdminDashboard = () => {
                 })}
               </div>
             )}
-          </div>
-        </div>
+          </Card>
 
-      </div>
-
-      {/* ── 4. Security & Quick Actions Row ───────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 w-full">
-
-        {/* Gate Security & Visitor Operations */}
-        <div className="glass-card p-5 sm:p-6 bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.06] rounded-2xl shadow-xs dark:shadow-none flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100 dark:border-white/[0.04]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-sky-50 dark:bg-sky-500/12 border border-sky-100 dark:border-sky-500/20 flex items-center justify-center text-sky-600 dark:text-sky-400 shrink-0">
-                  <HiOutlineShieldCheck size={18} />
-                </div>
-                <div>
-                  <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
-                    Gate & Campus Security
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-white/40 font-medium">
-                    Real-time campus entries and visitor records
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={() => navigate('/admin/visitors')} 
-                className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1 transition-colors"
-              >
-                <span>Logs</span>
-                <HiOutlineArrowRight size={13} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: 'Students Inside', count: s.currentlyInsideStudents || 0, color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50 dark:bg-indigo-500/12 border-indigo-100 dark:border-indigo-500/20', sub: "Active on campus" },
-                { label: 'Staff Inside',    count: s.currentlyInsideStaff || 0,    color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-50 dark:bg-sky-500/12 border-sky-100 dark:border-sky-500/20', sub: "Faculty & personnel" },
-                { label: 'Entries / Exits', count: `${s.todayEntries || 0} / ${s.todayExits || 0}`, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/12 border-emerald-100 dark:border-emerald-500/20', sub: "Total scanned today" },
-                { label: 'Visitors Logged', count: s.todayVisitors || 0,           color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/12 border-amber-100 dark:border-amber-500/20', sub: "Guest registrations" },
-              ].map((item, idx) => (
-                <div key={idx} className={`p-3 sm:p-3.5 rounded-xl ${item.bg} border flex flex-col justify-center`}>
-                  <p className={`text-lg sm:text-xl font-black ${item.color} leading-none`}>{item.count}</p>
-                  <p className="text-xs font-bold text-slate-800 dark:text-white mt-1">{item.label}</p>
-                  <p className="text-[10px] text-slate-500 dark:text-white/40 font-medium mt-0.5">{item.sub}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Administrative Actions Hub */}
-        <div className="glass-card p-5 sm:p-6 bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.06] rounded-2xl shadow-xs dark:shadow-none flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-slate-100 dark:border-white/[0.04]">
-              <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-500/12 border border-amber-100 dark:border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-                <HiOutlineChartBar size={18} />
-              </div>
-              <div>
-                <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
-                  Quick Administrative Actions
-                </h3>
-                <p className="text-[11px] text-slate-500 dark:text-white/40 font-medium">
-                  Frequently accessed workflows & portals
-                </p>
-              </div>
-            </div>
-
+          {/* Quick Administrative Actions */}
+          <Card
+            title="Quick Administrative Actions"
+            subtitle="Frequently accessed workflows & portals"
+          >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {[
-                { label: 'Add New Student',    icon: HiOutlineAcademicCap,    path: '/admin/students',        color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50 dark:bg-indigo-500/12' },
-                { label: 'Mark Attendance',    icon: HiOutlineClipboardCheck,  path: '/admin/attendance',      color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/12' },
-                { label: 'Enter Results',      icon: HiOutlineChartBar,        path: '/admin/results/entry',   color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-50 dark:bg-sky-500/12' },
-                { label: 'Post Announcement', icon: HiOutlineSpeakerphone,    path: '/admin/announcements',   color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/12' },
-                { label: 'Fee Defaulters',     icon: HiOutlineExclamation,     path: '/admin/fees/defaulters', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-500/12' },
-              ].map(a => {
-                const Icon = a.icon;
-                return (
-                  <button 
-                    key={a.path} 
-                    onClick={() => navigate(a.path)} 
-                    className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/70 dark:border-white/[0.04] hover:bg-slate-100 dark:hover:bg-white/[0.05] hover:border-indigo-500/30 transition-all text-left group"
-                  >
-                    <div className={`w-8 h-8 rounded-lg ${a.bg} flex items-center justify-center ${a.color} shrink-0`}>
-                      <Icon size={16} />
-                    </div>
-                    <span className="text-xs font-bold text-slate-800 dark:text-white/90 flex-1 truncate">
-                      {a.label}
-                    </span>
-                    <HiOutlineArrowRight size={14} className="text-slate-400 dark:text-white/30 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all shrink-0" />
-                  </button>
-                );
-              })}
+                {
+                  label: 'Add New Student',
+                  icon: 'graduation-cap',
+                  path: '/admin/students',
+                },
+                {
+                  label: 'Mark Attendance',
+                  icon: 'clipboard-check',
+                  path: '/admin/attendance',
+                },
+                {
+                  label: 'Enter Results',
+                  icon: 'bar-chart',
+                  path: '/admin/results/entry',
+                },
+                {
+                  label: 'Post Announcement',
+                  icon: 'megaphone',
+                  path: '/admin/announcements',
+                },
+                {
+                  label: 'Fee Defaulters',
+                  icon: 'alert',
+                  path: '/admin/fees/defaulters',
+                },
+                {
+                  label: 'Campus Settings',
+                  icon: 'cog',
+                  path: '/admin/settings',
+                },
+              ].map((a) => (
+                <button
+                  key={a.path}
+                  type="button"
+                  onClick={() => navigate(a.path)}
+                  className="flex items-center gap-3 p-3.5 rounded-2xl bg-b-surface1 border border-s-subtle hover:border-s-highlight hover:bg-b-highlight transition-all text-left group cursor-pointer"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-[var(--brand-blue-soft)] text-[var(--brand-blue)] flex items-center justify-center shrink-0">
+                    <Icon name={a.icon} size={18} className="fill-current" />
+                  </div>
+                  <span className="text-sub-title-2 text-t-primary flex-1 truncate">{a.label}</span>
+                  <Icon
+                    name="arrow"
+                    size={16}
+                    className="fill-t-tertiary group-hover:fill-[var(--brand-blue)] group-hover:translate-x-0.5 transition-all shrink-0"
+                  />
+                </button>
+              ))}
             </div>
-          </div>
+          </Card>
+
+          {/* Recent Activity Widget */}
+          <RecentActivityWidget role="admin" limit={4} />
         </div>
-
       </div>
-
-      {/* ── 5. Analytics Chart Row ────────────────────────────────────── */}
-      {totalMarked > 0 && (
-        <div className="w-full">
-          <div className="glass-card p-5 sm:p-6 bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/[0.06] rounded-2xl shadow-xs dark:shadow-none">
-            <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-              <span>📊</span> Today's Attendance Distribution Visualizer
-            </h3>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={attendanceChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.15)" />
-                <XAxis dataKey="status" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                <Tooltip content={<CustomChartTooltip />} />
-                <Bar dataKey="count" radius={[6, 6, 0, 0]} name="Students" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
-
-      {/* ── 6. Recent Activity Section ───────────────────────────────── */}
-      <div className="w-full">
-        <RecentActivityWidget role="admin" />
-      </div>
-
     </div>
   );
 };
 
 export default AdminDashboard;
-

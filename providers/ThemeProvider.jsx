@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import { resolveCollegePlan, resolveSubscriptionState } from '../lib/planTheme';
@@ -38,7 +39,11 @@ const syncHtmlTheme = (theme) => {
 };
 
 export function ThemeProvider({ children }) {
-  const [theme, setThemeState] = useState(getInitialTheme);
+  // Always initialize to 'light' so SSR HTML and client hydration match 100%,
+  // then immediately sync from localStorage / media query in useEffect so React
+  // is guaranteed to reconcile data-theme on all [data-app] wrappers.
+  const [theme, setThemeState] = useState('light');
+  const [portalTarget, setPortalTarget] = useState(null);
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
   const lastFetchRef = useRef(0);
@@ -47,6 +52,19 @@ export function ThemeProvider({ children }) {
     const initial = getInitialTheme();
     setThemeState(initial);
     syncHtmlTheme(initial);
+  }, []);
+
+  // Observe #app-portal-root so <Toaster /> portals directly inside [data-app]'s #app-portal-root
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const syncPortal = () => {
+      const root = document.getElementById('app-portal-root');
+      setPortalTarget((prev) => (prev !== root ? root : prev));
+    };
+    syncPortal();
+    const observer = new MutationObserver(syncPortal);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
   }, []);
 
   const setTheme = useCallback((nextTheme) => {
@@ -139,6 +157,39 @@ export function ThemeProvider({ children }) {
   const subStatus = resolveSubscriptionState(user);
   const appType = user?.role === 'superAdmin' ? 'platform' : 'college';
 
+  const toasterNode = (
+    <Toaster
+      position="top-right"
+      containerClassName="!z-[120]"
+      toastOptions={{
+        className: 'app-toast-item',
+        style: {
+          background: 'var(--backgrounds-surface2)',
+          color: 'var(--text-primary)',
+          border: '1px solid var(--stroke-stroke2)',
+          borderLeft: '4px solid var(--accent, var(--primary-01))',
+          borderRadius: '1rem',
+          fontSize: '0.84375rem',
+          fontWeight: 500,
+          boxShadow: 'var(--box-shadow-dropdown)',
+          padding: '12px 16px',
+        },
+        success: {
+          iconTheme: {
+            primary: 'var(--primary-02)',
+            secondary: 'var(--backgrounds-surface2)',
+          },
+        },
+        error: {
+          iconTheme: {
+            primary: 'var(--primary-03)',
+            secondary: 'var(--backgrounds-surface2)',
+          },
+        },
+      }}
+    />
+  );
+
   return (
     <ThemeContext.Provider
       value={{
@@ -152,48 +203,24 @@ export function ThemeProvider({ children }) {
       }}
     >
       {children}
-      {/* Portal-synced [data-app] host for Toast notifications so Toasts always inherit theme, plan, and tokens */}
-      <div
-        data-app={appType}
-        data-theme={theme}
-        data-plan={plan || undefined}
-        data-sub-status={subStatus}
-        className="no-print"
-      >
-        <Toaster
-          position="top-right"
-          containerClassName="!z-[120]"
-          toastOptions={{
-            className: 'app-toast-item',
-            style: {
-              background: 'var(--backgrounds-surface2)',
-              color: 'var(--text-primary)',
-              border: '1px solid var(--stroke-stroke2)',
-              borderLeft: '4px solid var(--accent, var(--primary-01))',
-              borderRadius: '1rem',
-              fontSize: '0.84375rem',
-              fontWeight: 500,
-              boxShadow: 'var(--box-shadow-dropdown)',
-              padding: '12px 16px',
-            },
-            success: {
-              iconTheme: {
-                primary: 'var(--primary-02)',
-                secondary: 'var(--backgrounds-surface2)',
-              },
-            },
-            error: {
-              iconTheme: {
-                primary: 'var(--primary-03)',
-                secondary: 'var(--backgrounds-surface2)',
-              },
-            },
-          }}
-        />
-      </div>
+      {/* Portal <Toaster /> directly inside #app-portal-root (inside [data-app]) when mounted */}
+      {portalTarget ? (
+        createPortal(toasterNode, portalTarget)
+      ) : (
+        <div
+          data-app={appType}
+          data-theme={theme}
+          data-plan={plan || undefined}
+          data-sub-status={subStatus}
+          className="no-print"
+        >
+          {toasterNode}
+        </div>
+      )}
     </ThemeContext.Provider>
   );
 }
 
 export const useTheme = () => useContext(ThemeContext);
 export default ThemeProvider;
+

@@ -1,30 +1,25 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import Card from '../ui/Card';
+import EmptyState from '../ui/EmptyState';
+import Icon from '../Icon';
 import CollegesHubLoader from './CollegesHubLoader';
-import { 
-  HiOutlineCalendar, 
-  HiOutlineChevronDown, 
-  HiOutlineChevronUp, 
-  HiOutlineSpeakerphone, 
-  HiOutlineBell,
-  HiOutlineExclamation
-} from 'react-icons/hi';
 
 const categoryConfig = {
-  general: { bg: 'rgba(99, 102, 241, 0.12)', color: '#818cf8', label: 'General' },
-  academic: { bg: 'rgba(56, 189, 248, 0.12)', color: '#60a5fa', label: 'Academic' },
-  fee: { bg: 'rgba(239, 68, 68, 0.12)', color: '#f87171', label: 'Finance' },
-  exam: { bg: 'rgba(245, 158, 11, 0.12)', color: '#fb923c', label: 'Exams' },
-  event: { bg: 'rgba(16, 185, 129, 0.12)', color: '#4ade80', label: 'Event' },
-  admission: { bg: 'rgba(139, 92, 246, 0.12)', color: '#a78bfa', label: 'Admission' },
+  general: { cls: 'label-blue', label: 'General' },
+  academic: { cls: 'label-blue', label: 'Academic' },
+  fee: { cls: 'label-red', label: 'Finance' },
+  exam: { cls: 'label-yellow', label: 'Exams' },
+  event: { cls: 'label-green', label: 'Event' },
+  admission: { cls: 'label-blue', label: 'Admission' },
 };
 
 const priorityConfig = {
-  urgent: { bg: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', label: 'Urgent 🔥' },
-  high: { bg: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', label: 'High Alert ⚠️' },
-  medium: { bg: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', label: 'Medium' },
-  low: { bg: 'rgba(107, 114, 128, 0.15)', color: '#9ca3af', label: 'Low' },
+  urgent: { cls: 'label-red', label: 'Urgent' },
+  high: { cls: 'label-yellow', label: 'High Alert' },
+  medium: { cls: 'label-blue', label: 'Medium' },
+  low: { cls: 'label-gray', label: 'Low' },
 };
 
 const RecentAnnouncements = () => {
@@ -42,8 +37,6 @@ const RecentAnnouncements = () => {
       const { data: res } = await api.get('/announcements');
       if (res.success) {
         const list = res.data || [];
-        
-        // Dynamic audience matching based on user role
         const role = user?.role?.toLowerCase() || '';
         let allowedAudience = ['all'];
         if (role === 'teacher') {
@@ -53,16 +46,14 @@ const RecentAnnouncements = () => {
         } else if (role === 'admin' || role === 'principal' || role === 'superadmin') {
           allowedAudience = ['all', 'students', 'teachers', 'employees', 'public'];
         } else {
-          // Accountant, Registrar, Employee, Guard
           allowedAudience = ['all', 'employees'];
         }
 
-        const filtered = list.filter(ann => {
+        const filtered = list.filter((ann) => {
           const audience = ann.audience || 'all';
           return allowedAudience.includes(audience);
         });
 
-        // Take only the 4 most recent announcements
         setAnnouncements(filtered.slice(0, 4));
       }
     } catch (err) {
@@ -78,92 +69,82 @@ const RecentAnnouncements = () => {
 
   if (loading) {
     return (
-      <div className="glass-card p-6 flex items-center justify-center min-h-[160px]">
+      <Card className="flex items-center justify-center min-h-[160px]">
         <CollegesHubLoader size="sm" text="Loading announcements..." minHeight="min-h-[120px]" />
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="glass-card p-5 flex flex-col gap-4 shadow-xl border border-white/5 relative overflow-hidden">
-      
-      {/* Title Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-white/5">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400">
-            <HiOutlineSpeakerphone size={18} className="animate-bounce" />
-          </div>
-          <div>
-            <h3 className="text-sm font-black text-white uppercase tracking-wider">Recent Announcements</h3>
-            <span className="text-[10px] text-slate-400 mt-0.5 block">Official updates & notices</span>
-          </div>
+    <Card
+      title="Recent Announcements"
+      subtitle="Official updates & notices"
+      headContent={
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--brand-blue-soft)] text-[var(--brand-blue)]">
+          <Icon name="megaphone" size={18} className="fill-current" />
         </div>
-        <HiOutlineBell size={18} className="text-slate-400 animate-pulse" />
-      </div>
-
-      {/* Announcements List */}
+      }
+    >
       {announcements.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-8 text-center text-slate-500 text-xs">
-          <span className="text-2xl mb-1">📭</span>
-          <p className="font-semibold uppercase tracking-wider text-[10px]">No active announcements</p>
-          <p className="text-slate-600 mt-1">Check back later for any new notices.</p>
-        </div>
+        <EmptyState
+          icon="bell"
+          title="No active announcements"
+          description="Check back later for any new notices."
+        />
       ) : (
         <div className="flex flex-col gap-3">
           {announcements.map((ann) => {
             const isExpanded = expandedId === ann._id;
             const cat = categoryConfig[ann.category] || categoryConfig.general;
             const prio = priorityConfig[ann.priority] || priorityConfig.medium;
-            
+
             return (
-              <div 
-                key={ann._id} 
-                className={`group p-3.5 rounded-xl border border-white/5 bg-slate-900/30 hover:bg-slate-900/60 transition-all duration-200 cursor-pointer ${
-                  ann.priority === 'urgent' ? 'shadow-[inset_0_0_12px_rgba(239,68,68,0.05)] border-red-500/20' : ''
+              <div
+                key={ann._id}
+                className={`group rounded-2xl border p-4 transition-colors cursor-pointer ${
+                  ann.priority === 'urgent'
+                    ? 'border-[var(--danger)]/30 bg-[var(--danger-soft)]/40'
+                    : 'border-s-subtle bg-b-surface1 hover:border-s-highlight'
                 }`}
                 onClick={() => toggleExpand(ann._id)}
               >
-                {/* Notice Top Badges */}
-                <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <span 
-                    className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md"
-                    style={{ backgroundColor: cat.bg, color: cat.color }}
-                  >
-                    {cat.label}
-                  </span>
-                  
-                  {ann.priority === 'urgent' || ann.priority === 'high' ? (
-                    <span 
-                      className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md animate-pulse border"
-                      style={{ backgroundColor: prio.bg, color: prio.color, borderColor: `${prio.color}30` }}
-                    >
-                      {prio.label}
-                    </span>
-                  ) : null}
-
-                  <span className="text-[10px] text-slate-400 font-mono ml-auto flex items-center gap-1">
-                    <HiOutlineCalendar size={12} />
-                    {new Date(ann.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span className={`label uppercase ${cat.cls}`}>{cat.label}</span>
+                  {(ann.priority === 'urgent' || ann.priority === 'high') && (
+                    <span className={`label uppercase ${prio.cls}`}>{prio.label}</span>
+                  )}
+                  <span className="ml-auto inline-flex items-center gap-1 text-caption font-mono text-t-tertiary">
+                    <Icon name="calendar" size={12} className="fill-current" />
+                    {new Date(ann.createdAt).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                    })}
                   </span>
                 </div>
 
-                {/* Announcement Title */}
                 <div className="flex items-start justify-between gap-3">
-                  <h4 className="text-xs font-black text-white group-hover:text-indigo-400 transition-colors">
+                  <h4 className="text-sub-title-2 text-t-primary group-hover:text-[var(--brand-blue)] transition-colors">
                     {ann.title}
                   </h4>
-                  <div className="text-slate-400 group-hover:text-white transition-colors shrink-0">
-                    {isExpanded ? <HiOutlineChevronUp size={16} /> : <HiOutlineChevronDown size={16} />}
-                  </div>
+                  <Icon
+                    name="chevron"
+                    size={16}
+                    className={`shrink-0 fill-t-tertiary transition-transform ${
+                      isExpanded ? 'rotate-180' : ''
+                    }`}
+                  />
                 </div>
 
-                {/* Content Details */}
-                <div 
+                <div
                   className={`mt-2 overflow-hidden transition-all duration-300 ${
-                    isExpanded ? 'max-h-[300px] opacity-100' : 'max-h-5 opacity-40'
+                    isExpanded ? 'max-h-[300px] opacity-100' : 'max-h-5 opacity-70'
                   }`}
                 >
-                  <p className={`text-slate-300 text-[11px] leading-relaxed ${isExpanded ? 'whitespace-pre-line' : 'truncate'}`}>
+                  <p
+                    className={`text-caption text-t-secondary leading-relaxed ${
+                      isExpanded ? 'whitespace-pre-line' : 'truncate'
+                    }`}
+                  >
                     {ann.content}
                   </p>
                 </div>
@@ -172,7 +153,7 @@ const RecentAnnouncements = () => {
           })}
         </div>
       )}
-    </div>
+    </Card>
   );
 };
 

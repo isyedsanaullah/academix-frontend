@@ -1,7 +1,10 @@
+'use client';
+
 import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
-import { HiOutlineClock, HiOutlineShieldCheck, HiOutlineExclamation, HiOutlineCheckCircle } from 'react-icons/hi';
+import Icon from '@/components/Icon';
+import Button from '@/components/ui/Button';
 import CollegesHubLoader from '@/components/common/CollegesHubLoader';
 
 export default function QuizPlayer({ quizId, onClose, onCompleted }) {
@@ -40,7 +43,7 @@ export default function QuizPlayer({ quizId, onClose, onCompleted }) {
     if (!attemptData || submittedResult || remainingSeconds <= 0) return;
 
     const timer = setInterval(() => {
-      setRemainingSeconds(prev => {
+      setRemainingSeconds((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
           toast.error('Time expired! Auto-submitting quiz...');
@@ -60,16 +63,17 @@ export default function QuizPlayer({ quizId, onClose, onCompleted }) {
     try {
       const { data } = await api.post(`/quizzes/attempt/${attemptData.attemptId}/violation`, {
         type: violationType,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      toast.error(`⚠️ Security Warning: ${violationType} detected! (${data.violationsCount}/${data.maxAllowed})`, {
-        duration: 4000
-      });
+      toast.error(
+        `Security Warning: ${violationType} detected! (${data.violationsCount}/${data.maxAllowed})`,
+        { duration: 4000 }
+      );
       if (data.shouldAutoSubmit) {
         toast.error('Maximum violations exceeded! Auto-submitting quiz...');
         handleSubmit(true);
       }
-    } catch (e) {}
+    } catch {}
   };
 
   useEffect(() => {
@@ -86,7 +90,6 @@ export default function QuizPlayer({ quizId, onClose, onCompleted }) {
     };
 
     const handleKeyDown = (e) => {
-      // Block F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
       if (
         e.key === 'F12' ||
         (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
@@ -113,11 +116,12 @@ export default function QuizPlayer({ quizId, onClose, onCompleted }) {
     const updated = { ...answers, [qIdx]: oIdx };
     setAnswers(updated);
 
-    // Debounced API auto-save
-    api.post(`/quizzes/attempt/${attemptData.attemptId}/save-answer`, {
-      answers: updated,
-      currentQuestionIndex: qIdx
-    }).catch(() => {});
+    api
+      .post(`/quizzes/attempt/${attemptData.attemptId}/save-answer`, {
+        answers: updated,
+        currentQuestionIndex: qIdx,
+      })
+      .catch(() => {});
   };
 
   // 5. Submit Quiz
@@ -127,7 +131,7 @@ export default function QuizPlayer({ quizId, onClose, onCompleted }) {
     try {
       const { data } = await api.post(`/quizzes/attempt/${attemptData.attemptId}/submit`, {
         answers,
-        isAutoSubmitted: isAuto
+        isAutoSubmitted: isAuto,
       });
       setSubmittedResult(data.data);
       toast.success('Quiz submitted successfully!');
@@ -148,9 +152,16 @@ export default function QuizPlayer({ quizId, onClose, onCompleted }) {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm text-white">
-        <div className="bg-[#0d1117] border border-white/10 rounded-2xl p-10 max-w-sm w-full text-center">
-          <CollegesHubLoader size="md" text="Preparing secure quiz environment..." minHeight="min-h-[140px]" />
+      <div
+        data-fullscreen-player="true"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-b-surface1/90 backdrop-blur-sm text-t-primary"
+      >
+        <div className="card p-10 max-w-sm w-full text-center">
+          <CollegesHubLoader
+            size="md"
+            text="Preparing secure quiz environment..."
+            minHeight="min-h-[140px]"
+          />
         </div>
       </div>
     );
@@ -159,27 +170,35 @@ export default function QuizPlayer({ quizId, onClose, onCompleted }) {
   // Fullscreen Entrance Modal
   if (!isFullscreen && !submittedResult) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md text-white">
-        <div className="bg-[#0d1117] border border-white/10 p-8 rounded-2xl max-w-md w-full text-center space-y-5 shadow-2xl">
-          <HiOutlineShieldCheck className="mx-auto text-indigo-400" size={48} />
-          <div>
-            <h3 className="text-lg font-bold">{attemptData?.quiz?.title}</h3>
-            <p className="text-xs text-white/50 mt-1">Duration: {attemptData?.quiz?.duration} Mins | Total Questions: {attemptData?.quiz?.questions?.length}</p>
+      <div
+        data-fullscreen-player="true"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-b-surface1/95 backdrop-blur-md text-t-primary"
+      >
+        <div className="card p-8 max-w-md w-full text-center space-y-5 shadow-dropdown border border-s-subtle">
+          <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-full bg-primary-01/12 text-primary-01">
+            <Icon name="shield-check" className="!size-8 fill-primary-01" />
           </div>
-          <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg text-xs text-amber-300 text-left space-y-1">
-            <p className="font-bold flex items-center gap-1"><HiOutlineExclamation /> Security & Anti-Cheat Rules:</p>
-            <ul className="list-disc list-inside space-y-0.5 text-[11px] text-white/70">
+          <div>
+            <h3 className="text-h5 text-t-primary">{attemptData?.quiz?.title}</h3>
+            <p className="text-caption text-t-secondary mt-1">
+              Duration: {attemptData?.quiz?.duration} Mins | Total Questions:{' '}
+              {attemptData?.quiz?.questions?.length}
+            </p>
+          </div>
+          <div className="bg-primary-05/10 border border-primary-05/25 p-4 rounded-2xl text-caption text-t-primary text-left space-y-1.5">
+            <p className="font-bold flex items-center gap-1.5 text-primary-05">
+              <Icon name="alert" className="!size-4 fill-primary-05" />
+              Security & Anti-Cheat Rules:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-caption text-t-secondary">
               <li>Fullscreen mode is required throughout the attempt</li>
               <li>Switching tabs or minimizing window is monitored</li>
               <li>Copy, paste, and right-click are disabled</li>
             </ul>
           </div>
-          <button
-            onClick={enterFullscreen}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-sm transition"
-          >
+          <Button isPrimary onClick={enterFullscreen} className="w-full">
             Start Quiz in Fullscreen Mode
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -188,36 +207,48 @@ export default function QuizPlayer({ quizId, onClose, onCompleted }) {
   // Submitted Result View
   if (submittedResult) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 text-white overflow-y-auto">
-        <div className="bg-[#0d1117] border border-white/10 p-8 rounded-2xl max-w-md w-full text-center space-y-6 shadow-2xl">
-          <HiOutlineCheckCircle className="mx-auto text-emerald-400" size={56} />
+      <div
+        data-fullscreen-player="true"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-b-surface1/95 text-t-primary overflow-y-auto"
+      >
+        <div className="card p-8 max-w-md w-full text-center space-y-6 shadow-dropdown border border-s-subtle">
+          <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-full bg-primary-02/12 text-primary-02">
+            <Icon name="check-circle" className="!size-9 fill-primary-02" />
+          </div>
           <div>
-            <h3 className="text-xl font-bold">Quiz Attempt Submitted</h3>
-            <p className="text-xs text-white/50 mt-1">{attemptData?.quiz?.title}</p>
+            <h3 className="text-h5 text-t-primary">Quiz Attempt Submitted</h3>
+            <p className="text-caption text-t-secondary mt-1">
+              {attemptData?.quiz?.title}
+            </p>
           </div>
 
           {submittedResult.isResultsReleased ? (
-            <div className="bg-white/[0.03] border border-white/10 p-4 rounded-xl space-y-2">
-              <p className="text-xs text-white/50 uppercase">Your Final Score</p>
-              <h2 className="text-3xl font-extrabold text-emerald-400">{submittedResult.score} / {submittedResult.totalMarks}</h2>
-              <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${
-                submittedResult.status === 'passed' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'
-              }`}>
+            <div className="bg-b-surface1 border border-s-subtle p-5 rounded-3xl space-y-2">
+              <p className="text-caption text-t-secondary uppercase tracking-wider">
+                Your Final Score
+              </p>
+              <h2 className="text-h2 text-primary-02 tabular-nums">
+                {submittedResult.score} / {submittedResult.totalMarks}
+              </h2>
+              <span
+                className={`label ${
+                  submittedResult.status === 'passed' ? 'label-green' : 'label-red'
+                }`}
+              >
                 {submittedResult.percentage}% — {submittedResult.status.toUpperCase()}
               </span>
             </div>
           ) : (
-            <div className="bg-white/[0.03] border border-white/10 p-4 rounded-xl">
-              <p className="text-xs text-white/70">Your answers have been securely recorded. Results will be released according to teacher configuration.</p>
+            <div className="bg-b-surface1 border border-s-subtle p-4 rounded-3xl">
+              <p className="text-body-2 text-t-secondary">
+                Your answers have been securely recorded. Results will be released according to teacher configuration.
+              </p>
             </div>
           )}
 
-          <button
-            onClick={onClose}
-            className="w-full py-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-semibold transition"
-          >
+          <Button isWhite onClick={onClose} className="w-full">
             Back to Dashboard
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -230,99 +261,127 @@ export default function QuizPlayer({ quizId, onClose, onCompleted }) {
   return (
     <div
       ref={containerRef}
-      onCopy={(e) => { e.preventDefault(); logProctorViolation('Copy Event Blocked'); }}
-      onPaste={(e) => { e.preventDefault(); logProctorViolation('Paste Event Blocked'); }}
-      onContextMenu={(e) => { e.preventDefault(); logProctorViolation('Right-Click Context Menu'); }}
-      className="fixed inset-0 z-50 bg-[#090d13] text-white flex flex-col select-none"
+      data-fullscreen-player="true"
+      onCopy={(e) => {
+        e.preventDefault();
+        logProctorViolation('Copy Event Blocked');
+      }}
+      onPaste={(e) => {
+        e.preventDefault();
+        logProctorViolation('Paste Event Blocked');
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        logProctorViolation('Right-Click Context Menu');
+      }}
+      className="fixed inset-0 z-50 bg-b-surface1 text-t-primary flex flex-col select-none"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-white/10 bg-[#0d1117] shrink-0">
+      <div className="flex items-center justify-between px-6 py-3.5 border-b border-s-subtle bg-b-surface2 shrink-0">
         <div>
-          <h2 className="text-sm font-bold text-white">{attemptData?.quiz?.title}</h2>
-          <p className="text-[11px] text-white/40">Question {currentIndex + 1} of {attemptData?.quiz?.questions?.length}</p>
+          <h2 className="text-sub-title-1 text-t-primary">{attemptData?.quiz?.title}</h2>
+          <p className="text-caption text-t-secondary">
+            Question {currentIndex + 1} of {attemptData?.quiz?.questions?.length}
+          </p>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-indigo-300 text-xs font-mono font-bold">
-            <HiOutlineClock size={16} />
+          <div className="flex items-center gap-1.5 px-3.5 py-2 bg-primary-01/12 border border-primary-01/25 rounded-full text-t-blue text-caption font-mono font-bold tabular-nums">
+            <Icon name="clock" className="!size-4 fill-primary-01" />
             {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
           </div>
-          <button
+          <Button
+            isGreen
+            size="sm"
             onClick={() => handleSubmit(false)}
             disabled={submitting}
-            className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold transition disabled:opacity-50"
           >
             {submitting ? 'Submitting...' : 'Submit Quiz'}
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Main Area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Question Panel */}
-        <div className="flex-1 p-6 md:p-10 overflow-y-auto space-y-6">
-          <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between text-xs text-white/40">
-              <span>Marks: {currentQ?.marks || 1}</span>
+        <div className="flex-1 p-6 md:p-10 overflow-y-auto space-y-6 max-w-4xl mx-auto">
+          <div className="card p-6 space-y-4">
+            <div className="flex items-center justify-between text-caption text-t-secondary">
+              <span className="label label-blue">Marks: {currentQ?.marks || 1}</span>
             </div>
-            <h3 className="text-base md:text-lg font-semibold text-white/90">{currentQ?.questionText}</h3>
+            <h3 className="text-h6 text-t-primary">{currentQ?.questionText}</h3>
           </div>
 
-          {/* Options List */}
           <div className="space-y-3">
-            {currentQ?.options?.map((opt, oIdx) => (
-              <button
-                key={oIdx}
-                onClick={() => handleSelectOption(currentIndex, oIdx)}
-                className={`w-full flex items-center gap-3 p-4 rounded-xl text-left border transition ${
-                  answers[currentIndex] === oIdx
-                    ? 'bg-indigo-600/20 border-indigo-500 text-white font-medium shadow-lg'
-                    : 'bg-white/[0.02] border-white/10 text-white/70 hover:bg-white/5'
-                }`}
-              >
-                <div className={`w-5 h-5 rounded-full border flex items-center justify-center text-xs font-bold shrink-0 ${
-                  answers[currentIndex] === oIdx ? 'border-indigo-400 bg-indigo-500 text-white' : 'border-white/20 text-white/40'
-                }`}>
-                  {String.fromCharCode(65 + oIdx)}
-                </div>
-                <span className="text-sm">{opt}</span>
-              </button>
-            ))}
+            {currentQ?.options?.map((opt, oIdx) => {
+              const selected = answers[currentIndex] === oIdx;
+              return (
+                <button
+                  key={oIdx}
+                  type="button"
+                  onClick={() => handleSelectOption(currentIndex, oIdx)}
+                  className={`w-full flex items-center gap-3.5 p-4 rounded-3xl text-left border transition cursor-pointer ${
+                    selected
+                      ? 'bg-primary-01/12 border-primary-01 text-t-primary font-semibold shadow-widget'
+                      : 'bg-b-surface2 border-s-subtle text-t-secondary hover:bg-b-highlight hover:text-t-primary'
+                  }`}
+                >
+                  <div
+                    className={`w-7 h-7 rounded-full border flex items-center justify-center text-caption font-bold shrink-0 ${
+                      selected
+                        ? 'border-primary-01 bg-primary-01 text-t-light'
+                        : 'border-s-stroke2 text-t-secondary'
+                    }`}
+                  >
+                    {String.fromCharCode(65 + oIdx)}
+                  </div>
+                  <span className="text-body-2">{opt}</span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Navigation Controls */}
           <div className="flex justify-between pt-4">
-            <button
-              onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
+            <Button
+              isStroke
+              size="sm"
+              onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
               disabled={currentIndex === 0}
-              className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-semibold disabled:opacity-30"
+              icon="arrow-left"
             >
-              ← Previous
-            </button>
-            <button
-              onClick={() => setCurrentIndex(prev => Math.min(attemptData.quiz.questions.length - 1, prev + 1))}
+              Previous
+            </Button>
+            <Button
+              isPrimary
+              size="sm"
+              onClick={() =>
+                setCurrentIndex((prev) =>
+                  Math.min(attemptData.quiz.questions.length - 1, prev + 1)
+                )
+              }
               disabled={currentIndex === attemptData.quiz.questions.length - 1}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-semibold disabled:opacity-30"
+              iconRight="arrow"
             >
-              Next →
-            </button>
+              Next
+            </Button>
           </div>
         </div>
 
-        {/* Question Grid Sidebar */}
-        <div className="w-64 border-l border-white/10 p-4 bg-[#0d1117] hidden lg:block overflow-y-auto space-y-4">
-          <h4 className="text-xs font-bold text-white/50 uppercase tracking-wider">Question Navigator</h4>
+        <div className="w-68 border-l border-s-subtle p-5 bg-b-surface2 hidden lg:block overflow-y-auto space-y-4">
+          <h4 className="text-caption font-bold text-t-tertiary uppercase tracking-wider">
+            Question Navigator
+          </h4>
           <div className="grid grid-cols-4 gap-2">
             {attemptData?.quiz?.questions?.map((_, idx) => (
               <button
                 key={idx}
+                type="button"
                 onClick={() => setCurrentIndex(idx)}
-                className={`h-9 rounded-lg text-xs font-bold transition flex items-center justify-center ${
+                className={`h-10 rounded-2xl text-caption font-bold tabular-nums transition flex items-center justify-center cursor-pointer ${
                   currentIndex === idx
-                    ? 'ring-2 ring-indigo-400 bg-indigo-600 text-white'
+                    ? 'ring-2 ring-primary-01 bg-primary-01 text-t-light'
                     : answers[idx] !== undefined
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                    : 'bg-white/5 text-white/40 hover:bg-white/10'
+                      ? 'bg-primary-02/15 text-primary-02 border border-primary-02/30'
+                      : 'bg-b-surface1 text-t-secondary hover:bg-b-highlight'
                 }`}
               >
                 {idx + 1}

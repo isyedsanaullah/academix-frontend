@@ -1,18 +1,20 @@
 'use client';
+
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import Icon from '../Icon';
+import { getAppPortalRoot } from '../../lib/portal';
 
 /**
- * UndoToast
- * Generic 5-second Undo notification for soft deletes and status transitions.
- *
- * Props:
- *  - message    {string}   - Toast message to display (e.g. "Assignment deleted.")
- *  - operationId {string}  - Exact operation ID to send on Undo (never guessed by frontend)
- *  - onUndo     {Function} - async callback(operationId) called when user clicks Undo
- *  - onClose    {Function} - called when toast dismisses (by timeout or close)
- *  - duration   {number}   - Undo window in ms (default 5000)
+ * UndoToast — Tokenised Core 2.0 5-second Undo notification portaled inside #app-portal-root
  */
-export default function UndoToast({ message, operationId, onUndo, onClose, duration = 5000 }) {
+export default function UndoToast({
+  message,
+  operationId,
+  onUndo,
+  onClose,
+  duration = 5000,
+}) {
   const [progress, setProgress] = useState(100);
   const [undoing, setUndoing] = useState(false);
   const [done, setDone] = useState(false);
@@ -21,14 +23,12 @@ export default function UndoToast({ message, operationId, onUndo, onClose, durat
   const startTime = useRef(Date.now());
 
   useEffect(() => {
-    // Animate progress bar
     intervalRef.current = setInterval(() => {
       const elapsed = Date.now() - startTime.current;
       const remaining = Math.max(0, 100 - (elapsed / duration) * 100);
       setProgress(remaining);
     }, 50);
 
-    // Auto-dismiss after duration
     timeoutRef.current = setTimeout(() => {
       clearInterval(intervalRef.current);
       setDone(true);
@@ -39,7 +39,7 @@ export default function UndoToast({ message, operationId, onUndo, onClose, durat
       clearInterval(intervalRef.current);
       clearTimeout(timeoutRef.current);
     };
-  }, []);
+  }, [duration, onClose]);
 
   const handleUndo = async () => {
     if (undoing || done) return;
@@ -65,81 +65,43 @@ export default function UndoToast({ message, operationId, onUndo, onClose, durat
 
   if (done) return null;
 
-  return (
+  const portalRoot = getAppPortalRoot();
+  const content = (
     <div
-      style={{
-        position: 'fixed',
-        bottom: '24px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 9999,
-        minWidth: '340px',
-        maxWidth: '480px',
-        background: 'rgba(22, 24, 36, 0.97)',
-        border: '1px solid rgba(255,255,255,0.1)',
-        borderRadius: '14px',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-        overflow: 'hidden',
-        backdropFilter: 'blur(16px)',
-      }}
+      role="status"
+      aria-live="polite"
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[120] min-w-[340px] max-w-[480px] rounded-3xl bg-b-surface2 border border-s-stroke2 shadow-dropdown overflow-hidden"
     >
-      {/* Progress bar */}
       <div
+        className="h-1 transition-all duration-75"
         style={{
-          height: '3px',
-          background: `linear-gradient(90deg, #818cf8 ${progress}%, rgba(255,255,255,0.06) ${progress}%)`,
-          transition: 'background 0.05s linear',
+          background: `linear-gradient(90deg, var(--primary-01) ${progress}%, transparent ${progress}%)`,
         }}
       />
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px' }}>
-        {/* Icon */}
-        <span style={{ fontSize: '18px', flexShrink: 0 }}>🗑️</span>
-
-        {/* Message */}
-        <p style={{ flex: 1, fontSize: '13px', color: 'rgba(255,255,255,0.85)', margin: 0, lineHeight: 1.4 }}>
-          {message}
-        </p>
-
-        {/* Undo button */}
+      <div className="flex items-center gap-3 px-4 py-3.5">
+        <div className="flex items-center justify-center w-9 h-9 rounded-full bg-b-surface1 border border-s-subtle shrink-0">
+          <Icon name="trash" className="!size-4.5 fill-t-secondary" />
+        </div>
+        <p className="flex-1 text-body-2 text-t-primary leading-snug">{message}</p>
         <button
+          type="button"
           onClick={handleUndo}
           disabled={undoing}
-          style={{
-            padding: '6px 14px',
-            borderRadius: '8px',
-            border: '1px solid rgba(129,140,248,0.5)',
-            background: 'rgba(129,140,248,0.12)',
-            color: '#818cf8',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: undoing ? 'not-allowed' : 'pointer',
-            transition: 'all 0.12s',
-            flexShrink: 0,
-            letterSpacing: '0.03em',
-          }}
+          className="h-9 px-4 rounded-full bg-primary-01/12 border border-primary-01/30 text-t-blue text-caption font-semibold hover:bg-primary-01/20 transition cursor-pointer disabled:opacity-50"
         >
           {undoing ? 'Reverting…' : 'Undo'}
         </button>
-
-        {/* Dismiss button */}
         <button
+          type="button"
           onClick={handleClose}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: 'rgba(255,255,255,0.3)',
-            fontSize: '16px',
-            padding: '0 2px',
-            lineHeight: 1,
-            flexShrink: 0,
-          }}
-          aria-label="Dismiss"
+          aria-label="Dismiss notification"
+          className="p-1.5 rounded-full text-t-tertiary hover:text-t-primary transition cursor-pointer"
         >
-          ×
+          <Icon name="close" className="!size-4 fill-current" />
         </button>
       </div>
     </div>
   );
+
+  return portalRoot ? createPortal(content, portalRoot) : content;
 }

@@ -1,344 +1,357 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { HiOutlineCog, HiOutlineKey, HiOutlineGlobe, HiOutlineClock } from 'react-icons/hi';
 import ApiKeyManager from '../../components/ai/ApiKeyManager';
 import CollegesHubLoader from '../../components/common/CollegesHubLoader';
+import Card from '../../components/ui/Card';
+import Button from '../../components/ui/Button';
+import Tabs from '../../components/ui/Tabs';
+import Field from '../../components/ui/Field';
+import Select from '../../components/ui/Select';
+import Icon from '../../components/Icon';
 
 const TABS = [
-  { id: 'general', label: 'General', icon: HiOutlineCog },
-  { id: 'gate', label: 'Gate & Timetable Fines', icon: HiOutlineClock },
-  { id: 'profile', label: 'Public Profile', icon: HiOutlineGlobe },
-  { id: 'ai', label: 'AI Configuration', icon: HiOutlineKey },
+  { id: 'general', name: 'General & Fees' },
+  { id: 'gate', name: 'Gate & Timetable Fines' },
+  { id: 'profile', name: 'Public Profile' },
+  { id: 'ai', name: 'AI Configuration' },
+];
+
+const AUTO_FINE_OPTIONS = [
+  { id: 'true', name: 'Enabled (Auto-issue fine on late scan)' },
+  { id: 'false', name: 'Disabled (Log late without fine)' },
 ];
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('general');
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchSettings = async () => {
       try {
         const { data } = await api.get('/colleges/settings');
-        setSettings(data.data);
-      }
-      catch {
+        setSettings(data.data || {});
+      } catch {
         toast.error('Failed to load settings');
-      }
-      finally {
+      } finally {
         setLoading(false);
       }
     };
-    fetch();
+    fetchSettings();
   }, []);
 
   const handleSave = async () => {
+    setSaving(true);
     try {
       await api.put('/colleges/settings', settings);
-      toast.success('Settings saved');
-    }
-    catch {
+      toast.success('Settings saved successfully');
+    } catch {
       toast.error('Failed to save settings');
+    } finally {
+      setSaving(false);
     }
   };
 
-  if (loading) return (
-    <div className="flex justify-center py-20">
-      <CollegesHubLoader size="md" text="Loading college configuration…" minHeight="min-h-[220px]" />
-    </div>
-  );
+  if (loading)
+    return (
+      <div className="flex justify-center py-20">
+        <CollegesHubLoader
+          size="md"
+          text="Loading college configuration…"
+          minHeight="min-h-[220px]"
+        />
+      </div>
+    );
 
   return (
-    <div className="animate-fade-in space-y-6">
-      <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-        <HiOutlineCog className="text-indigo-400" /> Settings
-      </h1>
-
-      {/* Tab Navigation */}
-      <div className="flex gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06] w-fit">
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-              activeTab === tab.id
-                ? 'bg-indigo-500/15 text-indigo-400 shadow-sm'
-                : 'text-white/35 hover:text-white/60 hover:bg-white/[0.04]'
-            }`}
-          >
-            <tab.icon size={15} />
-            {tab.label}
-          </button>
-        ))}
+    <div className="page">
+      {/* Page Header */}
+      <div className="page-head">
+        <div>
+          <h1 className="page-title flex items-center gap-2.5">
+            <Icon name="cog" size={24} className="fill-[var(--brand-blue)]" />
+            <span>Campus Settings</span>
+          </h1>
+          <p className="page-sub">
+            Configure institutional fee defaults, gate timings, public directory metadata, and AI
+            integrations
+          </p>
+        </div>
+        {activeTab !== 'ai' && (
+          <div className="page-actions">
+            <Button isPrimary icon="check" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving…' : 'Save Changes'}
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* General Settings Tab */}
+      {/* Core 2.0 Segmented Pill Tabs */}
+      <Tabs items={TABS} value={activeTab} setValue={setActiveTab} />
+
+      {/* Tab 1: General Settings */}
       {activeTab === 'general' && (
-        <div className="glass-card p-6 space-y-6">
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-3">Fee Structure</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm text-surface-300 mb-1">Tuition Fee</label>
-                <input
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+          <div className="lg:col-span-8">
+            <Card
+              title="Default Fee Structure"
+              subtitle="Standard billing amounts applied to new student enrollments (PKR)"
+              className="space-y-6"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Field
+                  label="Tuition Fee (PKR)"
                   type="number"
-                  value={settings?.feeStructure?.tuitionFee || 0}
-                  onChange={e => setSettings({
-                    ...settings,
-                    feeStructure: { ...settings?.feeStructure, tuitionFee: Number(e.target.value) }
-                  })}
-                  className="input-field"
+                  value={settings?.feeStructure?.tuitionFee ?? 0}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      feeStructure: {
+                        ...settings?.feeStructure,
+                        tuitionFee: Number(e.target.value),
+                      },
+                    })
+                  }
+                />
+                <Field
+                  label="Function Fee (PKR)"
+                  type="number"
+                  value={settings?.feeStructure?.functionFee ?? 0}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      feeStructure: {
+                        ...settings?.feeStructure,
+                        functionFee: Number(e.target.value),
+                      },
+                    })
+                  }
+                />
+                <Field
+                  label="Lab Fee (PKR)"
+                  type="number"
+                  value={settings?.feeStructure?.labFee ?? 0}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      feeStructure: {
+                        ...settings?.feeStructure,
+                        labFee: Number(e.target.value),
+                      },
+                    })
+                  }
                 />
               </div>
-              <div>
-                <label className="block text-sm text-surface-300 mb-1">Function Fee</label>
-                <input
-                  type="number"
-                  value={settings?.feeStructure?.functionFee || 0}
-                  onChange={e => setSettings({
-                    ...settings,
-                    feeStructure: { ...settings?.feeStructure, functionFee: Number(e.target.value) }
-                  })}
-                  className="input-field"
-                />
+
+              <div className="border-t border-s-subtle pt-5 flex items-center justify-end">
+                <Button isPrimary icon="check" onClick={handleSave} disabled={saving}>
+                  {saving ? 'Saving…' : 'Save Fee Structure'}
+                </Button>
               </div>
-              <div>
-                <label className="block text-sm text-surface-300 mb-1">Lab Fee</label>
-                <input
-                  type="number"
-                  value={settings?.feeStructure?.labFee || 0}
-                  onChange={e => setSettings({
-                    ...settings,
-                    feeStructure: { ...settings?.feeStructure, labFee: Number(e.target.value) }
-                  })}
-                  className="input-field"
-                />
-              </div>
-            </div>
+            </Card>
           </div>
 
-          <div>
-            <label className="block text-sm text-surface-300 mb-1">Academic Year</label>
-            <input
-              value={settings?.academicYear || ''}
-              onChange={e => setSettings({ ...settings, academicYear: e.target.value })}
-              className="input-field w-40"
-            />
+          <div className="lg:col-span-4">
+            <Card
+              title="Academic Session"
+              subtitle="Active academic year identifier across reports and transcripts"
+              className="space-y-5"
+            >
+              <Field
+                label="Academic Year"
+                placeholder="e.g. 2026-2027"
+                value={settings?.academicYear || ''}
+                onChange={(e) => setSettings({ ...settings, academicYear: e.target.value })}
+              />
+              <div className="p-4 rounded-3xl bg-b-surface1 border border-s-subtle text-caption text-t-secondary">
+                All new student admissions, fee challans, and exam sessions default to this
+                academic year label.
+              </div>
+            </Card>
           </div>
-
-          <button onClick={handleSave} className="btn-primary">Save Settings</button>
         </div>
       )}
 
-      {/* Public Profile Tab */}
-      {activeTab === 'profile' && (
-        <div className="glass-card p-6 space-y-6">
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-1">Visual Branding</h3>
-            <p className="text-white/30 text-xs mb-4">Set your college logo and main cover photo urls</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-surface-300 mb-1">Cover Photo URL</label>
-                <input
-                  type="text"
-                  placeholder="https://images.unsplash.com/..."
-                  value={settings?.coverPhoto || ''}
-                  onChange={e => setSettings({ ...settings, coverPhoto: e.target.value })}
-                  className="input-field"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-surface-300 mb-1">Logo URL</label>
-                <input
-                  type="text"
-                  placeholder="https://images.unsplash.com/..."
-                  value={settings?.logo || ''}
-                  onChange={e => setSettings({ ...settings, logo: e.target.value })}
-                  className="input-field"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-white/[0.05] pt-6">
-            <h3 className="text-lg font-semibold text-white mb-1">Profile Metadata</h3>
-            <p className="text-white/30 text-xs mb-4">Provide details to display on your public profile page</p>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-surface-300 mb-1">Tagline</label>
-                  <input
-                    type="text"
-                    placeholder="Excellence in Education"
-                    value={settings?.tagline || ''}
-                    onChange={e => setSettings({ ...settings, tagline: e.target.value })}
-                    className="input-field"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-surface-300 mb-1">Established Year</label>
-                  <input
-                    type="number"
-                    placeholder="1989"
-                    value={settings?.establishedYear || ''}
-                    onChange={e => setSettings({ ...settings, establishedYear: Number(e.target.value) })}
-                    className="input-field"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm text-surface-300 mb-1">About description</label>
-                <textarea
-                  rows={4}
-                  placeholder="Write a brief introduction about your college..."
-                  value={settings?.about || ''}
-                  onChange={e => setSettings({ ...settings, about: e.target.value })}
-                  className="input-field"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-white/[0.05] pt-6">
-            <h3 className="text-lg font-semibold text-white mb-1">Contact & Address</h3>
-            <p className="text-white/30 text-xs mb-4">Official communication channels and campus location</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-surface-300 mb-1">Email Address</label>
-                <input
-                  type="email"
-                  value={settings?.email || ''}
-                  onChange={e => setSettings({ ...settings, email: e.target.value })}
-                  className="input-field"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-surface-300 mb-1">Phone Number</label>
-                <input
-                  type="text"
-                  value={settings?.phone || ''}
-                  onChange={e => setSettings({ ...settings, phone: e.target.value })}
-                  className="input-field"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-surface-300 mb-1">Website URL</label>
-                <input
-                  type="text"
-                  value={settings?.website || ''}
-                  onChange={e => setSettings({ ...settings, website: e.target.value })}
-                  className="input-field"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-surface-300 mb-1">City</label>
-                <input
-                  type="text"
-                  value={settings?.city || ''}
-                  onChange={e => setSettings({ ...settings, city: e.target.value })}
-                  className="input-field"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-sm text-surface-300 mb-1">Campus Address</label>
-                <input
-                  type="text"
-                  value={settings?.address || ''}
-                  onChange={e => setSettings({ ...settings, address: e.target.value })}
-                  className="input-field"
-                />
-              </div>
-            </div>
-          </div>
-
-          <button onClick={handleSave} className="btn-primary">Save Settings</button>
-        </div>
-      )}
-
-      {/* Gate & Timetable Fines Tab */}
+      {/* Tab 2: Gate & Timetable Fines */}
       {activeTab === 'gate' && (
-        <div className="glass-card p-6 space-y-6">
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-1">College Timings & Gate Control</h3>
-            <p className="text-xs text-surface-400 mb-4">Set college operating hours and early exit restrictions for students and staff.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-surface-300 mb-1">College Opening Time</label>
-                <input
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+          <div className="lg:col-span-6">
+            <Card
+              title="College Timings & Gate Control"
+              subtitle="Set campus operating hours and early exit cutoff rules"
+              className="space-y-5"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field
+                  label="College Opening Time"
                   type="time"
                   value={settings?.openingTime || '08:00'}
-                  onChange={e => setSettings({ ...settings, openingTime: e.target.value })}
-                  className="input-field"
+                  onChange={(e) => setSettings({ ...settings, openingTime: e.target.value })}
                 />
-              </div>
-              <div>
-                <label className="block text-sm text-surface-300 mb-1">College Closing Time (Early Exit Cutoff)</label>
-                <input
+                <Field
+                  label="Closing Time (Early Exit Cutoff)"
                   type="time"
                   value={settings?.closingTime || '14:00'}
-                  onChange={e => setSettings({ ...settings, closingTime: e.target.value })}
-                  className="input-field"
+                  onChange={(e) => setSettings({ ...settings, closingTime: e.target.value })}
                 />
               </div>
-            </div>
+            </Card>
           </div>
 
-          <div className="border-t border-white/10 pt-6">
-            <h3 className="text-lg font-semibold text-white mb-1">Late Entry & Auto Fine Configuration</h3>
-            <p className="text-xs text-surface-400 mb-4">Fines apply <strong>only to students</strong>. Teachers and staff are marked late without fines.</p>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm text-surface-300 mb-1">Late Grace Period (Minutes)</label>
-                <input
+          <div className="lg:col-span-6">
+            <Card
+              title="Late Entry & Auto Fine Policy"
+              subtitle="Fines apply only to students. Faculty and staff are logged without fines."
+              className="space-y-5"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field
+                  label="Late Grace Period (Minutes)"
                   type="number"
-                  value={settings?.lateGraceMinutes ?? 15}
-                  onChange={e => setSettings({ ...settings, lateGraceMinutes: Number(e.target.value) })}
-                  className="input-field"
                   placeholder="15"
+                  value={settings?.lateGraceMinutes ?? 15}
+                  onChange={(e) =>
+                    setSettings({ ...settings, lateGraceMinutes: Number(e.target.value) })
+                  }
                 />
-              </div>
-              <div>
-                <label className="block text-sm text-surface-300 mb-1">Student Late Fine Amount (PKR)</label>
-                <input
+                <Field
+                  label="Student Late Fine Amount (PKR)"
                   type="number"
-                  value={settings?.lateFineAmount ?? 100}
-                  onChange={e => setSettings({ ...settings, lateFineAmount: Number(e.target.value) })}
-                  className="input-field"
                   placeholder="100"
+                  value={settings?.lateFineAmount ?? 100}
+                  onChange={(e) =>
+                    setSettings({ ...settings, lateFineAmount: Number(e.target.value) })
+                  }
                 />
               </div>
-              <div>
-                <label className="block text-sm text-surface-300 mb-1">Auto Fine Students</label>
-                <select
-                  value={settings?.autoLateFine !== false ? 'true' : 'false'}
-                  onChange={e => setSettings({ ...settings, autoLateFine: e.target.value === 'true' })}
-                  className="input-field"
-                >
-                  <option value="true">Enabled (Auto-issue fine on late scan)</option>
-                  <option value="false">Disabled (Log late without fine)</option>
-                </select>
+
+              <Select
+                label="Automatic Fine Enforcement"
+                value={settings?.autoLateFine !== false ? 'true' : 'false'}
+                onChange={(opt) =>
+                  setSettings({
+                    ...settings,
+                    autoLateFine: (typeof opt === 'object' ? opt.id : opt) === 'true',
+                  })
+                }
+                options={AUTO_FINE_OPTIONS}
+              />
+
+              <div className="border-t border-s-subtle pt-4 flex justify-end">
+                <Button isPrimary icon="check" onClick={handleSave} disabled={saving}>
+                  Save Gate & Fine Policy
+                </Button>
               </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end pt-4">
-            <button onClick={handleSave} className="btn-primary">Save Timetable & Gate Settings</button>
+            </Card>
           </div>
         </div>
       )}
 
-      {/* AI Configuration Tab */}
-      {activeTab === 'ai' && (
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-1">AI API Configuration</h3>
-            <p className="text-white/30 text-xs">Configure your Gemini AI API key to enable AI-powered features</p>
+      {/* Tab 3: Public Profile */}
+      {activeTab === 'profile' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+          <div className="lg:col-span-7 space-y-3">
+            <Card
+              title="Profile Metadata"
+              subtitle="Displayed on your public institutional directory listing"
+              className="space-y-4"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field
+                  label="Institutional Tagline"
+                  placeholder="Excellence in Education"
+                  value={settings?.tagline || ''}
+                  onChange={(e) => setSettings({ ...settings, tagline: e.target.value })}
+                />
+                <Field
+                  label="Established Year"
+                  type="number"
+                  placeholder="1989"
+                  value={settings?.establishedYear || ''}
+                  onChange={(e) =>
+                    setSettings({ ...settings, establishedYear: Number(e.target.value) })
+                  }
+                />
+              </div>
+              <Field
+                label="About Description"
+                textarea
+                rows={4}
+                placeholder="Write a brief introduction about your college..."
+                value={settings?.about || ''}
+                onChange={(e) => setSettings({ ...settings, about: e.target.value })}
+              />
+            </Card>
+
+            <Card
+              title="Visual Branding URLs"
+              subtitle="Set your college logo and cover banner URLs"
+              className="space-y-4"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field
+                  label="Cover Photo URL"
+                  placeholder="https://images.unsplash.com/..."
+                  value={settings?.coverPhoto || ''}
+                  onChange={(e) => setSettings({ ...settings, coverPhoto: e.target.value })}
+                />
+                <Field
+                  label="Logo URL"
+                  placeholder="https://images.unsplash.com/..."
+                  value={settings?.logo || ''}
+                  onChange={(e) => setSettings({ ...settings, logo: e.target.value })}
+                />
+              </div>
+            </Card>
           </div>
-          <ApiKeyManager />
+
+          <div className="lg:col-span-5">
+            <Card
+              title="Contact & Campus Location"
+              subtitle="Official communication channels and physical address"
+              className="space-y-4"
+            >
+              <Field
+                label="Official Email Address"
+                type="email"
+                value={settings?.email || ''}
+                onChange={(e) => setSettings({ ...settings, email: e.target.value })}
+              />
+              <Field
+                label="Phone Number"
+                value={settings?.phone || ''}
+                onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
+              />
+              <Field
+                label="Website URL"
+                value={settings?.website || ''}
+                onChange={(e) => setSettings({ ...settings, website: e.target.value })}
+              />
+              <Field
+                label="City"
+                value={settings?.city || ''}
+                onChange={(e) => setSettings({ ...settings, city: e.target.value })}
+              />
+              <Field
+                label="Campus Address"
+                value={settings?.address || ''}
+                onChange={(e) => setSettings({ ...settings, address: e.target.value })}
+              />
+
+              <div className="border-t border-s-subtle pt-4 flex justify-end">
+                <Button isPrimary icon="check" onClick={handleSave} disabled={saving}>
+                  Save Profile Details
+                </Button>
+              </div>
+            </Card>
+          </div>
         </div>
       )}
+
+      {/* Tab 4: AI Configuration */}
+      {activeTab === 'ai' && <ApiKeyManager />}
     </div>
   );
 };

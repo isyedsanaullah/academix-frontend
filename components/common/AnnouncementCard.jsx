@@ -3,17 +3,10 @@ import {
   ANNOUNCEMENT_CATEGORIES,
   ANNOUNCEMENT_PRIORITIES,
   ANNOUNCEMENT_AUDIENCES,
-  CATEGORY_COLORS,
-  PRIORITY_COLORS,
-  REFINEMENT_ACTIONS
+  REFINEMENT_ACTIONS,
 } from '../../config/announcementConstants';
-import {
-  HiOutlineSparkles, HiOutlineCheckCircle, HiOutlineExclamationCircle,
-  HiOutlineCalendar, HiOutlineClock, HiOutlinePencilAlt,
-  HiOutlineCloudUpload, HiOutlineSave, HiOutlineXCircle,
-  HiOutlineChevronDown, HiOutlineChevronUp, HiOutlinePaperClip,
-  HiOutlineDuplicate, HiOutlineEye
-} from 'react-icons/hi';
+import Button from '../ui/Button';
+import Icon from '../Icon';
 
 const AnnouncementCard = ({
   announcement,
@@ -24,7 +17,7 @@ const AnnouncementCard = ({
   onRefine,
   onEditChange,
   onCancel,
-  authorName = 'Administrator'
+  authorName = 'Administrator',
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [showAiReasoning, setShowAiReasoning] = useState(false);
@@ -46,27 +39,30 @@ const AnnouncementCard = ({
     warnings: [],
     reasoning: '',
     attachments: [],
-    ...announcement
+    ...announcement,
   });
 
   const [versions, setVersions] = useState([
-    { v: 1, title: announcement?.title || '', content: announcement?.content || '', timestamp: new Date() }
+    {
+      v: 1,
+      title: announcement?.title || '',
+      content: announcement?.content || '',
+      timestamp: new Date(),
+    },
   ]);
 
   useEffect(() => {
     if (announcement) {
-      setDraft(prev => ({ ...prev, ...announcement }));
+      setDraft((prev) => ({ ...prev, ...announcement }));
     }
   }, [announcement]);
 
-  // Handle local form edits
   const handleChange = (field, value) => {
     const updated = { ...draft, [field]: value };
     setDraft(updated);
     if (onEditChange) onEditChange(updated);
   };
 
-  // Version tracking on major changes
   const saveVersion = () => {
     const newVer = {
       v: versions.length + 1,
@@ -75,9 +71,9 @@ const AnnouncementCard = ({
       category: draft.category,
       priority: draft.priority,
       audience: draft.audience,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
-    setVersions(prev => [...prev, newVer]);
+    setVersions((prev) => [...prev, newVer]);
   };
 
   const restoreVersion = (verObj) => {
@@ -87,13 +83,20 @@ const AnnouncementCard = ({
       content: verObj.content,
       category: verObj.category || draft.category,
       priority: verObj.priority || draft.priority,
-      audience: verObj.audience || draft.audience
+      audience: verObj.audience || draft.audience,
     };
     setDraft(restored);
     if (onEditChange) onEditChange(restored);
   };
 
-  // Keyboard Shortcuts Handler
+  const isValidTitle = Boolean(draft.title && draft.title.trim().length >= 3);
+  const isValidContent = Boolean(draft.content && draft.content.trim().length >= 5);
+  const isValidCategory = ANNOUNCEMENT_CATEGORIES.includes(draft.category);
+  const isValidPriority = ANNOUNCEMENT_PRIORITIES.includes(draft.priority);
+  const isValidAudience = ANNOUNCEMENT_AUDIENCES.includes(draft.audience);
+  const isValid =
+    isValidTitle && isValidContent && isValidCategory && isValidPriority && isValidAudience;
+
   useEffect(() => {
     if (mode !== 'preview') return;
     const handleKeyDown = (e) => {
@@ -113,67 +116,43 @@ const AnnouncementCard = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [draft, mode, isEditing]);
+  }, [draft, mode, isEditing, isValid, onPublish, onSaveDraft, onRefine]);
 
-  // Pre-Publish Validation Check
-  const isValidTitle = Boolean(draft.title && draft.title.trim().length >= 3);
-  const isValidContent = Boolean(draft.content && draft.content.trim().length >= 5);
-  const isValidCategory = ANNOUNCEMENT_CATEGORIES.includes(draft.category);
-  const isValidPriority = ANNOUNCEMENT_PRIORITIES.includes(draft.priority);
-  const isValidAudience = ANNOUNCEMENT_AUDIENCES.includes(draft.audience);
-  const isValid = isValidTitle && isValidContent && isValidCategory && isValidPriority && isValidAudience;
-
-  const catStyle = CATEGORY_COLORS[draft.category] || CATEGORY_COLORS.General;
-  const prioStyle = PRIORITY_COLORS[draft.priority] || PRIORITY_COLORS.Medium;
+  const prioClass =
+    draft.priority === 'Urgent' || draft.priority === 'High'
+      ? 'label-red'
+      : draft.priority === 'Medium'
+      ? 'label-yellow'
+      : 'label-gray';
 
   return (
-    <div className={`w-full rounded-2xl border transition-all shadow-lg overflow-hidden ${
-      mode === 'preview'
-        ? 'bg-[#0f172a]/95 border-indigo-500/30 text-white'
-        : 'bg-[#111827] border-white/10 text-white'
-    }`}>
+    <div className="w-full rounded-4xl border border-s-stroke2 bg-b-surface2 shadow-depth overflow-hidden">
       {/* Header Banner */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3.5 bg-slate-900/80 border-b border-white/10">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-ping" />
-          <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">
-            {mode === 'preview' ? '📢 Announcement Preview' : 'Announcement Notice'}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-6 py-4 bg-b-surface1 border-b border-s-subtle">
+        <div className="flex items-center gap-2.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[var(--brand-blue)] animate-pulse" />
+          <span className="text-caption font-bold uppercase tracking-wider text-[var(--brand-blue)]">
+            {mode === 'preview' ? 'Announcement Preview' : 'Announcement Notice'}
           </span>
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-            draft.status === 'Published'
-              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-              : draft.status === 'Scheduled'
-              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-              : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-          }`}>
+          <span
+            className={`label uppercase ${
+              draft.status === 'Published'
+                ? 'label-green'
+                : draft.status === 'Scheduled'
+                ? 'label-yellow'
+                : 'label-blue'
+            }`}
+          >
             {draft.status || 'Draft'}
           </span>
         </div>
 
-        {/* Badges Bar */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {/* Category Badge */}
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg border ${catStyle.bg} ${catStyle.text} ${catStyle.border}`}>
-            {draft.category}
-          </span>
-
-          {/* Priority Badge */}
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg ${prioStyle.badge}`}>
-            {draft.priority} Priority
-          </span>
-
-          {/* Audience Badge */}
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-white/80">
-            🎯 {draft.audience}
-          </span>
-
-          {/* Confidence Score Badge */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="label label-blue">{draft.category}</span>
+          <span className={`label ${prioClass}`}>{draft.priority} Priority</span>
+          <span className="label label-gray">{draft.audience}</span>
           {mode === 'preview' && draft.confidenceScore !== undefined && (
-            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
-              draft.confidenceScore >= 80
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-            }`}>
+            <span className={`label ${draft.confidenceScore >= 80 ? 'label-green' : 'label-yellow'}`}>
               {draft.confidenceScore}% Confidence
             </span>
           )}
@@ -181,58 +160,80 @@ const AnnouncementCard = ({
       </div>
 
       {/* Warning Banners */}
-      {mode === 'preview' && (
-        <div className="space-y-1 p-3 px-5 bg-slate-950/40 border-b border-white/5">
-          {/* Low Confidence Warning */}
-          {draft.confidenceScore < 80 && (
-            <div className="flex items-center gap-2 text-xs font-medium text-amber-300 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20">
-              <HiOutlineExclamationCircle size={18} className="shrink-0 text-amber-400" />
-              <span>⚠️ Low confidence output: Please review all announcement fields carefully before publishing.</span>
-            </div>
-          )}
+      {mode === 'preview' &&
+        (draft.confidenceScore < 80 ||
+          draft.missingFields?.length > 0 ||
+          draft.warnings?.length > 0) && (
+          <div className="space-y-2 p-4 px-6 bg-b-surface1 border-b border-s-subtle">
+            {draft.confidenceScore < 80 && (
+              <div className="flex items-center gap-2 text-caption font-medium text-[var(--warning)] bg-[var(--warning-soft)] p-3 rounded-2xl border border-[var(--warning)]/25">
+                <Icon name="alert" size={18} className="shrink-0 fill-current" />
+                <span>
+                  Low confidence output: Please review all announcement fields carefully before
+                  publishing.
+                </span>
+              </div>
+            )}
 
-          {/* Missing Information Alert */}
-          {draft.missingFields && draft.missingFields.length > 0 && (
-            <div className="flex items-center gap-2 text-xs font-medium text-red-300 bg-red-500/10 p-2.5 rounded-xl border border-red-500/20">
-              <HiOutlineExclamationCircle size={18} className="shrink-0 text-red-400" />
-              <span>⚠️ Missing details detected ({draft.missingFields.join(', ')}). Please complete missing details or edit fields below.</span>
-            </div>
-          )}
+            {draft.missingFields && draft.missingFields.length > 0 && (
+              <div className="flex items-center gap-2 text-caption font-medium text-[var(--danger)] bg-[var(--danger-soft)] p-3 rounded-2xl border border-[var(--danger)]/25">
+                <Icon name="alert" size={18} className="shrink-0 fill-current" />
+                <span>
+                  Missing details detected ({draft.missingFields.join(', ')}). Please complete
+                  missing details below.
+                </span>
+              </div>
+            )}
 
-          {/* Warnings List */}
-          {draft.warnings && draft.warnings.map((warn, i) => (
-            <div key={i} className="flex items-center gap-2 text-xs font-medium text-amber-300 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20">
-              <HiOutlineExclamationCircle size={18} className="shrink-0 text-amber-400" />
-              <span>{warn}</span>
-            </div>
-          ))}
-        </div>
-      )}
+            {draft.warnings &&
+              draft.warnings.map((warn, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2 text-caption font-medium text-[var(--warning)] bg-[var(--warning-soft)] p-3 rounded-2xl border border-[var(--warning)]/25"
+                >
+                  <Icon name="alert" size={18} className="shrink-0 fill-current" />
+                  <span>{warn}</span>
+                </div>
+              ))}
+          </div>
+        )}
 
       {/* Card Content Area */}
-      <div className="p-5 md:p-6 space-y-4">
+      <div className="p-6 space-y-4">
         {!isEditing ? (
-          /* WYSIWYG View Mode */
           <div className="space-y-3">
-            <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight leading-snug">
-              {draft.title || <span className="italic text-white/30">Untitled Announcement</span>}
+            <h2 className="text-h5 text-t-primary">
+              {draft.title || <span className="italic text-t-tertiary">Untitled Announcement</span>}
             </h2>
 
-            <div className="text-sm md:text-base text-slate-200 leading-relaxed max-w-none break-words whitespace-pre-wrap font-sans">
-              {draft.content ? draft.content.replace(/<p[^>]*>/gi, '').replace(/<\/p>/gi, '\n').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '').trim() : 'No content provided.'}
+            <div className="text-body-2 text-t-secondary leading-relaxed max-w-none break-words whitespace-pre-wrap">
+              {draft.content
+                ? draft.content
+                    .replace(/<p[^>]*>/gi, '')
+                    .replace(/<\/p>/gi, '\n')
+                    .replace(/<br\s*\/?>/gi, '\n')
+                    .replace(/<[^>]*>/g, '')
+                    .trim()
+                : 'No content provided.'}
             </div>
 
-            {/* Attachments List */}
             {draft.attachments && draft.attachments.length > 0 && (
-              <div className="pt-3 border-t border-white/10">
-                <p className="text-xs font-semibold text-white/50 mb-1 flex items-center gap-1">
-                  <HiOutlinePaperClip size={14} /> Attached Documents ({draft.attachments.length})
+              <div className="pt-3 border-t border-s-subtle">
+                <p className="text-caption font-semibold text-t-secondary mb-2 flex items-center gap-1.5">
+                  <Icon name="paperclip" size={14} className="fill-current" /> Attached Documents (
+                  {draft.attachments.length})
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {draft.attachments.map((file, idx) => (
-                    <a key={idx} href={file} target="_blank" rel="noopener noreferrer"
-                      className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-medium text-indigo-300 hover:bg-white/10 transition flex items-center gap-1.5">
-                      <HiOutlinePaperClip size={12} /> {typeof file === 'string' ? file.split('/').pop() : `Attachment ${idx+1}`}
+                    <a
+                      key={idx}
+                      href={file}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-2xl bg-b-surface1 border border-s-stroke2 text-caption font-medium text-[var(--brand-blue)] hover:border-s-highlight transition flex items-center gap-1.5"
+                    >
+                      <Icon name="paperclip" size={12} className="fill-current" />{' '}
+                      {typeof file === 'string' ? file.split('/').pop() : `Attachment ${idx + 1}`}
                     </a>
                   ))}
                 </div>
@@ -240,85 +241,112 @@ const AnnouncementCard = ({
             )}
           </div>
         ) : (
-          /* Interactive Inline Edit Mode */
-          <div className="space-y-4 bg-slate-900/60 p-4 rounded-xl border border-indigo-500/30">
-            <div className="flex items-center justify-between border-b border-white/10 pb-2">
-              <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1">
-                <HiOutlinePencilAlt size={14} /> Edit Announcement Fields
+          <div className="space-y-4 bg-b-surface1 p-5 rounded-3xl border border-s-stroke2">
+            <div className="flex items-center justify-between border-b border-s-subtle pb-3">
+              <span className="text-caption font-bold text-[var(--brand-blue)] uppercase tracking-wider flex items-center gap-1.5">
+                <Icon name="edit" size={14} className="fill-current" /> Edit Announcement Fields
               </span>
-              <button onClick={() => { setIsEditing(false); saveVersion(); }}
-                className="text-xs font-semibold px-3 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition">
+              <Button
+                isPrimary
+                size="sm"
+                onClick={() => {
+                  setIsEditing(false);
+                  saveVersion();
+                }}
+              >
                 Done Editing
-              </button>
+              </Button>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-white/70 mb-1">Announcement Title</label>
+              <label className="block text-sub-title-2 text-t-primary mb-1.5">
+                Announcement Title
+              </label>
               <input
                 type="text"
                 value={draft.title}
-                onChange={e => handleChange('title', e.target.value)}
+                onChange={(e) => handleChange('title', e.target.value)}
                 placeholder="Enter title..."
-                className="w-full px-3 py-2 bg-slate-950 border border-white/15 rounded-lg text-sm text-white focus:border-indigo-500 outline-none"
+                className="input-field"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-white/70 mb-1">Announcement Body Text</label>
+              <label className="block text-sub-title-2 text-t-primary mb-1.5">
+                Announcement Body Text
+              </label>
               <textarea
-                value={draft.content ? draft.content.replace(/<p[^>]*>/gi, '').replace(/<\/p>/gi, '\n').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '').trim() : ''}
-                onChange={e => handleChange('content', e.target.value)}
+                value={
+                  draft.content
+                    ? draft.content
+                        .replace(/<p[^>]*>/gi, '')
+                        .replace(/<\/p>/gi, '\n')
+                        .replace(/<br\s*\/?>/gi, '\n')
+                        .replace(/<[^>]*>/g, '')
+                        .trim()
+                    : ''
+                }
+                onChange={(e) => handleChange('content', e.target.value)}
                 placeholder="Enter notice details..."
                 rows={5}
-                className="w-full px-3 py-2 bg-slate-950 border border-white/15 rounded-lg text-sm text-white focus:border-indigo-500 outline-none font-sans text-xs"
+                className="input-field"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-white/70 mb-1">Category</label>
+                <label className="block text-sub-title-2 text-t-primary mb-1.5">Category</label>
                 <select
                   value={draft.category}
-                  onChange={e => handleChange('category', e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-white/15 rounded-lg text-xs text-white outline-none">
-                  {ANNOUNCEMENT_CATEGORIES.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
+                  onChange={(e) => handleChange('category', e.target.value)}
+                  className="input-field"
+                >
+                  {ANNOUNCEMENT_CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-white/70 mb-1">Priority</label>
+                <label className="block text-sub-title-2 text-t-primary mb-1.5">Priority</label>
                 <select
                   value={draft.priority}
-                  onChange={e => handleChange('priority', e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-white/15 rounded-lg text-xs text-white outline-none">
-                  {ANNOUNCEMENT_PRIORITIES.map(prio => (
-                    <option key={prio} value={prio}>{prio}</option>
+                  onChange={(e) => handleChange('priority', e.target.value)}
+                  className="input-field"
+                >
+                  {ANNOUNCEMENT_PRIORITIES.map((prio) => (
+                    <option key={prio} value={prio}>
+                      {prio}
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-white/70 mb-1">Audience</label>
+                <label className="block text-sub-title-2 text-t-primary mb-1.5">Audience</label>
                 <select
                   value={draft.audience}
-                  onChange={e => handleChange('audience', e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-white/15 rounded-lg text-xs text-white outline-none">
-                  {ANNOUNCEMENT_AUDIENCES.map(aud => (
-                    <option key={aud} value={aud}>{aud}</option>
+                  onChange={(e) => handleChange('audience', e.target.value)}
+                  className="input-field"
+                >
+                  {ANNOUNCEMENT_AUDIENCES.map((aud) => (
+                    <option key={aud} value={aud}>
+                      {aud}
+                    </option>
                   ))}
                 </select>
               </div>
             </div>
 
             <div className="flex items-center gap-4 pt-1">
-              <label className="flex items-center gap-2 cursor-pointer text-xs text-white/80">
+              <label className="flex items-center gap-2 cursor-pointer text-caption text-t-secondary">
                 <input
                   type="checkbox"
                   checked={draft.isPublic}
-                  onChange={e => handleChange('isPublic', e.target.checked)}
-                  className="rounded bg-slate-950 border-white/20 text-indigo-600 focus:ring-0"
+                  onChange={(e) => handleChange('isPublic', e.target.checked)}
+                  className="rounded border-s-stroke2 text-[var(--brand-blue)]"
                 />
                 Public Notice (Visible on Website)
               </label>
@@ -326,75 +354,109 @@ const AnnouncementCard = ({
           </div>
         )}
 
-        {/* Live Character & Metrics Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-white/40 pt-2 border-t border-white/10">
+        {/* Metrics Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 text-caption text-t-tertiary pt-3 border-t border-s-subtle">
           <div className="flex items-center gap-4">
-            <span>Title: <strong className="text-white/70">{draft.title?.length || 0}</strong> chars</span>
-            <span>Content: <strong className="text-white/70">{draft.content?.replace(/<[^>]*>/g, '')?.length || 0}</strong> chars</span>
+            <span>
+              Title: <strong className="text-t-primary">{draft.title?.length || 0}</strong> chars
+            </span>
+            <span>
+              Content:{' '}
+              <strong className="text-t-primary">
+                {draft.content?.replace(/<[^>]*>/g, '')?.length || 0}
+              </strong>{' '}
+              chars
+            </span>
             {draft.viewCount !== undefined && (
-              <span className="flex items-center gap-1 text-indigo-300">
-                <HiOutlineEye size={14} /> {draft.viewCount} Views
+              <span className="flex items-center gap-1 text-[var(--brand-blue)]">
+                <Icon name="eye" size={14} className="fill-current" /> {draft.viewCount} Views
               </span>
             )}
           </div>
 
           <div className="flex items-center gap-3">
-            <span>By: <strong className="text-white/70">{authorName}</strong></span>
-            {mode === 'preview' && (
-              <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded text-white/30">
-                Ctrl+Enter: Publish | Ctrl+S: Draft | Ctrl+E: Enhance
-              </span>
-            )}
+            <span>
+              By: <strong className="text-t-primary">{authorName}</strong>
+            </span>
           </div>
         </div>
 
-        {/* Collapsible AI Decision Reasoning Panel */}
+        {/* AI Reasoning */}
         {mode === 'preview' && draft.reasoning && (
-          <div className="border border-white/10 rounded-xl bg-slate-950/60 overflow-hidden">
+          <div className="border border-s-subtle rounded-2xl bg-b-surface1 overflow-hidden">
             <button
+              type="button"
               onClick={() => setShowAiReasoning(!showAiReasoning)}
-              className="w-full flex items-center justify-between px-4 py-2 text-xs font-semibold text-indigo-300 hover:bg-white/5 transition">
+              className="w-full flex items-center justify-between px-4 py-2.5 text-caption font-semibold text-[var(--brand-blue)] hover:bg-b-highlight transition"
+            >
               <span className="flex items-center gap-1.5">
-                <HiOutlineSparkles size={14} /> AI Decision & Rule Engine Explanation
+                <Icon name="sparkles" size={14} className="fill-current" /> AI Decision & Rule
+                Engine Explanation
               </span>
-              {showAiReasoning ? <HiOutlineChevronUp size={14} /> : <HiOutlineChevronDown size={14} />}
+              <Icon
+                name="chevron"
+                size={14}
+                className={`fill-current transition-transform ${
+                  showAiReasoning ? 'rotate-180' : ''
+                }`}
+              />
             </button>
             {showAiReasoning && (
-              <div className="p-4 pt-2 text-xs text-slate-300 space-y-1.5 border-t border-white/5">
-                <p><strong>Category Decision:</strong> {draft.category}</p>
-                <p><strong>Priority Decision:</strong> {draft.priority}</p>
-                <p><strong>Audience Mapping:</strong> {draft.audience}</p>
-                <p><strong>Rule Logic:</strong> {draft.reasoning}</p>
+              <div className="p-4 pt-2 text-caption text-t-secondary space-y-1.5 border-t border-s-subtle">
+                <p>
+                  <strong>Category Decision:</strong> {draft.category}
+                </p>
+                <p>
+                  <strong>Priority Decision:</strong> {draft.priority}
+                </p>
+                <p>
+                  <strong>Audience Mapping:</strong> {draft.audience}
+                </p>
+                <p>
+                  <strong>Rule Logic:</strong> {draft.reasoning}
+                </p>
               </div>
             )}
           </div>
         )}
 
-        {/* Collapsible Version History */}
+        {/* Version History */}
         {mode === 'preview' && versions.length > 1 && (
-          <div className="border border-white/10 rounded-xl bg-slate-950/60 overflow-hidden">
+          <div className="border border-s-subtle rounded-2xl bg-b-surface1 overflow-hidden">
             <button
+              type="button"
               onClick={() => setShowVersionHistory(!showVersionHistory)}
-              className="w-full flex items-center justify-between px-4 py-2 text-xs font-semibold text-white/60 hover:bg-white/5 transition">
+              className="w-full flex items-center justify-between px-4 py-2.5 text-caption font-semibold text-t-secondary hover:bg-b-highlight transition"
+            >
               <span className="flex items-center gap-1.5">
-                <HiOutlineClock size={14} /> Draft Version Trajectory ({versions.length} versions)
+                <Icon name="clock" size={14} className="fill-current" /> Draft Version Trajectory (
+                {versions.length} versions)
               </span>
-              {showVersionHistory ? <HiOutlineChevronUp size={14} /> : <HiOutlineChevronDown size={14} />}
+              <Icon
+                name="chevron"
+                size={14}
+                className={`fill-current transition-transform ${
+                  showVersionHistory ? 'rotate-180' : ''
+                }`}
+              />
             </button>
             {showVersionHistory && (
-              <div className="p-3 border-t border-white/5 space-y-2">
-                {versions.map(ver => (
-                  <div key={ver.v} className="flex items-center justify-between px-3 py-2 bg-white/5 rounded-lg text-xs">
+              <div className="p-3 border-t border-s-subtle space-y-2">
+                {versions.map((ver) => (
+                  <div
+                    key={ver.v}
+                    className="flex items-center justify-between px-3 py-2 bg-b-surface2 rounded-xl text-caption"
+                  >
                     <div>
-                      <span className="font-bold text-indigo-300">Version {ver.v}</span>
-                      <span className="text-white/40 ml-2">{new Date(ver.timestamp).toLocaleTimeString()}</span>
-                      <p className="text-white/70 truncate max-w-md">{ver.title}</p>
+                      <span className="font-bold text-[var(--brand-blue)]">Version {ver.v}</span>
+                      <span className="text-t-tertiary ml-2">
+                        {new Date(ver.timestamp).toLocaleTimeString()}
+                      </span>
+                      <p className="text-t-primary truncate max-w-md">{ver.title}</p>
                     </div>
-                    <button
-                      onClick={() => restoreVersion(ver)}
-                      className="px-2 py-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-semibold transition">
+                    <Button isStroke size="sm" onClick={() => restoreVersion(ver)}>
                       Restore
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -402,121 +464,124 @@ const AnnouncementCard = ({
           </div>
         )}
 
-        {/* Schedule Date Input Drawer */}
+        {/* Schedule Input */}
         {showScheduleInput && (
-          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center gap-3">
-            <HiOutlineCalendar size={20} className="text-amber-400 shrink-0" />
-            <div className="flex-1">
-              <label className="block text-xs font-bold text-amber-300 mb-1">Select Schedule Publish Date & Time</label>
+          <div className="p-4 bg-[var(--warning-soft)] border border-[var(--warning)]/30 rounded-2xl flex items-center gap-3 flex-wrap">
+            <Icon name="calendar" size={20} className="fill-[var(--warning)] shrink-0" />
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-caption font-bold text-t-primary mb-1">
+                Select Schedule Publish Date & Time
+              </label>
               <input
                 type="datetime-local"
                 value={draft.scheduledFor || ''}
-                onChange={e => handleChange('scheduledFor', e.target.value)}
-                className="px-3 py-1.5 bg-slate-950 border border-white/20 rounded text-xs text-white outline-none w-full"
+                onChange={(e) => handleChange('scheduledFor', e.target.value)}
+                className="input-field"
               />
             </div>
-            <button
+            <Button
+              isPrimary
+              size="sm"
+              disabled={!draft.scheduledFor}
               onClick={() => {
                 if (onSchedule) onSchedule(draft);
                 setShowScheduleInput(false);
               }}
-              disabled={!draft.scheduledFor}
-              className="px-3 py-2 bg-amber-500 text-slate-950 font-bold rounded-lg text-xs hover:bg-amber-400 disabled:opacity-40 transition shrink-0">
+            >
               Confirm Schedule
-            </button>
+            </Button>
           </div>
         )}
 
-        {/* Refinement Actions & Publishing Toolbar (Preview Mode & Draft Only) */}
+        {/* Publishing Toolbar */}
         {mode === 'preview' && (
-          <div className="pt-3 border-t border-white/10 space-y-3">
+          <div className="pt-3 border-t border-s-subtle space-y-3">
             {draft.status === 'Published' ? (
-              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
-                  <HiOutlineCheckCircle size={20} />
+              <div className="p-3.5 bg-[var(--brand-green-soft)] border border-[var(--brand-green)]/30 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center gap-2 text-caption font-bold text-[var(--brand-green-text)]">
+                  <Icon name="check-circle" size={18} className="fill-current" />
                   <span>Announcement Published & Active</span>
                 </div>
-                <span className="text-[11px] text-emerald-300/60 font-medium">Visible to {draft.audience}</span>
+                <span className="text-caption text-t-secondary">Visible to {draft.audience}</span>
               </div>
             ) : draft.status === 'Scheduled' ? (
-              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-amber-400">
-                  <HiOutlineCalendar size={20} />
-                  <span>Scheduled for {draft.scheduledFor ? new Date(draft.scheduledFor).toLocaleString() : 'Selected Time'}</span>
+              <div className="p-3.5 bg-[var(--warning-soft)] border border-[var(--warning)]/30 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center gap-2 text-caption font-bold text-[var(--warning)]">
+                  <Icon name="calendar" size={18} className="fill-current" />
+                  <span>
+                    Scheduled for{' '}
+                    {draft.scheduledFor
+                      ? new Date(draft.scheduledFor).toLocaleString()
+                      : 'Selected Time'}
+                  </span>
                 </div>
-                <span className="text-[11px] text-amber-300/60 font-medium">Auto-publishing</span>
+                <span className="text-caption text-t-secondary">Auto-publishing</span>
               </div>
             ) : (
               <>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white/50 uppercase tracking-wider flex items-center gap-1">
-                    <HiOutlineSparkles size={14} className="text-indigo-400" /> AI Refinements
+                  <span className="text-caption font-bold text-t-secondary uppercase tracking-wider flex items-center gap-1.5">
+                    <Icon name="sparkles" size={14} className="fill-[var(--brand-blue)]" /> AI
+                    Refinements
                   </span>
                   {!isEditing && (
-                    <button
+                    <Button
+                      isGhost
+                      size="sm"
+                      icon="edit"
                       onClick={() => setIsEditing(true)}
-                      className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
-                      <HiOutlinePencilAlt size={14} /> Manual Edit
-                    </button>
+                    >
+                      Manual Edit
+                    </Button>
                   )}
                 </div>
 
                 <div className="flex flex-wrap gap-1.5">
-                  {REFINEMENT_ACTIONS.map(act => (
+                  {REFINEMENT_ACTIONS.map((act) => (
                     <button
                       key={act.id}
+                      type="button"
                       onClick={() => onRefine && onRefine(act.id, act.label)}
-                      className="px-2.5 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-300 rounded-lg text-xs font-medium transition">
+                      className="px-3 py-1.5 bg-[var(--brand-blue-soft)] hover:bg-[var(--brand-blue)]/15 text-[var(--brand-blue)] rounded-full text-caption font-semibold transition"
+                    >
                       {act.label}
                     </button>
                   ))}
                 </div>
 
-                {/* Main Action Buttons */}
                 <div className="flex flex-wrap items-center justify-end gap-2.5 pt-2">
                   {onCancel && (
-                    <button
-                      onClick={onCancel}
-                      className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white/70 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
-                      <HiOutlineXCircle size={16} /> Cancel
-                    </button>
+                    <Button isStroke size="sm" icon="close" onClick={onCancel}>
+                      Cancel
+                    </Button>
                   )}
-
                   {onSaveDraft && (
-                    <button
-                      onClick={() => onSaveDraft(draft)}
-                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border border-white/10">
-                      <HiOutlineSave size={16} /> Save Draft
-                    </button>
+                    <Button isStroke size="sm" icon="save" onClick={() => onSaveDraft(draft)}>
+                      Save Draft
+                    </Button>
                   )}
-
                   {onSchedule && (
-                    <button
+                    <Button
+                      isStroke
+                      size="sm"
+                      icon="calendar"
                       onClick={() => setShowScheduleInput(!showScheduleInput)}
-                      className="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border border-amber-500/30">
-                      <HiOutlineCalendar size={16} /> Schedule
-                    </button>
+                    >
+                      Schedule
+                    </Button>
                   )}
-
                   {onPublish && (
-                    <button
-                      onClick={() => onPublish(draft)}
+                    <Button
+                      isPrimary
+                      size="sm"
+                      icon="upload"
                       disabled={!isValid}
-                      className={`px-5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg ${
-                        isValid
-                          ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white hover:opacity-90 cursor-pointer'
-                          : 'bg-white/10 text-white/30 cursor-not-allowed border border-white/5'
-                      }`}>
-                      <HiOutlineCloudUpload size={18} /> Publish Now
-                    </button>
+                      onClick={() => onPublish(draft)}
+                    >
+                      Publish Now
+                    </Button>
                   )}
                 </div>
-
-                {!isValid && (
-                  <p className="text-[11px] text-red-400 text-right">
-                    ⚠️ Complete required fields (Title, Content, Category, Priority, Audience) to enable Publish.
-                  </p>
-                )}
               </>
             )}
           </div>

@@ -105,3 +105,4 @@ export default function MobileBottomBar({ role, onOpenMore }) {
     </nav>
   );
 }
+

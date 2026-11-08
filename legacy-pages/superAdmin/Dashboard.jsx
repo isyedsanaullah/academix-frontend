@@ -3,25 +3,29 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import {
-  HiOutlineOfficeBuilding,
-  HiOutlineUserGroup,
-  HiOutlineAcademicCap,
-  HiOutlineShieldCheck,
-  HiOutlineExclamation,
-  HiOutlineTrendingUp,
-  HiOutlineArrowRight,
-  HiOutlineChartBar
-} from 'react-icons/hi';
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import RecentActivityWidget from '../../components/activity/RecentActivityWidget';
 import CollegesHubLoader from '../../components/common/CollegesHubLoader';
+import PlanBadge from '../../components/common/PlanBadge';
+import Card from '../../components/ui/Card';
+import Button from '../../components/ui/Button';
+import Icon from '../../components/Icon';
 
 const CustomChartTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="rounded-xl border border-line bg-card p-2.5 text-xs shadow-lg">
-        <p className="mb-1 font-semibold text-fg-muted">{label}</p>
-        <p className="font-bold tabular-nums text-accent">
+      <div className="rounded-2xl border border-s-stroke2 bg-b-surface2 p-3 text-caption shadow-depth">
+        <p className="mb-1 font-semibold text-t-secondary">{label}</p>
+        <p className="font-bold tabular-nums text-[var(--brand-blue)]">
           {payload[0].name}: {payload[0].value}
         </p>
       </div>
@@ -37,11 +41,11 @@ const SuperAdminDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchAll = async () => {
       try {
         const [dash, ov] = await Promise.all([
           api.get('/super-admin/dashboard'),
-          api.get('/analytics/overview').catch(() => ({ data: { data: null } }))
+          api.get('/analytics/overview').catch(() => ({ data: { data: null } })),
         ]);
         setData(dash.data.data);
         setAnalytics(ov.data.data);
@@ -51,13 +55,17 @@ const SuperAdminDashboard = () => {
         setLoading(false);
       }
     };
-    fetch();
+    fetchAll();
   }, []);
 
   if (loading) {
     return (
       <div className="page flex items-center justify-center min-h-[420px]" aria-busy="true">
-        <CollegesHubLoader size="md" text="Loading platform control center…" minHeight="min-h-[380px]" />
+        <CollegesHubLoader
+          size="md"
+          text="Loading platform control center…"
+          minHeight="min-h-[380px]"
+        />
       </div>
     );
   }
@@ -67,27 +75,74 @@ const SuperAdminDashboard = () => {
   const recentColleges = data?.recentColleges || [];
 
   const totalForPct = s.totalColleges || 1;
-  // Derived from existing numbers only: share of colleges that are active.
-  const activeShare = s.totalColleges ? Math.round(((s.activeColleges || 0) / s.totalColleges) * 100) : 0;
+  const activeShare = s.totalColleges
+    ? Math.round(((s.activeColleges || 0) / s.totalColleges) * 100)
+    : 0;
 
-  const cards = [
-    { label: 'Total Colleges', value: s.totalColleges || 0, icon: HiOutlineOfficeBuilding, tone: '' },
-    { label: 'Active Colleges', value: s.activeColleges || 0, icon: HiOutlineShieldCheck, tone: 'text-ok' },
-    { label: 'Total Users', value: s.totalUsers || 0, icon: HiOutlineUserGroup, tone: '' },
-    { label: 'Total Students', value: s.totalStudents || 0, icon: HiOutlineAcademicCap, tone: '' },
+  const kpiRibbon = [
+    {
+      label: 'Total Colleges',
+      value: s.totalColleges || 0,
+      icon: 'building',
+      tone: 'text-t-primary',
+    },
+    {
+      label: 'Active Colleges',
+      value: s.activeColleges || 0,
+      icon: 'shield',
+      tone: 'text-[var(--brand-green-text)]',
+    },
+    {
+      label: 'Total Users',
+      value: s.totalUsers || 0,
+      icon: 'users',
+      tone: 'text-t-primary',
+    },
+    {
+      label: 'Total Students',
+      value: s.totalStudents || 0,
+      icon: 'graduation-cap',
+      tone: 'text-t-primary',
+    },
     {
       label: 'Suspended',
       value: s.suspendedColleges || 0,
-      icon: HiOutlineExclamation,
-      tone: (s.suspendedColleges || 0) > 0 ? 'text-bad' : ''
+      icon: 'alert',
+      tone: (s.suspendedColleges || 0) > 0 ? 'text-[var(--danger)]' : 'text-t-primary',
     },
-    { label: 'Active Share', value: `${activeShare}%`, icon: HiOutlineTrendingUp, tone: '' },
+    {
+      label: 'Active Share',
+      value: `${activeShare}%`,
+      icon: 'trending-up',
+      tone: 'text-[var(--brand-blue)]',
+    },
   ];
 
   const planData = [
-    { name: 'Basic', count: plans.basic || 0, color: 'var(--chart-2)' },
-    { name: 'Premium', count: plans.premium || 0, color: 'var(--chart-3)' },
-    { name: 'Enterprise', count: plans.enterprise || 0, color: 'var(--chart-1)' },
+    {
+      id: 'starter',
+      name: 'Starter (Basic)',
+      count: (plans.starter || 0) + (plans.basic || 0),
+      color: 'var(--chart-2)',
+    },
+    {
+      id: 'standard',
+      name: 'Standard',
+      count: plans.standard || 0,
+      color: 'var(--chart-1)',
+    },
+    {
+      id: 'premium',
+      name: 'Premium (Plus)',
+      count: (plans.premium || 0) + (plans.plus || 0),
+      color: 'var(--chart-3)',
+    },
+    {
+      id: 'enterprise',
+      name: 'Enterprise',
+      count: plans.enterprise || 0,
+      color: 'var(--chart-4)',
+    },
   ];
 
   const hasGrowth = analytics?.monthlyRegistrations?.length > 0;
@@ -95,158 +150,199 @@ const SuperAdminDashboard = () => {
 
   return (
     <div className="page">
-
-      {/* ── 1. Page header ───────────────────────────────────────────── */}
+      {/* 1. Command Center Header */}
       <div className="page-head">
         <div className="min-w-0">
-          <h1 className="page-title">Super Admin Overview</h1>
-          <p className="page-sub">Global operational overview across all registered colleges</p>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="page-title">Platform Command Center</h1>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-linear-to-r from-[var(--brand-blue-soft)] to-[var(--brand-green-soft)] border border-s-stroke2 px-3 py-1 text-caption font-bold text-[var(--brand-blue)]">
+              <span className="w-2 h-2 rounded-full bg-[var(--brand-green)] animate-pulse" />
+              Global Multi-Tenant Control
+            </span>
+          </div>
+          <p className="page-sub">
+            Real-time operational telemetry, tenant subscriptions, and system-wide activity across
+            all registered colleges
+          </p>
         </div>
         <div className="page-actions">
-          <button type="button" onClick={() => navigate('/super-admin/colleges')} className="btn-primary">
-            <HiOutlineOfficeBuilding size={18} aria-hidden="true" />
-            <span>Manage Colleges</span>
-          </button>
+          <Button
+            isStroke
+            icon="bar-chart"
+            onClick={() => navigate('/super-admin/analytics')}
+          >
+            Analytics
+          </Button>
+          <Button
+            isPrimary
+            icon="building"
+            onClick={() => navigate('/super-admin/colleges')}
+          >
+            Manage Colleges
+          </Button>
         </div>
       </div>
 
-      {/* ── 2. KPI strip ─────────────────────────────────────────────── */}
-      <div className="stat-grid stat-grid-3">
-        {cards.map((c) => {
-          const IconComp = c.icon;
-          return (
-            <div key={c.label} className="stat-card">
-              <div className="stat-top">
-                <span className="stat-label truncate">{c.label}</span>
-                <span className="stat-icon">
-                  <IconComp size={18} aria-hidden="true" />
+      {/* 2. Denser 6-KPI Command Ribbon */}
+      <div className="rounded-4xl bg-b-surface2 border border-s-stroke2 p-2 shadow-depth">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2">
+          {kpiRibbon.map((c) => (
+            <div
+              key={c.label}
+              className="rounded-3xl bg-b-surface1 border border-s-subtle p-4 flex flex-col justify-between gap-2.5 transition-colors hover:border-s-stroke2"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-caption font-semibold text-t-secondary truncate">
+                  {c.label}
+                </span>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-b-surface2 border border-s-subtle text-[var(--brand-blue)]">
+                  <Icon name={c.icon} size={16} className="fill-current" aria-hidden="true" />
                 </span>
               </div>
-              <div className={`stat-value tabular-nums ${c.tone}`}>
+              <div className={`text-h4 font-mono tabular-nums ${c.tone}`}>
                 {typeof c.value === 'number' ? c.value.toLocaleString() : c.value}
               </div>
             </div>
-          );
-        })}
+          ))}
+        </div>
       </div>
 
-      {/* ── 3. Subscription plans & recent colleges ──────────────────── */}
+      {/* 3. Subscription Tier Distribution & Recently Onboarded Colleges */}
       <div className="split split-even">
-
-        {/* Subscription tier distribution */}
-        <div className="card min-w-0">
-          <div className="card-head">
-            <div className="card-title flex min-w-0 items-center gap-2">
-              <HiOutlineChartBar size={18} className="shrink-0 text-accent" aria-hidden="true" />
-              <span className="truncate">Subscription Tier Distribution</span>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3">
+        {/* Subscription Tier Distribution */}
+        <Card
+          title="Subscription Tier Distribution"
+          subtitle="Active tenant breakdown by subscription plan"
+          headContent={
+            <Button
+              isStroke
+              size="sm"
+              icon="arrow"
+              onClick={() => navigate('/super-admin/subscriptions')}
+            >
+              Subscriptions
+            </Button>
+          }
+        >
+          <div className="flex flex-col gap-4">
             {planData.map((p) => {
               const pct = Math.round((p.count / totalForPct) * 100);
               return (
-                <div key={p.name} className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between gap-2 text-xs">
-                    <span className="flex min-w-0 items-center gap-2 font-semibold text-fg">
-                      <span
-                        className="h-2 w-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: p.color }}
-                        aria-hidden="true"
-                      />
-                      <span className="truncate">{p.name}</span>
+                <div key={p.id} className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-2 text-caption">
+                    <span className="flex min-w-0 items-center gap-2.5 font-semibold text-t-primary">
+                      <PlanBadge plan={p.id} />
+                      <span className="truncate text-t-secondary">{p.name}</span>
                     </span>
-                    <span className="shrink-0 tabular-nums text-fg-muted">
+                    <span className="shrink-0 font-mono font-semibold tabular-nums text-t-primary">
                       {p.count} colleges ({pct}%)
                     </span>
                   </div>
                   <div className="progress" role="img" aria-label={`${p.name}: ${pct}%`}>
-                    <i style={{ width: `${pct}%`, background: p.color }} />
+                    <i style={{ width: `${Math.max(pct, p.count > 0 ? 6 : 0)}%`, background: p.color }} />
                   </div>
                 </div>
               );
             })}
           </div>
-        </div>
+        </Card>
 
-        {/* Recently onboarded colleges */}
-        <div className="card min-w-0">
-          <div className="card-head">
-            <div className="card-title flex min-w-0 items-center gap-2">
-              <HiOutlineOfficeBuilding size={18} className="shrink-0 text-accent" aria-hidden="true" />
-              <span className="truncate">Recently Onboarded Colleges</span>
-            </div>
-            <button
-              type="button"
+        {/* Recently Onboarded Colleges */}
+        <Card
+          title="Recently Onboarded Colleges"
+          subtitle="Latest tenant workspaces provisioned on the platform"
+          headContent={
+            <Button
+              isStroke
+              size="sm"
+              icon="arrow"
               onClick={() => navigate('/super-admin/colleges')}
-              className="btn-ghost btn-sm shrink-0"
             >
-              <span>View all</span>
-              <HiOutlineArrowRight size={14} aria-hidden="true" />
-            </button>
-          </div>
-
+              View All
+            </Button>
+          }
+        >
           {recentColleges.length === 0 ? (
             <div className="empty">No colleges registered yet</div>
           ) : (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2.5">
               {recentColleges.map((c) => (
-                <div key={c._id} className="flex items-center gap-2.5 rounded-xl bg-card-2 p-2.5">
-                  <div className="avatar shrink-0 uppercase" aria-hidden="true">
-                    {c.code?.slice(0, 2)}
+                <div
+                  key={c._id}
+                  onClick={() => navigate(`/super-admin/colleges/${c._id}`)}
+                  className="flex items-center gap-3.5 rounded-2xl border border-s-subtle bg-b-surface1 p-3 transition-colors hover:border-s-highlight cursor-pointer"
+                >
+                  <div
+                    className="avatar h-10 w-10 rounded-2xl shrink-0 uppercase font-mono text-caption"
+                    aria-hidden="true"
+                  >
+                    {c.code?.slice(0, 2) || 'CH'}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-fg" title={c.name}>
+                    <p className="truncate text-sub-title-2 text-t-primary" title={c.name}>
                       {c.name}
                     </p>
-                    <p className="truncate text-xs tabular-nums text-fg-muted">
-                      {c.code} · {c.totalStudents || 0} students
+                    <p className="truncate text-caption font-mono tabular-nums text-t-tertiary">
+                      {c.code} · {(c.totalStudents || 0).toLocaleString()} students
                     </p>
                   </div>
-                  <span
-                    className={`badge shrink-0 capitalize ${c.subscription?.status === 'active' ? 'badge-success' : 'badge-danger'}`}
-                  >
-                    {c.subscription?.status || 'inactive'}
-                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {c.subscription?.plan && (
+                      <PlanBadge
+                        plan={c.subscription.plan}
+                        status={c.subscription?.status || 'active'}
+                      />
+                    )}
+                    <span
+                      className={`label capitalize ${
+                        c.subscription?.status === 'active' ? 'label-green' : 'label-red'
+                      }`}
+                    >
+                      {c.subscription?.status || 'inactive'}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
-
+        </Card>
       </div>
 
-      {/* ── 4. Charts ────────────────────────────────────────────────── */}
+      {/* 4. Platform Telemetry Charts (Brand Blue + Brand Green) */}
       {(hasGrowth || hasLogins) && (
         <div className="split split-even">
           {hasGrowth && (
-            <div className="card min-w-0">
-              <div className="card-head">
-                <div className="card-title flex min-w-0 items-center gap-2">
-                  <HiOutlineTrendingUp size={18} className="shrink-0 text-accent" aria-hidden="true" />
-                  <span className="truncate">User Growth (12 months)</span>
-                </div>
-              </div>
-              <div className="min-w-0 text-fg-faint">
-                <ResponsiveContainer width="100%" height={220}>
-                  <AreaChart data={analytics.monthlyRegistrations} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+            <Card
+              title="User Growth (12 Months)"
+              subtitle="Cumulative platform user registrations"
+            >
+              <div className="h-56 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={analytics.monthlyRegistrations}
+                    margin={{ top: 8, right: 8, left: -12, bottom: 0 }}
+                  >
                     <defs>
-                      <linearGradient id="gU" x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient id="gPlatformUsers" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.35} />
                         <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.2} vertical={false} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--chart-grid)"
+                      vertical={false}
+                    />
                     <XAxis
                       dataKey="label"
-                      tick={{ fontSize: 10, fill: 'currentColor' }}
+                      tick={{ fontSize: 11, fill: 'var(--chart-axis)' }}
                       axisLine={false}
                       tickLine={false}
                       minTickGap={16}
                     />
                     <YAxis
-                      width={32}
-                      tick={{ fontSize: 10, fill: 'currentColor' }}
+                      width={36}
+                      tick={{ fontSize: 11, fill: 'var(--chart-axis)' }}
                       axisLine={false}
                       tickLine={false}
                     />
@@ -256,53 +352,64 @@ const SuperAdminDashboard = () => {
                       dataKey="count"
                       stroke="var(--chart-1)"
                       strokeWidth={2.5}
-                      fill="url(#gU)"
+                      fill="url(#gPlatformUsers)"
                       name="Users"
                     />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-            </div>
+            </Card>
           )}
 
           {hasLogins && (
-            <div className="card min-w-0">
-              <div className="card-head">
-                <div className="card-title flex min-w-0 items-center gap-2">
-                  <HiOutlineUserGroup size={18} className="shrink-0 text-accent" aria-hidden="true" />
-                  <span className="truncate">Daily Logins (30 days)</span>
-                </div>
-              </div>
-              <div className="min-w-0 text-fg-faint">
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={analytics.dailyLogins} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.2} vertical={false} />
+            <Card
+              title="Daily Logins (30 Days)"
+              subtitle="Authenticated sessions across all tenant portals"
+            >
+              <div className="h-56 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={analytics.dailyLogins}
+                    margin={{ top: 8, right: 8, left: -12, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--chart-grid)"
+                      vertical={false}
+                    />
                     <XAxis
                       dataKey="label"
-                      tick={{ fontSize: 10, fill: 'currentColor' }}
+                      tick={{ fontSize: 11, fill: 'var(--chart-axis)' }}
                       axisLine={false}
                       tickLine={false}
                       minTickGap={16}
                     />
                     <YAxis
-                      width={32}
-                      tick={{ fontSize: 10, fill: 'currentColor' }}
+                      width={36}
+                      tick={{ fontSize: 11, fill: 'var(--chart-axis)' }}
                       axisLine={false}
                       tickLine={false}
                     />
-                    <Tooltip content={<CustomChartTooltip />} cursor={{ fill: 'currentColor', fillOpacity: 0.08 }} />
-                    <Bar dataKey="count" fill="var(--chart-3)" radius={[4, 4, 0, 0]} name="Logins" />
+                    <Tooltip
+                      content={<CustomChartTooltip />}
+                      cursor={{ fill: 'var(--backgrounds-highlight)', opacity: 0.45 }}
+                    />
+                    <Bar
+                      dataKey="count"
+                      fill="var(--chart-2)"
+                      radius={[6, 6, 0, 0]}
+                      name="Logins"
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            </div>
+            </Card>
           )}
         </div>
       )}
 
-      {/* ── 5. Recent activity ───────────────────────────────────────── */}
+      {/* 5. System Activity Feed */}
       <RecentActivityWidget role="super-admin" />
-
     </div>
   );
 };
