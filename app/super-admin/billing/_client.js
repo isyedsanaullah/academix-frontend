@@ -1,21 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import axios from '@/lib/api';
-import {
-  HiOutlineCreditCard,
-  HiOutlineCheckCircle,
-  HiOutlineXCircle,
-  HiOutlineEye,
-  HiOutlineExclamation,
-  HiOutlineClock,
-  HiOutlineSearch,
-  HiOutlineDocumentText,
-  HiOutlineRefresh,
-  HiOutlineShieldCheck
-} from 'react-icons/hi';
+import Icon from '@/components/Icon';
+import Button from '@/components/ui/Button';
+import Modal from '@/components/ui/Modal';
+import PlanBadge from '@/components/common/PlanBadge';
+import CollegesHubLoader from '@/components/common/CollegesHubLoader';
 
 export default function SuperAdminBillingClient() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'history'
   const [pendingPayments, setPendingPayments] = useState([]);
   const [historyPayments, setHistoryPayments] = useState([]);
@@ -24,7 +19,7 @@ export default function SuperAdminBillingClient() {
   const [successMsg, setSuccessMsg] = useState(null);
 
   // Modals state
-  const [inspectModal, setInspectModal] = useState(null); // payment object
+  const [inspectModal, setInspectModal] = useState(null);
   const [proofUrl, setProofUrl] = useState('');
   const [loadingProof, setLoadingProof] = useState(false);
 
@@ -39,7 +34,6 @@ export default function SuperAdminBillingClient() {
 
   // History filters
   const [historyFilterStatus, setHistoryFilterStatus] = useState('');
-  const [historySearch, setHistorySearch] = useState('');
 
   const fetchPending = async () => {
     try {
@@ -48,8 +42,11 @@ export default function SuperAdminBillingClient() {
       const res = await axios.get('/super-admin/billing/pending');
       setPendingPayments(res.data.payments || []);
     } catch (err) {
-      console.error('Failed to load pending payments:', err);
-      setError(err.response?.data?.message || err.message || 'Error loading billing queue');
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          'Error loading billing queue'
+      );
     } finally {
       setLoading(false);
     }
@@ -64,8 +61,9 @@ export default function SuperAdminBillingClient() {
       const res = await axios.get('/super-admin/billing/all', { params });
       setHistoryPayments(res.data.payments || []);
     } catch (err) {
-      console.error('Failed to load payment history:', err);
-      setError(err.response?.data?.message || err.message || 'Error loading history');
+      setError(
+        err.response?.data?.message || err.message || 'Error loading history'
+      );
     } finally {
       setLoading(false);
     }
@@ -87,13 +85,20 @@ export default function SuperAdminBillingClient() {
           if (isMounted) setHistoryPayments(res.data.payments || []);
         }
       } catch (err) {
-        if (isMounted) setError(err.response?.data?.message || err.message || 'Error loading billing data');
+        if (isMounted)
+          setError(
+            err.response?.data?.message ||
+              err.message ||
+              'Error loading billing data'
+          );
       } finally {
         if (isMounted) setLoading(false);
       }
     };
     load();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [activeTab, historyFilterStatus]);
 
   const handleInspect = async (payment) => {
@@ -103,7 +108,7 @@ export default function SuperAdminBillingClient() {
     try {
       const res = await axios.get(`/super-admin/billing/receipt/${payment.id}`);
       setProofUrl(res.data.url || payment.screenshotUrl);
-    } catch (e) {
+    } catch {
       setProofUrl(payment.screenshotUrl);
     } finally {
       setLoadingProof(false);
@@ -112,7 +117,7 @@ export default function SuperAdminBillingClient() {
 
   const openApproveModal = (payment) => {
     setApproveModal(payment);
-    setVerifiedAmount(payment.amountPaid.toString());
+    setVerifiedAmount(String(payment.amountPaid || ''));
     setOverrideNote(payment.overrideNote || '');
   };
 
@@ -120,7 +125,9 @@ export default function SuperAdminBillingClient() {
     if (!approveModal) return;
     const isUnderpaid = Number(verifiedAmount) < approveModal.expectedAmount;
     if (isUnderpaid && !overrideNote.trim()) {
-      alert('An override note is mandatory when settled amount is less than expected amount.');
+      alert(
+        'An override note is mandatory when settled amount is less than expected amount.'
+      );
       return;
     }
 
@@ -129,9 +136,11 @@ export default function SuperAdminBillingClient() {
       setError(null);
       await axios.post(`/super-admin/billing/approve/${approveModal.id}`, {
         verifiedAmountOverride: Number(verifiedAmount),
-        overrideNote: overrideNote.trim()
+        overrideNote: overrideNote.trim(),
       });
-      setSuccessMsg(`Payment ${approveModal.transactionId} settled successfully.`);
+      setSuccessMsg(
+        `Payment ${approveModal.transactionId} settled successfully.`
+      );
       setApproveModal(null);
       fetchPending();
     } catch (err) {
@@ -152,9 +161,11 @@ export default function SuperAdminBillingClient() {
       setSubmittingReject(true);
       setError(null);
       await axios.post(`/super-admin/billing/reject/${rejectModal.id}`, {
-        reason: rejectReason.trim()
+        reason: rejectReason.trim(),
       });
-      setSuccessMsg(`Payment ${rejectModal.transactionId} marked as REJECTED.`);
+      setSuccessMsg(
+        `Payment ${rejectModal.transactionId} marked as REJECTED.`
+      );
       setRejectModal(null);
       fetchPending();
     } catch (err) {
@@ -164,101 +175,142 @@ export default function SuperAdminBillingClient() {
     }
   };
 
-  const slaBreachedCount = pendingPayments.filter((p) => p.slaSlaBreached).length;
-  const duplicateSuspectedCount = pendingPayments.filter((p) => p.isDuplicateSuspected).length;
+  const slaBreachedCount = pendingPayments.filter(
+    (p) => p.slaSlaBreached
+  ).length;
+  const duplicateSuspectedCount = pendingPayments.filter(
+    (p) => p.isDuplicateSuspected
+  ).length;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="page space-y-3">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 pb-5">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-              <HiOutlineCreditCard className="w-6 h-6" />
+      <div className="page-head">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h2 className="page-title">Subscription Settlement Queue</h2>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-b-surface2 border border-s-subtle px-3 py-1 text-caption font-semibold text-t-blue shadow-widget">
+              <Icon name="credit-card" className="!size-4 fill-current" />
+              Offline Proof Verification
             </span>
-            <h1 className="text-2xl font-bold text-gray-900">Subscription Settlement Engine</h1>
           </div>
-          <p className="text-sm text-gray-500 mt-1">
-            Super Admin settlement authority: verify offline bank proofs, approve renewals/upgrades, and dispatch receipts.
+          <p className="page-sub">
+            Verify offline bank proofs, approve renewals and upgrades, and
+            dispatch sequential receipts
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => (activeTab === 'pending' ? fetchPending() : fetchHistory())}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+        <div className="page-actions">
+          <Button
+            isStroke
+            icon="wallet"
+            onClick={() => router.push('/super-admin/payments')}
           >
-            <HiOutlineRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Payments & Accounts
+          </Button>
+          <Button
+            isPrimary
+            icon="refresh"
+            onClick={() =>
+              activeTab === 'pending' ? fetchPending() : fetchHistory()
+            }
+          >
             Refresh
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pending Orders</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{pendingPayments.length}</p>
+      <section className="card p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 p-1.5 rounded-4xl bg-b-depth2 border border-s-subtle">
+          <div className="rounded-3xl bg-b-surface2 border border-s-stroke2 p-4 flex items-center justify-between shadow-depth-toggle">
+            <div>
+              <p className="text-caption font-semibold text-t-secondary">
+                Pending Orders
+              </p>
+              <p className="text-h4 font-mono tabular-nums text-t-primary mt-1">
+                {pendingPayments.length}
+              </p>
+            </div>
+            <span className="flex items-center justify-center w-11 h-11 rounded-full bg-primary-01/12 text-t-blue border border-primary-01/25">
+              <Icon name="clock" className="!size-5 fill-current" />
+            </span>
           </div>
-          <span className="p-3 bg-blue-50 text-blue-600 rounded-lg">
-            <HiOutlineClock className="w-6 h-6" />
-          </span>
-        </div>
 
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">SLA Breached (&gt;24h)</p>
-            <p className={`text-2xl font-bold mt-1 ${slaBreachedCount > 0 ? 'text-rose-600' : 'text-gray-900'}`}>
-              {slaBreachedCount}
-            </p>
+          <div className="rounded-3xl bg-b-surface2/70 border border-s-subtle p-4 flex items-center justify-between">
+            <div>
+              <p className="text-caption font-semibold text-t-secondary">
+                SLA Breached (&gt;24h)
+              </p>
+              <p
+                className={`text-h4 font-mono tabular-nums mt-1 ${
+                  slaBreachedCount > 0 ? 'text-primary-03' : 'text-t-primary'
+                }`}
+              >
+                {slaBreachedCount}
+              </p>
+            </div>
+            <span className="flex items-center justify-center w-11 h-11 rounded-full bg-primary-03/12 text-primary-03 border border-primary-03/25">
+              <Icon name="alert" className="!size-5 fill-current" />
+            </span>
           </div>
-          <span className={`p-3 rounded-lg ${slaBreachedCount > 0 ? 'bg-rose-50 text-rose-600' : 'bg-gray-50 text-gray-400'}`}>
-            <HiOutlineExclamation className="w-6 h-6" />
-          </span>
-        </div>
 
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Duplicate Suspected</p>
-            <p className={`text-2xl font-bold mt-1 ${duplicateSuspectedCount > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
-              {duplicateSuspectedCount}
-            </p>
+          <div className="rounded-3xl bg-b-surface2/70 border border-s-subtle p-4 flex items-center justify-between">
+            <div>
+              <p className="text-caption font-semibold text-t-secondary">
+                Duplicate Suspected
+              </p>
+              <p
+                className={`text-h4 font-mono tabular-nums mt-1 ${
+                  duplicateSuspectedCount > 0
+                    ? 'text-primary-05'
+                    : 'text-t-primary'
+                }`}
+              >
+                {duplicateSuspectedCount}
+              </p>
+            </div>
+            <span className="flex items-center justify-center w-11 h-11 rounded-full bg-primary-05/15 text-t-primary border border-primary-05/30">
+              <Icon name="shield" className="!size-5 fill-current" />
+            </span>
           </div>
-          <span className={`p-3 rounded-lg ${duplicateSuspectedCount > 0 ? 'bg-amber-50 text-amber-600' : 'bg-gray-50 text-gray-400'}`}>
-            <HiOutlineShieldCheck className="w-6 h-6" />
-          </span>
-        </div>
 
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Auto-Receipt Engine</p>
-            <p className="text-sm font-semibold text-emerald-600 mt-1">Sequential RCP-YYYY</p>
+          <div className="rounded-3xl bg-b-surface2/70 border border-s-subtle p-4 flex items-center justify-between">
+            <div>
+              <p className="text-caption font-semibold text-t-secondary">
+                Auto-Receipt Engine
+              </p>
+              <p className="text-sub-title-1 font-mono font-bold text-[var(--brand-green-text)] mt-1">
+                Sequential RCP-YYYY
+              </p>
+            </div>
+            <span className="flex items-center justify-center w-11 h-11 rounded-full bg-primary-02/15 text-[var(--brand-green-text)] border border-primary-02/30">
+              <Icon name="check-circle" className="!size-5 fill-current" />
+            </span>
           </div>
-          <span className="p-3 bg-emerald-50 text-emerald-600 rounded-lg">
-            <HiOutlineCheckCircle className="w-6 h-6" />
-          </span>
         </div>
-      </div>
+      </section>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200">
+      <div className="inline-flex items-center gap-1.5 p-1.5 rounded-full bg-b-depth2 border border-s-subtle">
         <button
+          type="button"
           onClick={() => setActiveTab('pending')}
-          className={`py-3 px-5 text-sm font-medium border-b-2 transition ${
+          className={`h-10 px-5 rounded-full text-button transition-all cursor-pointer ${
             activeTab === 'pending'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              ? 'bg-b-surface2 text-t-primary shadow-depth-toggle border border-s-stroke2'
+              : 'text-t-secondary hover:text-t-primary'
           }`}
         >
           Pending Review Queue ({pendingPayments.length})
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('history')}
-          className={`py-3 px-5 text-sm font-medium border-b-2 transition ${
+          className={`h-10 px-5 rounded-full text-button transition-all cursor-pointer ${
             activeTab === 'history'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              ? 'bg-b-surface2 text-t-primary shadow-depth-toggle border border-s-stroke2'
+              : 'text-t-secondary hover:text-t-primary'
           }`}
         >
           Settled / Archive History
@@ -266,136 +318,161 @@ export default function SuperAdminBillingClient() {
       </div>
 
       {successMsg && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg flex items-center justify-between text-sm">
+        <div className="card p-4 border-primary-02/40 flex items-center justify-between text-body-2 text-[var(--brand-green-text)]">
           <span>{successMsg}</span>
-          <button onClick={() => setSuccessMsg(null)} className="text-emerald-500 hover:text-emerald-800">×</button>
+          <button
+            type="button"
+            onClick={() => setSuccessMsg(null)}
+            className="text-t-secondary hover:text-t-primary cursor-pointer"
+          >
+            ×
+          </button>
         </div>
       )}
 
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg flex items-center justify-between text-sm">
+        <div className="card p-4 border-primary-03/40 flex items-center justify-between text-body-2 text-primary-03">
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-rose-500 hover:text-rose-800">×</button>
+          <button
+            type="button"
+            onClick={() => setError(null)}
+            className="text-t-secondary hover:text-t-primary cursor-pointer"
+          >
+            ×
+          </button>
         </div>
       )}
 
       {/* Tab 1: Pending Queue */}
       {activeTab === 'pending' && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <section className="card p-6 max-md:p-4">
           {loading && pendingPayments.length === 0 ? (
-            <div className="p-12 text-center text-gray-500">Loading pending settlements...</div>
+            <CollegesHubLoader
+              size="sm"
+              text="Loading pending settlements…"
+              minHeight="min-h-[220px]"
+            />
           ) : pendingPayments.length === 0 ? (
-            <div className="p-12 text-center">
-              <HiOutlineCheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
-              <p className="text-base font-semibold text-gray-900">Billing Queue Clear</p>
-              <p className="text-sm text-gray-500">There are no offline subscription payments waiting for review.</p>
+            <div className="empty py-14">
+              <div className="mx-auto mb-3 flex items-center justify-center w-12 h-12 rounded-full bg-primary-02/15 text-[var(--brand-green-text)]">
+                <Icon name="check-circle" className="!size-6 fill-current" />
+              </div>
+              <p className="text-sub-title-1 text-t-primary">
+                Billing Queue Clear
+              </p>
+              <p className="text-caption text-t-secondary mt-1">
+                There are no offline subscription payments waiting for review.
+              </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-gray-600">
-                <thead className="bg-gray-50 text-xs uppercase font-semibold text-gray-500 border-b border-gray-200">
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
                   <tr>
-                    <th className="px-4 py-3">College & Order</th>
-                    <th className="px-4 py-3">Channel / TxID</th>
-                    <th className="px-4 py-3 text-right">Amount (PKR)</th>
-                    <th className="px-4 py-3">Discrepancy / Flags</th>
-                    <th className="px-4 py-3">Submitted</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
+                    <th>College & Order</th>
+                    <th>Channel / TxID</th>
+                    <th className="text-right">Amount (PKR)</th>
+                    <th>Discrepancy / Flags</th>
+                    <th>Submitted</th>
+                    <th className="text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody>
                   {pendingPayments.map((p) => {
-                    const diff = p.amountPaid - p.expectedAmount;
+                    const diff =
+                      Number(p.amountPaid || 0) - Number(p.expectedAmount || 0);
                     return (
-                      <tr key={p.id} className="hover:bg-gray-50/50 transition">
-                        <td className="px-4 py-3.5">
-                          <p className="font-semibold text-gray-900">{p.college?.name || 'Unknown College'}</p>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-xs px-2 py-0.5 bg-indigo-50 text-indigo-700 font-medium rounded">
-                              {p.type}
-                            </span>
-                            {p.planId && (
-                              <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
-                                {p.planId} ({p.billingCycle})
-                              </span>
-                            )}
+                      <tr key={p.id}>
+                        <td>
+                          <p className="font-semibold text-t-primary">
+                            {p.college?.name || 'Unknown College'}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="label label-blue">{p.type}</span>
+                            {p.planId && <PlanBadge plan={p.planId} />}
                           </div>
                         </td>
-
-                        <td className="px-4 py-3.5 font-mono text-xs">
-                          <span className="font-semibold text-gray-800">{p.paymentMethod}</span>
-                          <p className="text-gray-500 mt-0.5">{p.transactionId}</p>
+                        <td className="font-mono text-caption">
+                          <span className="font-semibold text-t-primary">
+                            {p.paymentMethod}
+                          </span>
+                          <p className="text-t-secondary mt-0.5">
+                            {p.transactionId}
+                          </p>
                         </td>
-
-                        <td className="px-4 py-3.5 text-right font-semibold text-gray-900">
-                          PKR {p.amountPaid.toLocaleString()}
+                        <td className="text-right font-mono font-semibold tabular-nums text-t-primary">
+                          PKR {Number(p.amountPaid || 0).toLocaleString()}
                           {p.expectedAmount !== p.amountPaid && (
-                            <p className="text-xs font-normal text-gray-400">
-                              Exp: PKR {p.expectedAmount.toLocaleString()}
+                            <p className="text-caption font-normal text-t-tertiary">
+                              Exp: PKR{' '}
+                              {Number(p.expectedAmount || 0).toLocaleString()}
                             </p>
                           )}
                         </td>
-
-                        <td className="px-4 py-3.5">
+                        <td>
                           <div className="flex flex-col gap-1">
                             {p.isDuplicateSuspected && (
-                              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded font-medium">
-                                <HiOutlineShieldCheck className="w-3.5 h-3.5" />
+                              <span className="label label-yellow">
                                 Duplicate Suspected
                               </span>
                             )}
                             {diff < 0 && (
-                              <span className="text-xs text-rose-600 font-medium">
+                              <span className="text-caption text-primary-03 font-semibold">
                                 Underpaid: -PKR {Math.abs(diff).toLocaleString()}
                               </span>
                             )}
                             {diff > 0 && (
-                              <span className="text-xs text-emerald-600 font-medium">
+                              <span className="text-caption text-[var(--brand-green-text)] font-semibold">
                                 Overpaid: +PKR {diff.toLocaleString()}
                               </span>
                             )}
                             {diff === 0 && !p.isDuplicateSuspected && (
-                              <span className="text-xs text-gray-400">Exact Match</span>
+                              <span className="text-caption text-t-tertiary">
+                                Exact Match
+                              </span>
                             )}
                           </div>
                         </td>
-
-                        <td className="px-4 py-3.5">
-                          <p className="text-xs text-gray-700">
+                        <td className="font-mono text-caption">
+                          <p className="text-t-primary">
                             {new Date(p.createdAt).toLocaleDateString()}
                           </p>
                           {p.slaSlaBreached ? (
-                            <span className="inline-block text-xs font-bold text-rose-600 mt-0.5">
+                            <span className="text-primary-03 font-bold">
                               SLA Breached (&gt;24h)
                             </span>
                           ) : (
-                            <span className="text-xs text-gray-400">Under SLA</span>
+                            <span className="text-t-tertiary">Under SLA</span>
                           )}
                         </td>
-
-                        <td className="px-4 py-3.5 text-right space-x-2">
-                          <button
-                            onClick={() => handleInspect(p)}
-                            className="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded transition"
-                            title="Inspect Proof"
-                          >
-                            <HiOutlineEye className="w-5 h-5 inline" />
-                          </button>
-                          <button
-                            onClick={() => openApproveModal(p)}
-                            className="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => {
-                              setRejectModal(p);
-                              setRejectReason('');
-                            }}
-                            className="px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition"
-                          >
-                            Reject
-                          </button>
+                        <td className="text-right whitespace-nowrap">
+                          <div className="inline-flex items-center gap-2">
+                            <Button
+                              isStroke
+                              size="sm"
+                              icon="eye"
+                              onClick={() => handleInspect(p)}
+                            >
+                              Proof
+                            </Button>
+                            <Button
+                              isPrimary
+                              size="sm"
+                              onClick={() => openApproveModal(p)}
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              isStroke
+                              size="sm"
+                              onClick={() => {
+                                setRejectModal(p);
+                                setRejectReason('');
+                              }}
+                            >
+                              Reject
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -404,17 +481,18 @@ export default function SuperAdminBillingClient() {
               </table>
             </div>
           )}
-        </div>
+        </section>
       )}
 
       {/* Tab 2: Settled / Archive History */}
       {activeTab === 'history' && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden p-4 space-y-4">
+        <section className="card p-6 max-md:p-4 space-y-4">
           <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
             <select
               value={historyFilterStatus}
               onChange={(e) => setHistoryFilterStatus(e.target.value)}
-              className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white"
+              aria-label="Filter history by status"
+              className="input w-full sm:w-56"
             >
               <option value="">All Statuses</option>
               <option value="APPROVED">APPROVED</option>
@@ -422,203 +500,243 @@ export default function SuperAdminBillingClient() {
             </select>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-600">
-              <thead className="bg-gray-50 text-xs uppercase font-semibold text-gray-500 border-b border-gray-200">
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
                 <tr>
-                  <th className="px-4 py-3">Receipt / ID</th>
-                  <th className="px-4 py-3">College</th>
-                  <th className="px-4 py-3">Channel & Ref</th>
-                  <th className="px-4 py-3 text-right">Settled Amount</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Settled At</th>
+                  <th>Receipt / ID</th>
+                  <th>College</th>
+                  <th>Channel & Ref</th>
+                  <th className="text-right">Settled Amount</th>
+                  <th>Status</th>
+                  <th>Settled At</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody>
                 {historyPayments.map((p) => (
-                  <tr key={p.id} className="hover:bg-gray-50/50">
-                    <td className="px-4 py-3 font-mono text-xs font-bold text-gray-900">
+                  <tr key={p.id}>
+                    <td className="font-mono text-caption font-bold text-t-primary">
                       {p.receiptNumber || '—'}
                     </td>
-                    <td className="px-4 py-3 font-semibold text-gray-800">
+                    <td className="font-semibold text-t-primary">
                       {p.college?.name || p.college_id}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs">
+                    <td className="font-mono text-caption text-t-secondary">
                       {p.paymentMethod} • {p.transactionId}
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                      PKR {(p.verifiedAmount || p.amountPaid).toLocaleString()}
+                    <td className="text-right font-mono font-semibold tabular-nums text-t-primary">
+                      PKR{' '}
+                      {Number(
+                        p.verifiedAmount || p.amountPaid || 0
+                      ).toLocaleString()}
                     </td>
-                    <td className="px-4 py-3">
+                    <td>
                       <span
-                        className={`text-xs px-2 py-0.5 rounded font-semibold ${
-                          p.status === 'APPROVED'
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : 'bg-rose-50 text-rose-700'
+                        className={`label ${
+                          p.status === 'APPROVED' ? 'label-green' : 'label-red'
                         }`}
                       >
                         {p.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-500">
-                      {p.reviewedAt ? new Date(p.reviewedAt).toLocaleString() : '—'}
+                    <td className="font-mono text-caption text-t-secondary">
+                      {p.reviewedAt
+                        ? new Date(p.reviewedAt).toLocaleString()
+                        : '—'}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
       )}
 
       {/* Inspect Proof Modal */}
-      {inspectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full p-6 space-y-4">
-            <div className="flex justify-between items-center border-b pb-3">
-              <h3 className="font-bold text-lg text-gray-900">Inspect Bank Transfer Proof</h3>
-              <button onClick={() => setInspectModal(null)} className="text-gray-400 hover:text-gray-600 text-xl font-bold">×</button>
-            </div>
-
+      <Modal
+        open={Boolean(inspectModal)}
+        onClose={() => setInspectModal(null)}
+        title="Inspect Bank Transfer Proof"
+      >
+        {inspectModal && (
+          <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2 text-sm">
-                <p><span className="font-semibold text-gray-600">College:</span> {inspectModal.college?.name}</p>
-                <p><span className="font-semibold text-gray-600">Method:</span> {inspectModal.paymentMethod}</p>
-                <p><span className="font-semibold text-gray-600">Tx ID:</span> <code className="bg-gray-100 px-1 py-0.5 rounded">{inspectModal.transactionId}</code></p>
-                <p><span className="font-semibold text-gray-600">Amount Paid:</span> PKR {inspectModal.amountPaid.toLocaleString()}</p>
-                <p><span className="font-semibold text-gray-600">Expected:</span> PKR {inspectModal.expectedAmount.toLocaleString()}</p>
+              <div className="space-y-2 text-caption">
+                <p>
+                  <span className="font-semibold text-t-secondary">
+                    College:
+                  </span>{' '}
+                  <span className="text-t-primary">
+                    {inspectModal.college?.name}
+                  </span>
+                </p>
+                <p>
+                  <span className="font-semibold text-t-secondary">
+                    Method:
+                  </span>{' '}
+                  <span className="text-t-primary">
+                    {inspectModal.paymentMethod}
+                  </span>
+                </p>
+                <p>
+                  <span className="font-semibold text-t-secondary">Tx ID:</span>{' '}
+                  <code className="bg-b-surface1 px-2 py-0.5 rounded font-mono text-t-primary">
+                    {inspectModal.transactionId}
+                  </code>
+                </p>
+                <p>
+                  <span className="font-semibold text-t-secondary">
+                    Amount Paid:
+                  </span>{' '}
+                  <span className="font-mono font-bold text-t-primary">
+                    PKR {Number(inspectModal.amountPaid || 0).toLocaleString()}
+                  </span>
+                </p>
+                <p>
+                  <span className="font-semibold text-t-secondary">
+                    Expected:
+                  </span>{' '}
+                  <span className="font-mono text-t-secondary">
+                    PKR{' '}
+                    {Number(inspectModal.expectedAmount || 0).toLocaleString()}
+                  </span>
+                </p>
               </div>
 
-              <div className="border border-gray-200 rounded-lg p-2 flex items-center justify-center bg-gray-50 min-h-[260px]">
+              <div className="border border-s-subtle rounded-2xl p-3 flex items-center justify-center bg-b-surface1 min-h-[240px]">
                 {loadingProof ? (
-                  <p className="text-sm text-gray-400">Loading signed receipt URL...</p>
+                  <p className="text-caption text-t-secondary">
+                    Loading signed receipt URL…
+                  </p>
                 ) : proofUrl ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={proofUrl} alt="Bank Proof" className="max-h-[300px] object-contain rounded" />
+                  <img
+                    src={proofUrl}
+                    alt="Bank Proof"
+                    className="max-h-[280px] object-contain rounded-xl"
+                  />
                 ) : (
-                  <p className="text-sm text-gray-400">No screenshot available</p>
+                  <p className="text-caption text-t-tertiary">
+                    No screenshot available
+                  </p>
                 )}
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 border-t pt-3">
-              <button
-                onClick={() => setInspectModal(null)}
-                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
+            <div className="flex justify-end gap-2 pt-2">
+              <Button isStroke onClick={() => setInspectModal(null)}>
                 Close
-              </button>
+              </Button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* Approve Modal */}
-      {approveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 space-y-4">
-            <div className="flex justify-between items-center border-b pb-3">
-              <h3 className="font-bold text-lg text-gray-900">Confirm Payment Settlement</h3>
-              <button onClick={() => setApproveModal(null)} className="text-gray-400 hover:text-gray-600 text-xl font-bold">×</button>
+      <Modal
+        open={Boolean(approveModal)}
+        onClose={() => setApproveModal(null)}
+        title="Confirm Payment Settlement"
+      >
+        {approveModal && (
+          <div className="space-y-4">
+            <div className="p-3.5 bg-b-surface1 border border-s-subtle rounded-2xl">
+              <p className="font-semibold text-t-primary">
+                {approveModal.college?.name}
+              </p>
+              <p className="text-caption text-t-secondary mt-0.5 font-mono">
+                Order: {approveModal.type} • Expected: PKR{' '}
+                {Number(approveModal.expectedAmount || 0).toLocaleString()}
+              </p>
             </div>
 
-            <div className="space-y-3 text-sm">
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <p className="font-semibold text-gray-900">{approveModal.college?.name}</p>
-                <p className="text-xs text-gray-500 mt-0.5">Order: {approveModal.type} • Expected: PKR {approveModal.expectedAmount.toLocaleString()}</p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Verified Settled Amount (PKR)
-                </label>
-                <input
-                  type="number"
-                  value={verifiedAmount}
-                  onChange={(e) => setVerifiedAmount(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-semibold"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Override / Settlement Note {Number(verifiedAmount) < approveModal.expectedAmount && <span className="text-rose-500">* (Mandatory for Underpayment)</span>}
-                </label>
-                <textarea
-                  value={overrideNote}
-                  onChange={(e) => setOverrideNote(e.target.value)}
-                  placeholder="e.g. Authorized 10% director concession..."
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  rows={2}
-                />
-              </div>
+            <div>
+              <label className="block text-caption font-semibold text-t-secondary mb-1.5">
+                Verified Settled Amount (PKR)
+              </label>
+              <input
+                type="number"
+                value={verifiedAmount}
+                onChange={(e) => setVerifiedAmount(e.target.value)}
+                className="input w-full font-mono"
+              />
             </div>
 
-            <div className="flex justify-end gap-2 border-t pt-3">
-              <button
-                onClick={() => setApproveModal(null)}
-                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
+            <div>
+              <label className="block text-caption font-semibold text-t-secondary mb-1.5">
+                Override / Settlement Note{' '}
+                {Number(verifiedAmount) < approveModal.expectedAmount && (
+                  <span className="text-primary-03">
+                    * (Mandatory for Underpayment)
+                  </span>
+                )}
+              </label>
+              <textarea
+                value={overrideNote}
+                onChange={(e) => setOverrideNote(e.target.value)}
+                placeholder="e.g. Authorized 10% director concession..."
+                className="input w-full min-h-20 py-2.5"
+                rows={2}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button isStroke onClick={() => setApproveModal(null)}>
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                isPrimary
                 disabled={submittingApprove}
                 onClick={handleConfirmApprove}
-                className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-50"
               >
-                {submittingApprove ? 'Settling...' : 'Confirm & Issue Receipt'}
-              </button>
+                {submittingApprove ? 'Settling…' : 'Confirm & Issue Receipt'}
+              </Button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* Reject Modal */}
-      {rejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
-            <div className="flex justify-between items-center border-b pb-3">
-              <h3 className="font-bold text-lg text-gray-900">Reject Payment</h3>
-              <button onClick={() => setRejectModal(null)} className="text-gray-400 hover:text-gray-600 text-xl font-bold">×</button>
+      <Modal
+        open={Boolean(rejectModal)}
+        onClose={() => setRejectModal(null)}
+        title="Reject Payment"
+      >
+        {rejectModal && (
+          <div className="space-y-4">
+            <p className="text-body-2 text-t-secondary">
+              Rejecting this payment allows the college to resubmit with a
+              valid proof. The transaction ID will be unblocked for
+              resubmission.
+            </p>
+
+            <div>
+              <label className="block text-caption font-semibold text-t-secondary mb-1.5">
+                Rejection Reason <span className="text-primary-03">*</span>
+              </label>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="e.g. Screenshot unreadable / transaction ID not found in bank statement..."
+                className="input w-full min-h-24 py-2.5"
+                rows={3}
+              />
             </div>
 
-            <div className="space-y-3 text-sm">
-              <p className="text-gray-600">
-                Rejecting this payment allows the college to re-submit with correct proof. The normalized transaction ID will be unblocked for resubmission.
-              </p>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Rejection Reason <span className="text-rose-500">*</span>
-                </label>
-                <textarea
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="e.g. Screenshot unreadable / transaction ID not found in bank statement..."
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  rows={3}
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 border-t pt-3">
-              <button
-                onClick={() => setRejectModal(null)}
-                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
+            <div className="flex justify-end gap-2 pt-2">
+              <Button isStroke onClick={() => setRejectModal(null)}>
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                isPrimary
                 disabled={submittingReject}
                 onClick={handleConfirmReject}
-                className="px-4 py-2 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg disabled:opacity-50"
               >
-                {submittingReject ? 'Rejecting...' : 'Reject Payment'}
-              </button>
+                {submittingReject ? 'Rejecting…' : 'Reject Payment'}
+              </Button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }

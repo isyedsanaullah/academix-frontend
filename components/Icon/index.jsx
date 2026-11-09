@@ -1816,7 +1816,22 @@ export const ICON_ALIASES = {
   "HiOutlineZoomIn": "zoom-in",
   "HiPencil": "edit",
   "HiPlus": "plus",
-  "HiTrash": "trash"
+  "HiTrash": "trash",
+  "graduation-cap": "academic-cap",
+  "profile-2": "user-group",
+  "dollar-circle": "usd-circle",
+  "file-text": "document-text",
+  "megaphone": "promote",
+  "gear": "cog",
+  "alert": "exclamation",
+  "copy-files": "document-duplicate",
+  "landmark": "library",
+  "banknote": "wallet",
+  "layout-template": "grid",
+  "qr-code": "qrcode",
+  "flask-conical": "beaker",
+  "toggle": "switch-horizontal",
+  "copy": "clipboard-copy"
 };
 
 export function resolveIconName(rawName) {

@@ -45,9 +45,25 @@ export default function MessagesTab({ collegeId, collegeName }) {
   };
 
   useEffect(() => {
-    if (collegeId) {
-      fetchDeliveries();
-    }
+    let isMounted = true;
+    if (!collegeId) return;
+
+    const loadData = async () => {
+      try {
+        const res = await api.get(`/super-admin/colleges/${collegeId}/messages`);
+        if (isMounted && res.data?.success) {
+          setDeliveries(res.data.data || []);
+        }
+      } catch (err) {
+        if (isMounted) toast.error(err.response?.data?.message || 'Failed to load message history');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    loadData();
+    return () => {
+      isMounted = false;
+    };
   }, [collegeId]);
 
   const handleSend = async (e) => {

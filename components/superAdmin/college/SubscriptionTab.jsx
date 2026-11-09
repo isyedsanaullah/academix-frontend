@@ -1,7 +1,7 @@
 'use strict';
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
 import CollegesHubLoader from '../../common/CollegesHubLoader';
@@ -31,14 +31,14 @@ export default function SubscriptionTab({ collegeId, collegeName, onSubscription
   const [submitting, setSubmitting] = useState(false);
 
   // Form states
-  const [assignForm, setAssignForm] = useState({
+  const [assignForm, setAssignForm] = useState(() => ({
     plan: 'starter',
     startsAt: new Date().toISOString().split('T')[0],
     expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     amountNote: '',
     paymentNote: '',
     reason: ''
-  });
+  }));
 
   const [renewForm, setRenewForm] = useState({
     extendFrom: 'current_expiry',
@@ -63,8 +63,23 @@ export default function SubscriptionTab({ collegeId, collegeName, onSubscription
     reason: ''
   });
   const [savingQuotas, setSavingQuotas] = useState(false);
+  const [nowTimestamp] = useState(() => Date.now());
 
-  const fetchSubscription = async () => {
+  const { currentPeriod, status, graceUntil, daysLeft, history } = data || {};
+  const isSuspended = status === 'suspended';
+  const isGrace = status === 'grace';
+
+  // Progress percentage calculation (declared at top level before early returns)
+  const progressPct = useMemo(() => {
+    if (currentPeriod && currentPeriod.starts_at && currentPeriod.expires_at) {
+      const total = new Date(currentPeriod.expires_at).getTime() - new Date(currentPeriod.starts_at).getTime();
+      const elapsed = nowTimestamp - new Date(currentPeriod.starts_at).getTime();
+      return Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)));
+    }
+    return 0;
+  }, [currentPeriod, nowTimestamp]);
+
+  const fetchSubscription = useCallback(async () => {
     try {
       setLoading(true);
       const res = await api.get(`/super-admin/colleges/${collegeId}/subscription`);
@@ -84,7 +99,7 @@ export default function SubscriptionTab({ collegeId, collegeName, onSubscription
     } finally {
       setLoading(false);
     }
-  };
+  }, [collegeId]);
 
   const handleSaveQuotas = async (e) => {
     e?.preventDefault();
@@ -106,9 +121,35 @@ export default function SubscriptionTab({ collegeId, collegeName, onSubscription
   };
 
   useEffect(() => {
+    let isMounted = true;
     if (collegeId) {
-      fetchSubscription();
+      (async () => {
+        try {
+          setLoading(true);
+          const res = await api.get(`/super-admin/colleges/${collegeId}/subscription`);
+          if (isMounted && res.data?.success) {
+            setData(res.data.data);
+            if (res.data.data?.quotas) {
+              const q = res.data.data.quotas;
+              setQuotaForm({
+                maxStudents: q.maxStudents === -1 ? '' : String(q.maxStudents ?? ''),
+                maxStaff: q.maxStaff === -1 ? '' : String(q.maxStaff ?? ''),
+                reason: ''
+              });
+            }
+          }
+        } catch (err) {
+          if (isMounted) {
+            toast.error(err.response?.data?.message || 'Failed to load subscription details');
+          }
+        } finally {
+          if (isMounted) setLoading(false);
+        }
+      })();
     }
+    return () => {
+      isMounted = false;
+    };
   }, [collegeId]);
 
   const handleAssign = async (e) => {
@@ -200,18 +241,6 @@ export default function SubscriptionTab({ collegeId, collegeName, onSubscription
         <CollegesHubLoader size="md" text="Loading college subscription status…" minHeight="min-h-[220px]" />
       </div>
     );
-  }
-
-  const { currentPeriod, status, graceUntil, daysLeft, history } = data || {};
-  const isSuspended = status === 'suspended';
-  const isGrace = status === 'grace';
-
-  // Progress percentage calculation
-  let progressPct = 0;
-  if (currentPeriod && currentPeriod.starts_at && currentPeriod.expires_at) {
-    const total = new Date(currentPeriod.expires_at) - new Date(currentPeriod.starts_at);
-    const elapsed = Date.now() - new Date(currentPeriod.starts_at);
-    progressPct = Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)));
   }
 
   return (

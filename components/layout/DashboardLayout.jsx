@@ -22,6 +22,7 @@ const getPageTitle = (pathname) => {
     '/super-admin': 'Platform Command Center',
     '/super-admin/colleges': 'College Management',
     '/super-admin/subscription-requests': 'Subscription Requests',
+    '/super-admin/payments': 'Payments & Accounts',
     '/super-admin/billing': 'Billing Queue',
     '/super-admin/analytics': 'Platform Analytics',
     '/super-admin/ai/chat': 'AI Reports',
@@ -280,6 +281,7 @@ const buildSearchItems = (role) => {
       { to: '/super-admin', label: 'Dashboard' },
       { to: '/super-admin/colleges', label: 'Colleges' },
       { to: '/super-admin/subscription-requests', label: 'Subscription Requests' },
+      { to: '/super-admin/payments', label: 'Payments & Accounts' },
       { to: '/super-admin/billing', label: 'Billing Queue' },
       { to: '/super-admin/analytics', label: 'Analytics' },
       { to: '/super-admin/ai/chat', label: 'AI Reports' },
@@ -331,11 +333,13 @@ const buildSearchItems = (role) => {
   return map[role] || [];
 };
 
-/* ── Core 2.0 Spotlight Search Modal (Portaled inside #app-portal-root) ── */
-const SpotlightSearch = ({ open, onClose, role }) => {
+/* ── Core 2.0 Header Search Dropdown (Attached directly below search bar) ── */
+const HeaderSearchDropdown = ({ role, autoFocus, onCloseMobile }) => {
+  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const router = useRouter();
   const inputRef = useRef(null);
+  const containerRef = useRef(null);
   const items = buildSearchItems(role);
 
   const filtered = query.trim()
@@ -343,103 +347,124 @@ const SpotlightSearch = ({ open, onClose, role }) => {
     : items;
 
   useEffect(() => {
-    if (open) {
-      setQuery('');
-      setTimeout(() => inputRef.current?.focus(), 50);
+    if (autoFocus) {
+      setTimeout(() => inputRef.current?.focus(), 60);
+      setOpen(true);
     }
-  }, [open]);
+  }, [autoFocus]);
+
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false);
+        if (onCloseMobile) onCloseMobile();
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [onCloseMobile]);
 
   useEffect(() => {
     const handler = (e) => {
-      if (e.key === 'Escape') onClose();
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        inputRef.current?.focus();
+        setOpen(true);
+      }
+      if (e.key === 'Escape') {
+        setOpen(false);
+        if (onCloseMobile) onCloseMobile();
+      }
     };
-    if (open) window.addEventListener('keydown', handler);
+    window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, onClose]);
-
-  if (!open) return null;
+  }, [onCloseMobile]);
 
   const handleSelect = (to) => {
     router.push(to);
-    onClose();
+    setOpen(false);
+    setQuery('');
+    if (onCloseMobile) onCloseMobile();
   };
 
-  const portalRoot = getAppPortalRoot();
-  const content = (
-    <div
-      className="fixed inset-0 z-[105] flex items-start justify-center px-3 pt-[10vh] sm:pt-[14vh]"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Search pages"
-    >
-      <div className="fixed inset-0 bg-b-surface1/75 backdrop-blur-sm" />
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-xl overflow-hidden rounded-4xl border border-s-subtle bg-b-surface2 p-3 shadow-dropdown animate-slide-up"
-      >
-        <div className="relative flex items-center gap-3 rounded-3xl bg-b-surface1 px-4 h-12 border border-s-subtle focus-within:border-s-focus focus-within:bg-b-surface2 transition-all">
-          <Icon name="search" className="!size-5 shrink-0 fill-t-secondary" />
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search pages, modules, or tools..."
-            aria-label="Search pages and features"
-            className="min-w-0 flex-1 bg-transparent text-body-2 text-t-primary outline-none placeholder:text-t-tertiary"
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={() => setQuery('')}
-              aria-label="Clear search query"
-              className="p-1 rounded-full text-t-tertiary hover:text-t-primary"
-            >
-              <Icon name="close" className="!size-4 fill-current" />
-            </button>
-          )}
-          <kbd className="hidden shrink-0 items-center rounded-lg bg-b-surface2 px-2 py-1 font-mono text-[10px] font-semibold text-t-secondary border border-s-subtle sm:inline-flex">
-            ESC
+  return (
+    <div ref={containerRef} className="relative w-full md:w-auto">
+      {/* Search Input Bar (Matches Core 2.0 Search Widget) */}
+      <div className="relative flex items-center w-full md:w-72 lg:w-79 h-12 px-4 rounded-3xl bg-b-surface2 border border-s-subtle text-body-2 text-t-primary focus-within:border-s-focus focus-within:bg-b-surface1 shadow-widget transition-all">
+        <Icon
+          name="search"
+          className="!size-5 fill-t-secondary shrink-0 mr-2.5 pointer-events-none"
+        />
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            if (!open) setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder="Search anything..."
+          aria-label="Search pages and features"
+          className="min-w-0 flex-1 bg-transparent text-body-2 text-t-primary outline-none placeholder:text-t-secondary"
+        />
+        {query ? (
+          <button
+            type="button"
+            onClick={() => {
+              setQuery('');
+              inputRef.current?.focus();
+            }}
+            aria-label="Clear search"
+            className="p-1 rounded-full text-t-tertiary hover:text-t-primary cursor-pointer shrink-0"
+          >
+            <Icon name="close" className="!size-4 fill-current" />
+          </button>
+        ) : (
+          <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-lg bg-b-surface1 px-2 py-0.5 font-mono text-[11px] font-medium text-t-tertiary border border-s-subtle">
+            Ctrl K
           </kbd>
-        </div>
+        )}
+      </div>
 
-        <div className="mt-2 max-h-[55vh] overflow-y-auto px-1 py-1 sm:max-h-80">
-          <div className="px-3 py-2 text-caption font-semibold text-t-tertiary uppercase tracking-wider">
+      {/* Dropdown Menu attached directly beneath the search bar */}
+      {open && (
+        <div className="absolute top-[calc(100%+0.5rem)] right-0 left-auto z-50 w-full sm:w-88 md:w-88 lg:w-98 p-3 rounded-3xl bg-b-surface2 border border-s-subtle shadow-dropdown animate-slide-up max-h-[65vh] overflow-y-auto">
+          <div className="px-3 py-1.5 text-caption font-semibold text-t-tertiary uppercase tracking-wider">
             {query.trim() ? 'Matching Pages' : 'Quick Navigation'}
           </div>
           {filtered.length === 0 ? (
-            <p className="py-8 text-center text-body-2 text-t-tertiary">
+            <p className="py-6 text-center text-body-2 text-t-tertiary">
               No matching pages found
             </p>
           ) : (
-            filtered.map((item) => (
-              <button
-                key={item.to}
-                type="button"
-                onClick={() => handleSelect(item.to)}
-                className="group relative flex w-full items-center gap-3 rounded-2xl px-3.5 py-2.5 text-left transition hover:bg-b-highlight focus-visible:bg-b-highlight focus-visible:outline-none cursor-pointer"
-              >
-                <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-b-surface1 border border-s-subtle group-hover:border-s-highlight transition-colors">
-                  <Icon
-                    name="arrow"
-                    className="!size-4 fill-t-secondary transition group-hover:fill-[var(--accent,var(--primary-01))]"
-                  />
-                </div>
-                <span className="min-w-0 truncate text-sub-title-2 text-t-secondary transition group-hover:text-t-primary">
-                  {item.label}
-                </span>
-                <span className="ml-auto hidden max-w-40 truncate font-mono text-caption text-t-tertiary sm:inline">
-                  {item.to}
-                </span>
-              </button>
-            ))
+            <div className="space-y-1 mt-1">
+              {filtered.slice(0, 10).map((item) => (
+                <button
+                  key={item.to}
+                  type="button"
+                  onClick={() => handleSelect(item.to)}
+                  className="group flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left transition hover:bg-b-highlight focus-visible:bg-b-highlight focus-visible:outline-none cursor-pointer"
+                >
+                  <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-b-surface1 border border-s-subtle group-hover:border-s-highlight transition-colors shrink-0">
+                    <Icon
+                      name="arrow"
+                      className="!size-3.5 fill-t-secondary transition group-hover:fill-[var(--accent,var(--primary-01))]"
+                    />
+                  </div>
+                  <span className="min-w-0 truncate text-sub-title-2 text-t-secondary group-hover:text-t-primary transition-colors">
+                    {item.label}
+                  </span>
+                  <span className="ml-auto hidden max-w-36 truncate font-mono text-[11px] text-t-tertiary sm:inline">
+                    {item.to}
+                  </span>
+                </button>
+              ))}
+            </div>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
-
-  return portalRoot ? createPortal(content, portalRoot) : content;
 };
 
 /* ── Core 2.0 Notifications Slide-Over / Popover (Portaled inside #app-portal-root) ── */
@@ -575,7 +600,15 @@ const NotificationsDrawer = ({ open, onClose, role }) => {
 };
 
 /* ── Core 2.0 User Profile Dropdown (Portaled or Anchored inside [data-app]) ── */
-const ProfileDropdown = ({ open, onClose, user, plan, subStatus }) => {
+const ProfileDropdown = ({
+  open,
+  onClose,
+  user,
+  plan,
+  subStatus,
+  theme,
+  setTheme,
+}) => {
   const { logout } = useAuthStore();
   const router = useRouter();
 
@@ -751,6 +784,51 @@ const ProfileDropdown = ({ open, onClose, user, plan, subStatus }) => {
               <span>Subscription & Billing</span>
             </button>
           )}
+
+          {/* Theme Switcher Row (Accessible on desktop, tablet, and mobile) */}
+          {setTheme && (
+            <div className="flex items-center justify-between h-11 px-3.5 rounded-2xl text-button text-t-secondary">
+              <div className="flex items-center gap-3">
+                <Icon
+                  name={theme === 'dark' ? 'moon' : 'sun'}
+                  className="!size-5 fill-t-secondary"
+                />
+                <span>Appearance</span>
+              </div>
+              <div
+                role="group"
+                aria-label="Theme switcher"
+                className="inline-flex items-center gap-1 p-1 rounded-full bg-b-surface1 border border-s-subtle"
+              >
+                <button
+                  type="button"
+                  onClick={() => setTheme('light')}
+                  aria-label="Switch to light mode"
+                  aria-pressed={theme === 'light'}
+                  className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors cursor-pointer ${
+                    theme === 'light'
+                      ? 'bg-b-pop text-t-primary shadow-widget'
+                      : 'text-t-secondary hover:text-t-primary'
+                  }`}
+                >
+                  <Icon name="sun" className="!size-3.5 fill-current" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTheme('dark')}
+                  aria-label="Switch to dark mode"
+                  aria-pressed={theme === 'dark'}
+                  className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors cursor-pointer ${
+                    theme === 'dark'
+                      ? 'bg-b-pop text-t-primary shadow-widget'
+                      : 'text-t-secondary hover:text-t-primary'
+                  }`}
+                >
+                  <Icon name="moon" className="!size-3.5 fill-current" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="my-2 h-px bg-s-subtle" />
@@ -777,37 +855,66 @@ const ProfileDropdown = ({ open, onClose, user, plan, subStatus }) => {
 /* ── Core 2.0 DashboardLayout Shell ── */
 const DashboardLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [sidebarCompact, setSidebarCompact] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
   const { user } = useAuthStore();
-  const { theme, toggleTheme, plan, subStatus } = useTheme();
+  const { theme, setTheme, toggleTheme, themeMounted, plan, subStatus } =
+    useTheme();
   const pathname = usePathname();
   const pageTitle = getPageTitle(pathname);
-
-  useEffect(() => {
-    setSidebarOpen(false);
-    setNotifOpen(false);
-    setProfileOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
-    const handler = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setSearchOpen((prev) => !prev);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, []);
 
   const pathSegment = pathname?.split('/')[1] || '';
   const roleFromPath = pathSegment === 'super-admin' ? 'superAdmin' : pathSegment;
   const activeRole = user?.role || roleFromPath || 'admin';
   const isSuperAdmin = activeRole === 'superAdmin';
   const appType = isSuperAdmin ? 'platform' : 'college';
+
+  const compactStorageKey = `cesms-sidebar-compact:${user?._id || user?.id || activeRole}`;
+
+  useEffect(() => {
+    try {
+      const savedUserCompact = window.localStorage.getItem(compactStorageKey);
+      const savedFallback = window.localStorage.getItem('cesms-sidebar-compact');
+      const saved = savedUserCompact !== null ? savedUserCompact : savedFallback;
+      setSidebarCompact(saved === 'true');
+    } catch {
+      // Ignore storage errors
+    }
+  }, [compactStorageKey]);
+
+  const toggleSidebarCompact = () => {
+    setSidebarCompact((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(compactStorageKey, String(next));
+        window.localStorage.setItem('cesms-sidebar-compact', String(next));
+      } catch {
+        // Ignore storage errors
+      }
+      return next;
+    });
+  };
+
+  const handleHeaderMenuToggle = () => {
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(min-width: 1280px)').matches
+    ) {
+      toggleSidebarCompact();
+    } else {
+      setSidebarOpen((prev) => !prev);
+    }
+  };
+
+  useEffect(() => {
+    setSidebarOpen(false);
+    setMobileSearchOpen(false);
+    setNotifOpen(false);
+    setProfileOpen(false);
+  }, [pathname]);
 
   // Determine whether notifications endpoint is supported for current role
   const effectiveFeatures =
@@ -823,17 +930,23 @@ const DashboardLayout = ({ children }) => {
   return (
     <div
       data-app={appType}
-      data-theme={theme}
+      data-theme={themeMounted ? theme : undefined}
       data-plan={!isSuperAdmin ? plan || 'starter' : undefined}
       data-sub-status={subStatus}
       data-role={activeRole}
-      className="min-h-screen bg-b-surface1 text-t-primary font-inter transition-colors duration-200 xl:pl-85 max-4xl:xl:pl-70 max-3xl:xl:pl-60"
+      className={`min-h-screen bg-b-surface1 text-t-primary font-inter transition-[padding,background-color,color] duration-250 ease-out motion-reduce:transition-none ${
+        sidebarCompact
+          ? 'xl:pl-22'
+          : 'xl:pl-85 max-4xl:xl:pl-70 max-3xl:xl:pl-60'
+      }`}
     >
-      {/* Fixed Core 2.0 Sidebar */}
+      {/* Fixed Core 2.0 Sidebar (Separated by background contrast & spacing only) */}
       <Sidebar
         mobileOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         role={activeRole}
+        compact={sidebarCompact}
+        onToggleCompact={toggleSidebarCompact}
       />
 
       {/* Mobile Sidebar Backdrop */}
@@ -845,96 +958,69 @@ const DashboardLayout = ({ children }) => {
         />
       )}
 
-      {/* Fixed Core 2.0 Header (h-22 desktop / h-18 mobile) */}
-      <header className="no-print fixed top-0 right-0 left-0 xl:left-85 max-4xl:xl:left-70 max-3xl:xl:left-60 z-20 bg-b-surface1/95 backdrop-blur-md border-b border-s-subtle transition-colors duration-200">
-        {/* Top Plan Accent / Superadmin Command Center Gradient Hairline */}
-        <div
-          className="h-[3px] w-full"
-          style={{
-            background: isSuperAdmin
-              ? 'linear-gradient(90deg, #0B4D94 0%, #4C94E8 50%, #3DBE63 100%)'
-              : 'var(--header-strip)',
-          }}
-          aria-hidden="true"
-        />
-
+      {/* Fixed Core 2.0 Header (h-22 desktop / h-18 mobile, zero border lines) */}
+      <header
+        className={`no-print fixed top-0 right-0 left-0 z-20 bg-b-surface1 transition-[left,background-color] duration-250 ease-out motion-reduce:transition-none ${
+          sidebarCompact
+            ? 'xl:left-22'
+            : 'xl:left-85 max-4xl:xl:left-70 max-3xl:xl:left-60'
+        }`}
+      >
         <div className="center-with-sidebar flex items-center justify-between h-22 max-md:h-18 gap-3">
-          {/* Left: Mobile Logo + Sidebar Toggle + Page Title */}
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="flex xl:hidden items-center gap-2.5 shrink-0">
-              <Link
-                href={isSuperAdmin ? '/super-admin' : `/${activeRole}`}
-                className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-b-surface2 border border-s-subtle shadow-widget"
-                aria-label="CollegesHub Home"
-              >
-                <img
-                  src="/logo-mark.svg"
-                  alt="CollegesHub"
-                  className="w-6 h-6 object-contain"
-                />
-              </Link>
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(true)}
-                aria-label="Open navigation menu"
-                className="flex items-center justify-center w-11 h-11 rounded-full bg-b-surface2 border border-s-subtle text-t-secondary hover:text-t-primary shadow-widget transition-colors cursor-pointer"
-              >
-                <Icon name="menu" className="!size-5 fill-current" />
-              </button>
-            </div>
+          {/* Left: 48px Circular Two-Bar Collapse/Drawer Control + Page Title */}
+          <div className="flex items-center gap-3.5 min-w-0">
+            <button
+              type="button"
+              onClick={handleHeaderMenuToggle}
+              aria-label={
+                sidebarOpen
+                  ? 'Close navigation drawer'
+                  : sidebarCompact
+                    ? 'Expand sidebar'
+                    : 'Collapse sidebar'
+              }
+              aria-expanded={!sidebarCompact || sidebarOpen}
+              className={`group relative flex flex-col items-center justify-center w-12 h-12 rounded-full bg-b-surface2 border border-s-subtle text-t-secondary hover:text-t-primary hover:border-s-highlight shadow-widget transition-all shrink-0 cursor-pointer gap-[5px] before:content-[''] before:w-4.5 before:h-[1.5px] before:rounded-full before:bg-t-secondary before:transition-all before:duration-250 before:ease-out after:content-[''] after:w-4.5 after:h-[1.5px] after:rounded-full after:bg-t-secondary after:transition-all after:duration-250 after:ease-out hover:before:bg-t-primary hover:after:bg-t-primary motion-reduce:before:transition-none motion-reduce:after:transition-none ${
+                sidebarOpen
+                  ? 'max-xl:before:translate-y-[3.25px] max-xl:before:rotate-45 max-xl:after:-translate-y-[3.25px] max-xl:after:-rotate-45'
+                  : ''
+              } ${
+                sidebarCompact
+                  ? 'xl:before:w-3 xl:before:-translate-x-0.5 xl:after:w-4.5 xl:after:translate-x-0.5'
+                  : ''
+              }`}
+            />
 
-            <div className="min-w-0">
-              <div className="flex items-center gap-2.5">
-                <h1 className="truncate text-h4 max-lg:text-h5 max-md:text-h6 text-t-primary">
-                  {pageTitle}
-                </h1>
-                {!isSuperAdmin && (
-                  <div className="hidden sm:inline-flex">
-                    <PlanBadge
-                      plan={plan || user?.college?.planId || 'starter'}
-                      status={
-                        subStatus === 'suspended' || subStatus === 'expired'
-                          ? subStatus
-                          : undefined
-                      }
-                    />
-                  </div>
-                )}
-                {isSuperAdmin && (
-                  <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-primary-01/12 text-t-blue border border-primary-01/25">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary-02" />
-                    Platform HQ
-                  </span>
-                )}
-              </div>
-              {user?.college && !isSuperAdmin && (
-                <p className="truncate text-caption text-t-secondary hidden sm:block">
-                  {user.college.name}
-                </p>
+            <div className="min-w-0 flex items-center gap-2.5">
+              <h1 className="truncate text-h4 max-lg:text-h5 max-md:text-h6 text-t-primary">
+                {pageTitle}
+              </h1>
+              {!isSuperAdmin && (
+                <div className="hidden sm:inline-flex">
+                  <PlanBadge
+                    plan={plan || user?.college?.planId || 'starter'}
+                    status={
+                      subStatus === 'suspended' || subStatus === 'expired'
+                        ? subStatus
+                        : undefined
+                    }
+                  />
+                </div>
               )}
             </div>
           </div>
 
           {/* Right: Core 2.0 Global Search Pill + Theme Toggle + Notifications + Avatar */}
           <div className="flex items-center gap-2.5 shrink-0">
-            {/* Desktop Search Trigger Pill (Core 2.0 w-79 h-12 rounded-3xl) */}
-            <button
-              type="button"
-              onClick={() => setSearchOpen(true)}
-              aria-label="Search pages and features (Ctrl+K)"
-              className="hidden md:flex items-center gap-3 w-72 lg:w-79 h-12 px-4.5 rounded-3xl bg-b-surface2 border border-s-subtle text-body-2 text-t-secondary hover:border-s-highlight hover:text-t-primary shadow-widget transition-all cursor-pointer"
-            >
-              <Icon name="search" className="!size-5 fill-t-secondary shrink-0" />
-              <span className="truncate">Search anything...</span>
-              <kbd className="ml-auto inline-flex items-center rounded-lg bg-b-surface1 px-2 py-0.5 font-mono text-[11px] font-medium text-t-tertiary border border-s-subtle">
-                Ctrl K
-              </kbd>
-            </button>
+            {/* Desktop Search Dropdown Bar (Core 2.0 attached search widget) */}
+            <div className="hidden md:block">
+              <HeaderSearchDropdown role={activeRole} />
+            </div>
 
             {/* Mobile Search Icon Button */}
             <button
               type="button"
-              onClick={() => setSearchOpen(true)}
+              onClick={() => setMobileSearchOpen((prev) => !prev)}
               aria-label="Search pages and features"
               className="md:hidden flex items-center justify-center w-11 h-11 rounded-full bg-b-surface2 border border-s-subtle text-t-secondary hover:text-t-primary shadow-widget transition-colors cursor-pointer"
             >
@@ -1015,17 +1101,28 @@ const DashboardLayout = ({ children }) => {
             </button>
           </div>
         </div>
+
+        {/* Mobile Attached Search Dropdown Bar */}
+        {mobileSearchOpen && (
+          <div className="md:hidden absolute top-[calc(100%+0.5rem)] left-3 right-3 z-50 p-2 rounded-3xl bg-b-surface2 border border-s-subtle shadow-dropdown animate-slide-up">
+            <HeaderSearchDropdown
+              role={activeRole}
+              autoFocus
+              onCloseMobile={() => setMobileSearchOpen(false)}
+            />
+          </div>
+        )}
       </header>
 
-      {/* Main Content Area (pt-22 desktop / pt-18 mobile + pb-24 on student mobile) */}
+      {/* Main Content Area (Clean spacing between header and page content) */}
       <div
-        className={`pt-22 max-md:pt-18 ${
+        className={`pt-20 max-md:pt-16 ${
           hasMobileBottomBar ? 'max-lg:pb-24 pb-8' : 'pb-8'
         }`}
       >
         <SubscriptionExpiryBanner />
 
-        <main className="center-with-sidebar pt-5 max-md:pt-3">
+        <main className="center-with-sidebar pt-2 max-md:pt-1">
           {children}
         </main>
       </div>
@@ -1040,11 +1137,6 @@ const DashboardLayout = ({ children }) => {
       <div id="app-portal-root" className="relative z-[100]" />
 
       {/* Portaled Overlays */}
-      <SpotlightSearch
-        open={searchOpen}
-        onClose={() => setSearchOpen(false)}
-        role={activeRole}
-      />
       {showNotifications && (
         <NotificationsDrawer
           open={notifOpen}
@@ -1058,6 +1150,8 @@ const DashboardLayout = ({ children }) => {
         user={user}
         plan={plan}
         subStatus={subStatus}
+        theme={theme}
+        setTheme={setTheme}
       />
     </div>
   );

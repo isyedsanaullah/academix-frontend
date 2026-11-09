@@ -24,6 +24,7 @@ export const useAuth = () => {
   const loading = useAuthStore(state => state.loading);
   const login = useAuthStore(state => state.login);
   const loginWithGoogle = useAuthStore(state => state.loginWithGoogle);
+  const complete2FASession = useAuthStore(state => state.complete2FASession);
   const logout = useAuthStore(state => state.logout);
   const updateUser = useAuthStore(state => state.updateUser);
 
@@ -32,6 +33,7 @@ export const useAuth = () => {
     loading,
     login,
     loginWithGoogle,
+    complete2FASession,
     logout,
     updateUser
   };

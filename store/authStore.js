@@ -29,12 +29,36 @@ export const useAuthStore = create((set, get) => ({
     }
     const { data } = await api.post('/auth/login', { email, password }, { headers });
     if (data.success) {
+      if (data.requires2FAEnrollment || data.requires2FA) {
+        return data;
+      }
       localStorage.setItem('academix_token', data.data.token);
       localStorage.setItem('academix_user', JSON.stringify(data.data));
       set({ user: data.data });
       return data.data;
     }
     throw new Error(data.message);
+  },
+
+  complete2FASession: async (token, initialUser = null) => {
+    localStorage.setItem('academix_token', token);
+    try {
+      const { data } = await api.get('/auth/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (data?.success && data?.data) {
+        const userData = { ...data.data, token };
+        localStorage.setItem('academix_user', JSON.stringify(userData));
+        set({ user: userData });
+        return userData;
+      }
+    } catch {
+      // Fallback to initialUser if /auth/me fails
+    }
+    const fallback = { ...(initialUser || {}), token };
+    localStorage.setItem('academix_user', JSON.stringify(fallback));
+    set({ user: fallback });
+    return fallback;
   },
 
   loginWithGoogle: async () => {

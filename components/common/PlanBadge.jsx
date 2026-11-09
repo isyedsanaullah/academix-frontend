@@ -2,6 +2,8 @@
 
 import { normalizePlanKey, PLAN_LABELS } from '../../lib/planTheme';
 
+export const normalizePlanId = (rawPlan) => normalizePlanKey(rawPlan) || 'starter';
+
 /**
  * PlanBadge — Displays the subscription plan or status with Core 2.0 token styling
  * Usage: <PlanBadge plan="premium" /> or <PlanBadge plan="basic" size="lg" /> or <PlanBadge status="active" />

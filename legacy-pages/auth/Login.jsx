@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../../context/AuthContext';
 import {
   HiOutlineMail,
@@ -65,7 +66,7 @@ const Spinner = () => (
 export default function Login() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, logout, loginWithGoogle } = useAuth();
+  const { login, logout, loginWithGoogle, complete2FASession } = useAuth();
 
   const [mounted, setMounted] = useState(false);
   const [hostType, setHostType] = useState('root');
@@ -78,6 +79,14 @@ export default function Login() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  // 2FA states ('none' | 'enroll' | 'validate' | 'recover')
+  const [twoFaMode, setTwoFaMode] = useState('none');
+  const [enrollToken, setEnrollToken] = useState('');
+  const [preAuthToken, setPreAuthToken] = useState('');
+  const [twoFaSetupData, setTwoFaSetupData] = useState(null);
+  const [twoFaCode, setTwoFaCode] = useState('');
+  const [backupCode, setBackupCode] = useState('');
 
   // Step in root flow: 'code' -> 'credentials' (after slide animation)
   const [step, setStep] = useState('code');
@@ -261,6 +270,52 @@ export default function Login() {
     }
   };
 
+  // ─── Helper: Finalize post-login routing & guards ──────────────────────────
+  const finalizeAuthenticatedRoute = (userData) => {
+    // ── Guard A: Super-admin portal path ──────────────────────────────────
+    if (resolvedCollege?.isSuperAdmin || hostType === 'admin') {
+      if (userData.role !== 'superAdmin') {
+        logout();
+        shake();
+        toast.error('Access denied: Strictly reserved for Super Administrators.');
+        return;
+      }
+      toast.success(`Welcome back, ${userData.name || 'Super Admin'}!`);
+      router.push('/super-admin');
+      return;
+    }
+
+    // ── Guard B: Block Super Admin from logging in via a college code ─────
+    if (userData.role === 'superAdmin') {
+      logout();
+      shake();
+      toast.error('Access denied: Please use the Super Admin portal to sign in.');
+      return;
+    }
+
+    // ── Guard C: Block cross-college login ───────────────────────────────
+    if (resolvedCollege?.id && userData.college_id) {
+      if (userData.college_id !== resolvedCollege.id) {
+        logout();
+        shake();
+        toast.error('Access denied: Your account does not belong to this institution.');
+        return;
+      }
+    }
+
+    // ── Guard D: Block users with no college from logging in via college code ─
+    if (resolvedCollege && !resolvedCollege.isSuperAdmin && !userData.college_id && !userData.college) {
+      logout();
+      shake();
+      toast.error('Access denied: Your account is not associated with any institution.');
+      return;
+    }
+
+    const collegeDisplayName = resolvedCollege?.name || tenantProfile?.name || 'College';
+    toast.success(`Welcome back to ${collegeDisplayName}, ${userData.name}!`);
+    router.push(roleRedirects[userData.role] || '/');
+  };
+
   // ─── 2. Handle Credentials Submit ──────────────────────────────────────────
   const handleCredentialsSubmit = async (e) => {
     e.preventDefault();
@@ -271,8 +326,6 @@ export default function Login() {
 
     setLoading(true);
     try {
-      // Pass the expected college ID to the backend for server-side validation.
-      // Only send it when a specific college was resolved (not super-admin, not subdomain).
       const expectedCollegeId =
         resolvedCollege && !resolvedCollege.isSuperAdmin && hostType === 'root'
           ? (resolvedCollege.id || null)
@@ -280,59 +333,118 @@ export default function Login() {
 
       const userData = await login(email.trim(), password, expectedCollegeId);
 
-
-      // ── Guard A: Super-admin portal path ──────────────────────────────────
-      if (resolvedCollege?.isSuperAdmin || hostType === 'admin') {
-        if (userData.role !== 'superAdmin') {
-          logout();
-          shake();
-          toast.error('Access denied: Strictly reserved for Super Administrators.');
-          return;
+      // Phase 9A: Mandatory 2FA Enrollment flow
+      if (userData?.requires2FAEnrollment && userData?.enrollToken) {
+        setEnrollToken(userData.enrollToken);
+        setTwoFaCode('');
+        const setupRes = await api.post(
+          '/auth/2fa/setup',
+          {},
+          { headers: { Authorization: `Bearer ${userData.enrollToken}` } }
+        );
+        if (setupRes.data?.success) {
+          setTwoFaSetupData(setupRes.data);
+          setTwoFaMode('enroll');
+          toast(userData.message || 'Please complete Two-Factor Authentication setup.');
         }
-        toast.success(`Welcome back, ${userData.name}!`);
-        router.push('/super-admin');
         return;
       }
 
-      // ── Guard B: Block Super Admin from logging in via a college code ─────
-      // If we resolved a specific college (not super-admin) but the account is superAdmin,
-      // reject — superAdmin must use the dedicated super-admin portal.
-      if (userData.role === 'superAdmin') {
-        logout();
-        shake();
-        toast.error('Access denied: Please use the Super Admin portal to sign in.');
+      // Phase 9A: 2FA OTP Validation flow
+      if (userData?.requires2FA && userData?.preAuthToken) {
+        setPreAuthToken(userData.preAuthToken);
+        setTwoFaCode('');
+        setBackupCode('');
+        setTwoFaMode('validate');
+        toast(userData.message || 'Enter your 6-digit authenticator code.');
         return;
       }
 
-      // ── Guard C: Block cross-college login ───────────────────────────────
-      // If a specific college was resolved via code, the authenticated user MUST
-      // belong to that exact college. Compare IDs.
-      if (resolvedCollege?.id && userData.college_id) {
-        if (userData.college_id !== resolvedCollege.id) {
-          logout();
-          shake();
-          toast.error('Access denied: Your account does not belong to this institution.');
-          return;
-        }
-      }
-
-      // ── Guard D: Block users with no college from logging in via college code ─
-      // (e.g. a super admin account that somehow passed guard B)
-      if (resolvedCollege && !resolvedCollege.isSuperAdmin && !userData.college_id) {
-        logout();
-        shake();
-        toast.error('Access denied: Your account is not associated with any institution.');
-        return;
-      }
-
-      // College User login — all checks passed
-      const collegeDisplayName = resolvedCollege?.name || tenantProfile?.name || 'College';
-      toast.success(`Welcome back to ${collegeDisplayName}, ${userData.name}!`);
-      router.push(roleRedirects[userData.role] || '/');
+      finalizeAuthenticatedRoute(userData);
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Login failed. Invalid credentials.';
       shake();
       toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─── 2B. Handle 2FA Enrollment Verification (/auth/2fa/verify) ─────────────
+  const handleEnroll2FAVerify = async (e) => {
+    e.preventDefault();
+    const clean = twoFaCode.replace(/\s+/g, '');
+    if (clean.length !== 6) {
+      shake();
+      return toast.error('Please enter the 6-digit code from your authenticator app');
+    }
+    setLoading(true);
+    try {
+      const res = await api.post(
+        '/auth/2fa/verify',
+        { code: clean },
+        { headers: { Authorization: `Bearer ${enrollToken}` } }
+      );
+      if (res.data?.success && res.data?.token) {
+        const userData = await complete2FASession(res.data.token);
+        toast.success('Two-factor authentication enabled!');
+        finalizeAuthenticatedRoute(userData);
+      }
+    } catch (err) {
+      shake();
+      toast.error(err.response?.data?.message || 'Invalid verification code. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─── 2C. Handle 2FA Login Code Validation (/auth/2fa/validate) ─────────────
+  const handleValidate2FA = async (e) => {
+    e.preventDefault();
+    const clean = twoFaCode.replace(/\s+/g, '');
+    if (clean.length !== 6) {
+      shake();
+      return toast.error('Please enter your 6-digit authenticator code');
+    }
+    setLoading(true);
+    try {
+      const res = await api.post('/auth/2fa/validate', {
+        preAuthToken,
+        code: clean,
+      });
+      if (res.data?.success && res.data?.token) {
+        const userData = await complete2FASession(res.data.token, res.data.user);
+        finalizeAuthenticatedRoute(userData);
+      }
+    } catch (err) {
+      shake();
+      toast.error(err.response?.data?.message || 'Invalid 6-digit code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─── 2D. Handle 2FA Backup Code Recovery (/auth/2fa/recover) ───────────────
+  const handleRecover2FA = async (e) => {
+    e.preventDefault();
+    const clean = backupCode.trim();
+    if (!clean) {
+      shake();
+      return toast.error('Please enter a 10-character backup code');
+    }
+    setLoading(true);
+    try {
+      const res = await api.post('/auth/2fa/recover', {
+        preAuthToken,
+        backupCode: clean,
+      });
+      if (res.data?.success && res.data?.token) {
+        const userData = await complete2FASession(res.data.token, res.data.user);
+        finalizeAuthenticatedRoute(userData);
+      }
+    } catch (err) {
+      shake();
+      toast.error(err.response?.data?.message || 'Invalid backup code');
     } finally {
       setLoading(false);
     }
@@ -725,24 +837,39 @@ export default function Login() {
                     </div>
                   </div>
 
-                  {/* ─── Slide B: credentials ─── */}
+                  {/* ─── Slide B: credentials & 2FA ─── */}
                   <div
                     className="w-1/2 shrink-0 px-1.5 py-1.5"
                     style={panelStyle(onCredentials)}
                     aria-hidden={!onCredentials}
                   >
-                    <div className="flex flex-col gap-6">
+                    <div className="flex flex-col gap-5">
                       <div className="flex flex-col gap-2.5">
                         <div className="flex items-center justify-between gap-2">
                           <span className="badge badge-primary">
                             <HiOutlineShieldCheck size={13} aria-hidden="true" />
-                            {isSuperAdmin ? 'Super Administrator Access' : 'Sign-in Credentials'}
+                            {twoFaMode === 'enroll'
+                              ? 'Mandatory 2FA Setup'
+                              : twoFaMode !== 'none'
+                                ? 'Two-Factor Verification'
+                                : isSuperAdmin
+                                  ? 'Super Administrator Access'
+                                  : 'Sign-in Credentials'}
                           </span>
 
-                          {hostType === 'root' && (
+                          {(hostType === 'root' || twoFaMode !== 'none') && (
                             <button
                               type="button"
-                              onClick={() => setStep('code')}
+                              onClick={() => {
+                                if (twoFaMode !== 'none') {
+                                  setTwoFaMode('none');
+                                  setTwoFaSetupData(null);
+                                  setTwoFaCode('');
+                                  setBackupCode('');
+                                } else {
+                                  setStep('code');
+                                }
+                              }}
                               className="btn-ghost btn-sm"
                             >
                               <HiOutlineArrowLeft size={14} aria-hidden="true" /> Back
@@ -750,105 +877,278 @@ export default function Login() {
                           )}
                         </div>
 
-                        <h1 className="text-2xl font-bold tracking-tight text-fg sm:text-[28px]">Welcome back</h1>
+                        <h1 className="text-2xl font-bold tracking-tight text-fg sm:text-[28px]">
+                          {twoFaMode === 'enroll'
+                            ? 'Set Up Authenticator'
+                            : twoFaMode === 'validate'
+                              ? 'Enter Authenticator Code'
+                              : twoFaMode === 'recover'
+                                ? 'Backup Code Recovery'
+                                : 'Welcome back'}
+                        </h1>
                         <p className="text-sm leading-relaxed text-fg-muted">
-                          {isSuperAdmin
-                            ? 'Enter your Super Admin credentials to enter the platform console.'
-                            : `Sign in with your ${activeCollege?.name || 'College'} account.`}
+                          {twoFaMode === 'enroll'
+                            ? 'Scan the QR code below in Google Authenticator or Authy, then enter the 6-digit code to activate 2FA.'
+                            : twoFaMode === 'validate'
+                              ? 'Enter the 6-digit verification code generated by your authenticator app.'
+                              : twoFaMode === 'recover'
+                                ? 'Enter one of your 10-character single-use backup recovery codes.'
+                                : isSuperAdmin
+                                  ? 'Enter your Super Admin credentials to enter the platform console.'
+                                  : `Sign in with your ${activeCollege?.name || 'College'} account.`}
                         </p>
                       </div>
 
-                      <form onSubmit={handleCredentialsSubmit} className="flex flex-col gap-4">
-                        <div>
-                          <label htmlFor="login-email" className="field-label">Email or Username</label>
-                          <div className="relative">
-                            <HiOutlineMail
-                              className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-fg-faint"
-                              aria-hidden="true"
-                            />
-                            <input
-                              id="login-email"
-                              ref={emailRef}
-                              type="text"
-                              value={email}
-                              onChange={(e) => setEmail(e.target.value)}
-                              placeholder="Enter email or username"
-                              autoComplete="username"
-                              className="input-field min-h-12 pl-10"
-                            />
+                      {/* ── Mode 1: Mandatory 2FA Enrollment (QR + Secret + Verify) ── */}
+                      {twoFaMode === 'enroll' && twoFaSetupData && (
+                        <form onSubmit={handleEnroll2FAVerify} className="flex flex-col gap-4">
+                          <div className="flex flex-col items-center gap-3 rounded-2xl border border-line bg-card-2 p-4">
+                            <div className="rounded-xl bg-white p-3 shadow-sm">
+                              <QRCodeSVG value={twoFaSetupData.otpauthUrl || ''} size={148} />
+                            </div>
+                            <div className="w-full text-center">
+                              <p className="text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
+                                Manual Setup Key
+                              </p>
+                              <code className="mt-1 block select-all rounded-lg border border-line bg-card px-2.5 py-1.5 font-mono text-xs font-bold tracking-wider text-fg">
+                                {twoFaSetupData.secretBase32}
+                              </code>
+                            </div>
                           </div>
-                        </div>
 
-                        <div>
-                          <label htmlFor="login-password" className="field-label">Password</label>
-                          <div className="relative">
-                            <HiOutlineLockClosed
-                              className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-fg-faint"
-                              aria-hidden="true"
-                            />
-                            <input
-                              id="login-password"
-                              type={showPass ? 'text' : 'password'}
-                              value={password}
-                              onChange={(e) => setPassword(e.target.value)}
-                              placeholder="Enter password"
-                              autoComplete="current-password"
-                              className="input-field min-h-12 pl-10 pr-12"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowPass(!showPass)}
-                              className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-fg-faint transition hover:bg-card-2 hover:text-fg"
-                              aria-label={showPass ? 'Hide password' : 'Show password'}
-                              aria-pressed={showPass}
-                            >
-                              {showPass ? <HiOutlineEyeOff size={18} aria-hidden="true" /> : <HiOutlineEye size={18} aria-hidden="true" />}
-                            </button>
-                          </div>
-                        </div>
-
-                        <button
-                          type="submit"
-                          disabled={loading || !email.trim() || !password}
-                          className="btn-primary mt-1 min-h-12 w-full"
-                        >
-                          {loading ? (
-                            <>
-                              <Spinner />
-                              <span>Authenticating...</span>
-                            </>
-                          ) : (
-                            <span>Sign In</span>
+                          {Array.isArray(twoFaSetupData.backupCodes) && twoFaSetupData.backupCodes.length > 0 && (
+                            <details className="rounded-xl border border-line bg-card-2 px-3.5 py-2.5 text-xs">
+                              <summary className="cursor-pointer font-semibold text-fg">
+                                View 10 Single-Use Backup Codes (Save these safely)
+                              </summary>
+                              <div className="mt-2 grid grid-cols-2 gap-1.5 font-mono text-[11px] text-fg-muted">
+                                {twoFaSetupData.backupCodes.map((bc) => (
+                                  <span key={bc} className="rounded bg-card px-2 py-1 select-all">
+                                    {bc}
+                                  </span>
+                                ))}
+                              </div>
+                            </details>
                           )}
-                        </button>
-                      </form>
 
-                      {!isSuperAdmin && (
-                        <>
-                          <hr className="divider" />
-                          {/* Google Sign-In button — for admin accounts that use Google auth */}
+                          <div>
+                            <label htmlFor="twofa-enroll-code" className="field-label">
+                              6-Digit Authenticator Code
+                            </label>
+                            <input
+                              id="twofa-enroll-code"
+                              type="text"
+                              inputMode="numeric"
+                              maxLength={6}
+                              value={twoFaCode}
+                              onChange={(e) => setTwoFaCode(e.target.value.replace(/\D/g, ''))}
+                              placeholder="000000"
+                              autoFocus
+                              className="input-field min-h-12 text-center font-mono text-lg font-bold tracking-[0.35em]"
+                            />
+                          </div>
+
                           <button
-                            type="button"
-                            onClick={handleGoogleLogin}
-                            disabled={googleLoading || loading}
-                            className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-line bg-card-2 px-4 py-3 text-sm font-medium text-fg transition hover:bg-card-3 disabled:cursor-not-allowed disabled:opacity-60"
+                            type="submit"
+                            disabled={loading || twoFaCode.length !== 6}
+                            className="btn-primary min-h-12 w-full"
                           >
-                            {googleLoading ? (
+                            {loading ? (
                               <>
                                 <Spinner />
-                                <span>Signing in with Google…</span>
+                                <span>Verifying &amp; Activating...</span>
                               </>
                             ) : (
-                              <>
-                                <GoogleIcon />
-                                <span>Continue with Google</span>
-                              </>
+                              <span>Verify &amp; Enter Console</span>
                             )}
                           </button>
-                          <p className="text-center text-xs leading-relaxed text-fg-muted">
-                            Need help accessing your student or faculty account?{' '}
-                            <span className="font-semibold text-fg">Contact your college registrar office.</span>
-                          </p>
+                        </form>
+                      )}
+
+                      {/* ── Mode 2: 2FA 6-Digit Code Validation ── */}
+                      {twoFaMode === 'validate' && (
+                        <form onSubmit={handleValidate2FA} className="flex flex-col gap-4">
+                          <div>
+                            <label htmlFor="twofa-validate-code" className="field-label">
+                              6-Digit Authenticator Code
+                            </label>
+                            <input
+                              id="twofa-validate-code"
+                              type="text"
+                              inputMode="numeric"
+                              maxLength={6}
+                              value={twoFaCode}
+                              onChange={(e) => setTwoFaCode(e.target.value.replace(/\D/g, ''))}
+                              placeholder="000000"
+                              autoFocus
+                              className="input-field min-h-12 text-center font-mono text-lg font-bold tracking-[0.35em]"
+                            />
+                          </div>
+
+                          <button
+                            type="submit"
+                            disabled={loading || twoFaCode.length !== 6}
+                            className="btn-primary min-h-12 w-full"
+                          >
+                            {loading ? (
+                              <>
+                                <Spinner />
+                                <span>Verifying...</span>
+                              </>
+                            ) : (
+                              <span>Verify &amp; Sign In</span>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setTwoFaMode('recover')}
+                            className="text-center text-xs font-semibold text-accent hover:underline"
+                          >
+                            Lost your authenticator device? Use a backup code &rarr;
+                          </button>
+                        </form>
+                      )}
+
+                      {/* ── Mode 3: 2FA Backup Code Recovery ── */}
+                      {twoFaMode === 'recover' && (
+                        <form onSubmit={handleRecover2FA} className="flex flex-col gap-4">
+                          <div>
+                            <label htmlFor="twofa-backup-code" className="field-label">
+                              10-Character Backup Code
+                            </label>
+                            <input
+                              id="twofa-backup-code"
+                              type="text"
+                              value={backupCode}
+                              onChange={(e) => setBackupCode(e.target.value.toUpperCase())}
+                              placeholder="XXXXXXXXXX"
+                              autoFocus
+                              className="input-field min-h-12 text-center font-mono text-base font-bold tracking-widest uppercase"
+                            />
+                          </div>
+
+                          <button
+                            type="submit"
+                            disabled={loading || !backupCode.trim()}
+                            className="btn-primary min-h-12 w-full"
+                          >
+                            {loading ? (
+                              <>
+                                <Spinner />
+                                <span>Recovering Access...</span>
+                              </>
+                            ) : (
+                              <span>Verify Backup Code</span>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setTwoFaMode('validate')}
+                            className="text-center text-xs font-semibold text-accent hover:underline"
+                          >
+                            &larr; Use 6-digit authenticator code instead
+                          </button>
+                        </form>
+                      )}
+
+                      {/* ── Default Mode: Username & Password Credentials ── */}
+                      {twoFaMode === 'none' && (
+                        <>
+                          <form onSubmit={handleCredentialsSubmit} className="flex flex-col gap-4">
+                            <div>
+                              <label htmlFor="login-email" className="field-label">Email or Username</label>
+                              <div className="relative">
+                                <HiOutlineMail
+                                  className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-fg-faint"
+                                  aria-hidden="true"
+                                />
+                                <input
+                                  id="login-email"
+                                  ref={emailRef}
+                                  type="text"
+                                  value={email}
+                                  onChange={(e) => setEmail(e.target.value)}
+                                  placeholder="Enter email or username"
+                                  autoComplete="username"
+                                  className="input-field min-h-12 pl-10"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label htmlFor="login-password" className="field-label">Password</label>
+                              <div className="relative">
+                                <HiOutlineLockClosed
+                                  className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-fg-faint"
+                                  aria-hidden="true"
+                                />
+                                <input
+                                  id="login-password"
+                                  type={showPass ? 'text' : 'password'}
+                                  value={password}
+                                  onChange={(e) => setPassword(e.target.value)}
+                                  placeholder="Enter password"
+                                  autoComplete="current-password"
+                                  className="input-field min-h-12 pl-10 pr-12"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setShowPass(!showPass)}
+                                  className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-fg-faint transition hover:bg-card-2 hover:text-fg"
+                                  aria-label={showPass ? 'Hide password' : 'Show password'}
+                                  aria-pressed={showPass}
+                                >
+                                  {showPass ? <HiOutlineEyeOff size={18} aria-hidden="true" /> : <HiOutlineEye size={18} aria-hidden="true" />}
+                                </button>
+                              </div>
+                            </div>
+
+                            <button
+                              type="submit"
+                              disabled={loading || !email.trim() || !password}
+                              className="btn-primary mt-1 min-h-12 w-full"
+                            >
+                              {loading ? (
+                                <>
+                                  <Spinner />
+                                  <span>Authenticating...</span>
+                                </>
+                              ) : (
+                                <span>Sign In</span>
+                              )}
+                            </button>
+                          </form>
+
+                          {!isSuperAdmin && (
+                            <>
+                              <hr className="divider" />
+                              {/* Google Sign-In button — for admin accounts that use Google auth */}
+                              <button
+                                type="button"
+                                onClick={handleGoogleLogin}
+                                disabled={googleLoading || loading}
+                                className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-line bg-card-2 px-4 py-3 text-sm font-medium text-fg transition hover:bg-card-3 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {googleLoading ? (
+                                  <>
+                                    <Spinner />
+                                    <span>Signing in with Google…</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <GoogleIcon />
+                                    <span>Continue with Google</span>
+                                  </>
+                                )}
+                              </button>
+                              <p className="text-center text-xs leading-relaxed text-fg-muted">
+                                Need help accessing your student or faculty account?{' '}
+                                <span className="font-semibold text-fg">Contact your college registrar office.</span>
+                              </p>
+                            </>
+                          )}
                         </>
                       )}
                     </div>

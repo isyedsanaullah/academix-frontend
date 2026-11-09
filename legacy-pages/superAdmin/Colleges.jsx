@@ -1,202 +1,78 @@
+'use client';
+
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../services/api';
+import api from '@/services/api';
 import toast from 'react-hot-toast';
-import CollegesHubLoader from '../../components/common/CollegesHubLoader';
-import {
-  HiOutlinePlus,
-  HiOutlineSearch,
-  HiOutlineMail,
-  HiOutlineRefresh,
-  HiOutlineBan,
-  HiOutlineClipboardCopy,
-  HiOutlineCheckCircle,
-  HiOutlineClock,
-  HiOutlineOfficeBuilding,
-  HiOutlineX,
-  HiOutlineChevronRight,
-  HiOutlineFilter,
-  HiOutlineSparkles,
-  HiOutlineExclamationCircle,
-  HiOutlineAcademicCap,
-  HiOutlineCheck
-} from 'react-icons/hi';
+import CollegesHubLoader from '@/components/common/CollegesHubLoader';
+import Icon from '@/components/Icon';
 
-// Dynamic Badge Styling Helpers for Light & Dark Themes
-const getPlanBadgeClass = (planId) => {
-  const p = (planId || '').toLowerCase();
-  switch (p) {
-    case 'basic':
-      return 'bg-slate-100 dark:bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-500/20';
-    case 'standard':
-      return 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20';
-    case 'premium':
-      return 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-500/20';
-    case 'enterprise':
-      return 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/20';
-    default:
-      return 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20';
-  }
-};
+import PlanFilterDropdown from '@/components/superAdmin/colleges/PlanFilterDropdown';
+import CollegesStatsCards from '@/components/superAdmin/colleges/CollegesStatsCards';
+import CollegesTable from '@/components/superAdmin/colleges/CollegesTable';
+import InvitationsTable from '@/components/superAdmin/colleges/InvitationsTable';
+import InviteCollegeDrawer from '@/components/superAdmin/colleges/InviteCollegeDrawer';
 
-const getStatusBadgeClass = (status) => {
-  const s = (status || '').toLowerCase();
-  switch (s) {
-    case 'active':
-    case 'accepted':
-      return 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20';
-    case 'pending':
-    case 'trial':
-      return 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20';
-    case 'suspended':
-    case 'cancelled':
-      return 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/20';
-    case 'expired':
-      return 'bg-slate-100 dark:bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-500/20';
-    case 'grace':
-      return 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20';
-    case 'onboarding':
-      return 'bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-500/20';
-    case 'pending_setup':
-      return 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/20';
-    default:
-      return 'bg-slate-100 dark:bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-500/20';
-  }
-};
-
-const formatPlanLabel = (planId) => {
-  if (!planId) return 'Basic Plan';
-  return planId.charAt(0).toUpperCase() + planId.slice(1) + (planId.toLowerCase().includes('plan') ? '' : ' Plan');
-};
+const ACTUAL_PLANS = [
+  { id: 'starter', name: 'Starter' },
+  { id: 'standard', name: 'Standard' },
+  { id: 'premium', name: 'Premium' },
+  { id: 'enterprise', name: 'Enterprise' },
+];
 
 const Colleges = () => {
   const navigate = useNavigate();
-  const [tab, setTab] = useState('colleges'); // 'colleges' | 'invitations'
+
+  // Data State
   const [colleges, setColleges] = useState([]);
   const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [invitesLoading, setInvitesLoading] = useState(false);
+
+  // Filters & Selected Card State (Default: null — no card selected)
+  // Cards act as tabs & filters: 'active' | 'suspended' | 'invitations' | 'expired' | null
+  const [selectedCard, setSelectedCard] = useState(null);
   const [search, setSearch] = useState('');
   const [planFilter, setPlanFilter] = useState('');
-  const [expiryFilter, setExpiryFilter] = useState('all');
+  const [expiringSoonOnly, setExpiringSoonOnly] = useState(false);
 
-  const [availablePlans, setAvailablePlans] = useState([
-    { id: 'basic', name: 'Basic Plan' },
-    { id: 'standard', name: 'Standard Plan' },
-    { id: 'premium', name: 'Premium Plan' },
-    { id: 'enterprise', name: 'Enterprise Plan' }
-  ]);
-
+  // Invite Modal State
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteForm, setInviteForm] = useState({ email: '', planId: 'basic' });
-  const [submittingInvite, setSubmittingInvite] = useState(false);
-  const [createdInviteUrl, setCreatedInviteUrl] = useState('');
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    fetchColleges();
-    fetchInvitations();
-    fetchDynamicPlans();
-  }, []);
-
-  const fetchDynamicPlans = async () => {
-    try {
-      const { data } = await api.get('/super-admin/subscriptions');
-      if (data.data?.planDistribution) {
-        const planKeys = Object.keys(data.data.planDistribution);
-        if (planKeys.length > 0) {
-          const formatted = planKeys.map(key => ({
-            id: key,
-            name: formatPlanLabel(key)
-          }));
-          setAvailablePlans(prev => {
-            const combinedMap = new Map();
-            [...prev, ...formatted].forEach(p => combinedMap.set(p.id, p));
-            return Array.from(combinedMap.values());
-          });
-        }
-      }
-    } catch {
-      // Fallback to static base set if API is not available
-    }
-  };
-
-  const fetchColleges = async () => {
-    try {
-      const { data } = await api.get('/super-admin/colleges');
-      const loadedColleges = data.data || [];
-      setColleges(loadedColleges);
-
-      // Extract any unique plans present in existing colleges dynamically
-      const uniqueCollegePlans = Array.from(
-        new Set(loadedColleges.map(c => c.subscription?.plan).filter(Boolean))
-      );
-      if (uniqueCollegePlans.length > 0) {
-        setAvailablePlans(prev => {
-          const map = new Map(prev.map(p => [p.id, p]));
-          uniqueCollegePlans.forEach(planId => {
-            if (!map.has(planId)) {
-              map.set(planId, { id: planId, name: formatPlanLabel(planId) });
-            }
-          });
-          return Array.from(map.values());
-        });
-      }
-    } catch {
-      toast.error('Failed to load colleges');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const fetchInvitations = async () => {
-    setInvitesLoading(true);
     try {
       const { data } = await api.get('/super-admin/invitations');
-      const loadedInvites = data.data || [];
-      setInvitations(loadedInvites);
-
-      // Extract unique plans from invitations dynamically
-      const uniqueInvitePlans = Array.from(
-        new Set(loadedInvites.map(i => i.planId).filter(Boolean))
-      );
-      if (uniqueInvitePlans.length > 0) {
-        setAvailablePlans(prev => {
-          const map = new Map(prev.map(p => [p.id, p]));
-          uniqueInvitePlans.forEach(planId => {
-            if (!map.has(planId)) {
-              map.set(planId, { id: planId, name: formatPlanLabel(planId) });
-            }
-          });
-          return Array.from(map.values());
-        });
-      }
+      setInvitations(data.data || []);
     } catch {
-      // Quiet fallback
-    } finally {
-      setInvitesLoading(false);
+      // Silent fallback
     }
   };
 
-  const handleSendInvite = async (e) => {
-    e.preventDefault();
-    if (!inviteForm.email) return toast.error('Please enter official email address');
+  useEffect(() => {
+    let isMounted = true;
+    const loadInitialData = async () => {
+      try {
+        const [cRes, iRes] = await Promise.all([
+          api.get('/super-admin/colleges'),
+          api.get('/super-admin/invitations'),
+        ]);
+        if (isMounted) {
+          setColleges(cRes.data?.data || []);
+          setInvitations(iRes.data?.data || []);
+        }
+      } catch {
+        if (isMounted) toast.error('Failed to load colleges');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    loadInitialData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-    setSubmittingInvite(true);
-    setCopied(false);
-    try {
-      const { data } = await api.post('/super-admin/invitations', inviteForm);
-      toast.success(data.message || 'Invitation sent successfully!');
-      setCreatedInviteUrl(data.data?.inviteUrl || '');
-      fetchInvitations();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to send invitation');
-    } finally {
-      setSubmittingInvite(false);
-    }
-  };
-
-  const handleResend = async (id) => {
+  const handleResendInvite = async (id) => {
     try {
       await api.post(`/super-admin/invitations/${id}/resend`);
       toast.success('Invitation resent with fresh 48h token!');
@@ -223,684 +99,442 @@ const Colleges = () => {
     setTimeout(() => setCopied(false), 3000);
   };
 
+  /* ── 4 Core Counts ── */
+  const activeCollegesCount = useMemo(() => {
+    return colleges.filter((c) => {
+      const st = (
+        c.subscription?.status ||
+        c.subscription_status ||
+        c.status ||
+        'active'
+      ).toLowerCase();
+      return (
+        c.isActive !== false &&
+        st !== 'suspended' &&
+        st !== 'expired' &&
+        st !== 'grace'
+      );
+    }).length;
+  }, [colleges]);
+
+  const suspendedCollegesCount = useMemo(() => {
+    return colleges.filter((c) => {
+      const st = (
+        c.subscription?.status ||
+        c.subscription_status ||
+        c.status ||
+        ''
+      ).toLowerCase();
+      return c.isActive === false || st === 'suspended';
+    }).length;
+  }, [colleges]);
+
+  const pendingInvitesCount = useMemo(() => {
+    return invitations.filter((i) => i.status === 'pending').length;
+  }, [invitations]);
+
+  const expiredGraceCount = useMemo(() => {
+    return colleges.filter((c) => {
+      const st = (
+        c.subscription?.status ||
+        c.subscription_status ||
+        c.status ||
+        ''
+      ).toLowerCase();
+      return (
+        st === 'expired' ||
+        st === 'grace' ||
+        (c.daysLeft !== null && c.daysLeft <= 0)
+      );
+    }).length;
+  }, [colleges]);
+
+  /* ── 12-Month Telemetry Time-Series ── */
+  const collegeTimeSeries = useMemo(() => {
+    const now = new Date();
+    const buckets = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const endOfMonth = new Date(
+        now.getFullYear(),
+        now.getMonth() - i + 1,
+        0,
+        23,
+        59,
+        59,
+        999
+      );
+      const label = d.toLocaleDateString('en-US', {
+        month: 'short',
+        year: '2-digit',
+      });
+      buckets.push({
+        key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+        label,
+        endOfMonth,
+      });
+    }
+
+    return buckets.map((b, idx) => {
+      let active = 0;
+      let suspended = 0;
+      let expired = 0;
+      let total = 0;
+
+      colleges.forEach((c) => {
+        const created = c.createdAt ? new Date(c.createdAt) : null;
+        if (!created || created <= b.endOfMonth) {
+          total += 1;
+          const status = (
+            c.subscription?.status ||
+            c.subscription_status ||
+            (c.isActive === false ? 'suspended' : 'active')
+          ).toLowerCase();
+          if (status === 'suspended' || c.isActive === false) {
+            suspended += 1;
+          } else if (status === 'expired' || status === 'grace') {
+            expired += 1;
+          } else {
+            active += 1;
+          }
+        }
+      });
+
+      let invCount = 0;
+      invitations.forEach((inv) => {
+        const created = inv.createdAt ? new Date(inv.createdAt) : null;
+        if (!created || created <= b.endOfMonth) {
+          invCount += 1;
+        }
+      });
+
+      return {
+        label: b.label,
+        total,
+        active: idx === buckets.length - 1 ? activeCollegesCount : active,
+        suspended:
+          idx === buckets.length - 1 ? suspendedCollegesCount : suspended,
+        expired: idx === buckets.length - 1 ? expiredGraceCount : expired,
+        invitations:
+          idx === buckets.length - 1 ? pendingInvitesCount : invCount,
+      };
+    });
+  }, [
+    colleges,
+    invitations,
+    activeCollegesCount,
+    suspendedCollegesCount,
+    expiredGraceCount,
+    pendingInvitesCount,
+  ]);
+
+  const prevPoint =
+    collegeTimeSeries.length >= 2
+      ? collegeTimeSeries[collegeTimeSeries.length - 2]
+      : collegeTimeSeries[0] || {};
+
+  const computeDelta = (curr, prev) => {
+    if (!prev || prev <= 0) return curr > 0 ? 100 : 0;
+    return Math.round(((curr - prev) / prev) * 100);
+  };
+
+  const activeDelta = computeDelta(activeCollegesCount, prevPoint.active);
+  const suspendedDelta = computeDelta(
+    suspendedCollegesCount,
+    prevPoint.suspended
+  );
+  const invitesDelta = computeDelta(pendingInvitesCount, prevPoint.invitations);
+  const expiredDelta = computeDelta(expiredGraceCount, prevPoint.expired);
+
+  const statsCards = [
+    {
+      id: 'active',
+      label: 'Active Colleges',
+      value: activeCollegesCount.toLocaleString(),
+      caption: 'healthy workspaces',
+      delta: activeDelta,
+      isUpgrade: activeDelta >= 0,
+      sparkline: collegeTimeSeries.slice(-8).map((p) => ({ val: p.active })),
+    },
+    {
+      id: 'suspended',
+      label: 'Suspended Colleges',
+      value: suspendedCollegesCount.toLocaleString(),
+      caption:
+        suspendedCollegesCount === 0
+          ? 'zero suspended'
+          : 'requires review',
+      delta: suspendedDelta,
+      isUpgrade: suspendedCollegesCount === 0 || suspendedDelta < 0,
+      sparkline: collegeTimeSeries.slice(-8).map((p) => ({ val: p.suspended })),
+    },
+    {
+      id: 'invitations',
+      label: 'Invitations',
+      value: pendingInvitesCount.toLocaleString(),
+      caption: `${pendingInvitesCount} pending onboarding`,
+      delta: invitesDelta,
+      isUpgrade: true,
+      sparkline: collegeTimeSeries.slice(-8).map((p) => ({ val: p.invitations })),
+    },
+    {
+      id: 'expired',
+      label: 'Expired / Grace',
+      value: expiredGraceCount.toLocaleString(),
+      caption:
+        expiredGraceCount === 0 ? 'all in good standing' : 'renewal due',
+      delta: expiredDelta,
+      isUpgrade: expiredGraceCount === 0 || expiredDelta < 0,
+      sparkline: collegeTimeSeries.slice(-8).map((p) => ({ val: p.expired })),
+    },
+  ];
+
+  const handleCardClick = (cardId) => {
+    setSelectedCard((prev) => (prev === cardId ? null : cardId));
+  };
+
+  /* ── Filtered Colleges List ── */
   const filteredColleges = useMemo(() => {
-    return colleges.filter(c => {
+    return colleges.filter((c) => {
       const query = search.toLowerCase().trim();
       const matchesSearch =
         !query ||
         c.name?.toLowerCase().includes(query) ||
         c.code?.toLowerCase().includes(query) ||
         c.email?.toLowerCase().includes(query) ||
-        c.city?.toLowerCase().includes(query);
-      const matchesPlan = !planFilter || c.subscription?.plan === planFilter;
+        c.city?.toLowerCase().includes(query) ||
+        c.phone?.toLowerCase().includes(query) ||
+        c.contactPhone?.toLowerCase().includes(query) ||
+        c.adminPhone?.toLowerCase().includes(query) ||
+        c.mobile?.toLowerCase().includes(query);
+
+      const matchesPlan =
+        !planFilter ||
+        c.subscription?.plan === planFilter ||
+        c.planId === planFilter;
 
       let matchesExpiry = true;
-      if (expiryFilter === 'expiring_soon') {
-        matchesExpiry = c.daysLeft !== null && c.daysLeft <= 30 && c.daysLeft > 0;
-      } else if (expiryFilter === 'expired') {
-        matchesExpiry = c.daysLeft !== null && c.daysLeft <= 0;
+      if (expiringSoonOnly) {
+        matchesExpiry =
+          c.daysLeft !== null && c.daysLeft <= 30 && c.daysLeft > 0;
       }
 
-      return matchesSearch && matchesPlan && matchesExpiry;
+      let matchesCard = true;
+      const status = (
+        c.subscription?.status ||
+        c.subscription_status ||
+        c.status ||
+        (c.isActive === false ? 'suspended' : 'active')
+      ).toLowerCase();
+
+      if (selectedCard === 'active') {
+        matchesCard =
+          c.isActive !== false &&
+          status !== 'suspended' &&
+          status !== 'expired' &&
+          status !== 'grace';
+      } else if (selectedCard === 'suspended') {
+        matchesCard = status === 'suspended' || c.isActive === false;
+      } else if (selectedCard === 'expired') {
+        matchesCard =
+          status === 'expired' ||
+          status === 'grace' ||
+          (c.daysLeft !== null && c.daysLeft <= 0);
+      }
+
+      return matchesSearch && matchesPlan && matchesExpiry && matchesCard;
     });
-  }, [colleges, search, planFilter, expiryFilter]);
+  }, [colleges, search, planFilter, expiringSoonOnly, selectedCard]);
 
-  const activeCollegesCount = useMemo(() => {
-    return colleges.filter(c => c.subscription?.status === 'active').length;
-  }, [colleges]);
+  /* ── Filtered Invitations List ── */
+  const filteredInvitations = useMemo(() => {
+    return invitations.filter((inv) => {
+      const query = search.toLowerCase().trim();
+      const matchesSearch = !query || inv.email?.toLowerCase().includes(query);
+      const matchesPlan = !planFilter || inv.planId === planFilter;
+      return matchesSearch && matchesPlan;
+    });
+  }, [invitations, search, planFilter]);
 
-  const suspendedCollegesCount = useMemo(() => {
-    return colleges.filter(c => c.subscription?.status === 'suspended').length;
-  }, [colleges]);
+  const isDefaultView = selectedCard === null;
+  const isInvitationsMode = selectedCard === 'invitations';
 
-  const pendingInvitesCount = useMemo(() => {
-    return invitations.filter(i => i.status === 'pending').length;
-  }, [invitations]);
+  const getSeriesConfig = (seriesKey) => {
+    const baseColors = {
+      active: 'var(--chart-2)',
+      suspended: 'var(--primary-03)',
+      expired: '#EF9D0E',
+      invitations: 'var(--chart-1)',
+    };
+    if (isDefaultView) {
+      return {
+        stroke: baseColors[seriesKey],
+        strokeOpacity: 1,
+        strokeWidth: 2.5,
+        fillOpacity: 0.14,
+      };
+    }
+    const isFocused = selectedCard === seriesKey;
+    return {
+      stroke: isFocused ? baseColors[seriesKey] : 'var(--shade-06)',
+      strokeOpacity: isFocused ? 1 : 0.25,
+      strokeWidth: isFocused ? 3 : 1.5,
+      fillOpacity: isFocused ? 0.28 : 0,
+    };
+  };
+
+  const activeCfg = getSeriesConfig('active');
+  const suspendedCfg = getSeriesConfig('suspended');
+  const expiredCfg = getSeriesConfig('expired');
+
+  if (loading) {
+    return (
+      <div
+        className="page flex items-center justify-center min-h-[420px]"
+        aria-busy="true"
+      >
+        <CollegesHubLoader
+          size="md"
+          text="Loading college directory & telemetry…"
+          minHeight="min-h-[380px]"
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="animate-fade-in space-y-6">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-[#0d1117] p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-white/[0.06] shadow-sm">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center justify-center font-bold shrink-0">
-              <HiOutlineOfficeBuilding size={22} />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                College Management Directory
-              </h1>
-              <p className="text-slate-500 dark:text-white/40 text-xs sm:text-sm mt-0.5">
-                Invite new institutions and manage active college workspaces
-              </p>
-            </div>
-          </div>
-        </div>
+    <div className="page space-y-3">
+      {/* ── ROW 1: 4 Stats Cards + Interactive Trend Chart ── */}
+      <CollegesStatsCards
+        statsCards={statsCards}
+        selectedCard={selectedCard}
+        onCardClick={handleCardClick}
+        collegeTimeSeries={collegeTimeSeries}
+        isInvitationsMode={isInvitationsMode}
+        isDefaultView={isDefaultView}
+        activeCfg={activeCfg}
+        suspendedCfg={suspendedCfg}
+        expiredCfg={expiredCfg}
+        onResetView={() => setSelectedCard(null)}
+      />
 
-        <button
-          onClick={() => {
-            setCreatedInviteUrl('');
-            setInviteForm({ email: '', planId: availablePlans[0]?.id || 'basic' });
-            setShowInviteModal(true);
-          }}
-          className="btn-primary self-start sm:self-center shadow-lg shadow-indigo-500/25"
-        >
-          <HiOutlineMail size={18} className="shrink-0" />
-          <span>Invite College</span>
-        </button>
-      </div>
-
-      {/* KPI Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="glass-card p-4 sm:p-5 relative overflow-hidden flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 dark:text-white/40 uppercase tracking-wider">
-              Total Colleges
-            </p>
-            <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">
-              {colleges.length}
-            </p>
-            <p className="text-[11px] text-slate-400 dark:text-white/30 mt-0.5">Registered institutions</p>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/15 shrink-0">
-            <HiOutlineOfficeBuilding size={24} />
-          </div>
-        </div>
-
-        <div className="glass-card p-4 sm:p-5 relative overflow-hidden flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 dark:text-white/40 uppercase tracking-wider">
-              Active Status
-            </p>
-            <p className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-              {activeCollegesCount}
-            </p>
-            <p className="text-[11px] text-slate-400 dark:text-white/30 mt-0.5">Operating workspaces</p>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/15 shrink-0">
-            <HiOutlineCheckCircle size={24} />
-          </div>
-        </div>
-
-        <div className="glass-card p-4 sm:p-5 relative overflow-hidden flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 dark:text-white/40 uppercase tracking-wider">
-              Suspended
-            </p>
-            <p className="text-2xl sm:text-3xl font-black text-rose-600 dark:text-rose-400 mt-1">
-              {suspendedCollegesCount}
-            </p>
-            <p className="text-[11px] text-slate-400 dark:text-white/30 mt-0.5">Inactive or restricted</p>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-500/15 shrink-0">
-            <HiOutlineBan size={24} />
-          </div>
-        </div>
-      </div>
-
-      {/* Visually Polished Navigation Tabs (Only Two Tabs) */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-white/[0.08] pb-3">
-        <button
-          onClick={() => setTab('colleges')}
-          className={`inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
-            tab === 'colleges'
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
-              : 'text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.04]'
-          }`}
-        >
-          <HiOutlineOfficeBuilding size={16} className="shrink-0" />
-          <span>Active Colleges</span>
-          <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-              tab === 'colleges'
-                ? 'bg-white/20 text-white'
-                : 'bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-white/70'
-            }`}
-          >
-            {colleges.length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setTab('invitations')}
-          className={`inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
-            tab === 'invitations'
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
-              : 'text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.04]'
-          }`}
-        >
-          <HiOutlineMail size={16} className="shrink-0" />
-          <span>College Invitations</span>
-          <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-              tab === 'invitations'
-                ? 'bg-white/20 text-white'
-                : 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300'
-            }`}
-          >
-            {pendingInvitesCount} Pending
-          </span>
-        </button>
-      </div>
-
-      {/* TAB 1: Active Colleges */}
-      {tab === 'colleges' && (
-        <div className="space-y-4">
-          {/* Search & Dynamic Filter Bar */}
-          <div className="glass-card p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="relative flex-1 max-w-lg">
-              <HiOutlineSearch
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40 pointer-events-none"
-                size={18}
-              />
-              <input
-                type="text"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="input-field pl-10 pr-9"
-                placeholder="Search colleges by name, code, city, or email..."
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-white/40 dark:hover:text-white/80 transition"
-                  title="Clear search"
-                >
-                  <HiOutlineX size={16} />
-                </button>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1 sm:w-52">
-                <HiOutlineFilter className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40 pointer-events-none" size={16} />
-                <select
-                  value={planFilter}
-                  onChange={e => setPlanFilter(e.target.value)}
-                  className="input-field pl-9 capitalize text-xs font-semibold"
-                >
-                  <option value="">All Subscription Plans</option>
-                  {availablePlans.map(plan => (
-                    <option key={plan.id} value={plan.id}>
-                      {plan.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="relative flex-1 sm:w-44">
-                <select
-                  value={expiryFilter}
-                  onChange={e => setExpiryFilter(e.target.value)}
-                  className="input-field text-xs font-semibold"
-                >
-                  <option value="all">All Expiries</option>
-                  <option value="expiring_soon">Expiring Soon (≤30d)</option>
-                  <option value="expired">Expired / Grace</option>
-                </select>
-              </div>
-
-              {(search || planFilter || expiryFilter !== 'all') && (
-                <button
-                  onClick={() => {
-                    setSearch('');
-                    setPlanFilter('');
-                    setExpiryFilter('all');
-                  }}
-                  className="btn-secondary py-2.5 px-3 text-xs shrink-0"
-                  title="Reset filters"
-                >
-                  Reset
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Active Colleges Data Table */}
-          <div className="glass-card overflow-hidden">
-            {loading ? (
-              <CollegesHubLoader size="md" text="Loading colleges database..." minHeight="min-h-[220px]" />
-            ) : filteredColleges.length === 0 ? (
-              <div className="text-center py-16 px-4">
-                <HiOutlineOfficeBuilding size={40} className="mx-auto text-slate-300 dark:text-white/15 mb-3" />
-                <p className="font-bold text-slate-800 dark:text-white/80 text-base">No colleges match your filter</p>
-                <p className="text-xs text-slate-500 dark:text-white/40 mt-1 max-w-sm mx-auto">
-                  Try broadening your search term or clearing the plan filter option.
-                </p>
-                {(search || planFilter) && (
-                  <button
-                    onClick={() => {
-                      setSearch('');
-                      setPlanFilter('');
-                    }}
-                    className="btn-secondary text-xs mt-4"
-                  >
-                    Clear All Filters
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th className="pl-5">College Info</th>
-                      <th>Code</th>
-                      <th>Subscription Plan</th>
-                      <th>Expiry Date</th>
-                      <th>Onboarding</th>
-                      <th>Status</th>
-                      <th>City</th>
-                      <th className="pr-5 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredColleges.map(c => (
-                      <tr
-                        key={c._id}
-                        className="cursor-pointer hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition"
-                        onClick={() => navigate(`/super-admin/colleges/${c._id}`)}
-                      >
-                        <td className="pl-5 py-3.5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-violet-500/20 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-extrabold text-xs shrink-0 shadow-sm">
-                              {c.code?.slice(0, 2)?.toUpperCase() || 'CO'}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-bold text-slate-900 dark:text-white text-sm truncate">
-                                {c.name}
-                              </p>
-                              <p className="text-[11px] text-slate-500 dark:text-white/40 truncate">
-                                {c.email}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td>
-                          <span className="font-mono text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 px-2.5 py-1 rounded-md text-xs font-bold tracking-wide inline-block">
-                            {c.code}
-                          </span>
-                        </td>
-
-                        <td>
-                          <span
-                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border capitalize ${getPlanBadgeClass(
-                              c.subscription?.plan
-                            )}`}
-                          >
-                            {formatPlanLabel(c.subscription?.plan)}
-                          </span>
-                        </td>
-
-                        <td>
-                          {c.expiryDate ? (
-                            <div className="space-y-0.5 whitespace-nowrap">
-                              <span className="text-xs font-semibold text-slate-800 dark:text-white/80">
-                                {new Date(c.expiryDate).toLocaleDateString()}
-                              </span>
-                              {c.daysLeft !== null && (
-                                <div className="text-[10px]">
-                                  {c.daysLeft <= 0 ? (
-                                    <span className="text-rose-600 dark:text-rose-400 font-bold">Expired</span>
-                                  ) : c.daysLeft <= 30 ? (
-                                    <span className="text-amber-600 dark:text-amber-400 font-bold">{c.daysLeft}d left</span>
-                                  ) : (
-                                    <span className="text-slate-400">{c.daysLeft}d left</span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-slate-400 text-xs">—</span>
-                          )}
-                        </td>
-
-                        <td>
-                          <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border capitalize ${
-                              c.onboardingStatus === 'completed'
-                                ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
-                                : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20'
-                            }`}
-                          >
-                            {c.onboardingStatus === 'completed' ? (
-                              <HiOutlineCheckCircle size={13} />
-                            ) : (
-                              <HiOutlineClock size={13} />
-                            )}
-                            {c.onboardingStatus || 'completed'}
-                          </span>
-                        </td>
-
-                        <td>
-                          <span
-                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border capitalize ${getStatusBadgeClass(
-                              c.subscription_status || c.subscription?.status || c.status
-                            )}`}
-                          >
-                            {c.subscription_status || c.subscription?.status || c.status || 'active'}
-                          </span>
-                        </td>
-
-                        <td className="text-slate-600 dark:text-white/60 text-xs font-medium">
-                          {c.city || '—'}
-                        </td>
-
-                        <td className="pr-5 text-right">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/super-admin/colleges/${c._id}`);
-                            }}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 dark:text-white/30 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition"
-                            title="View college details"
-                          >
-                            <HiOutlineChevronRight size={18} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 2: College Invitations */}
-      {tab === 'invitations' && (
-        <div className="glass-card overflow-hidden">
-          {invitesLoading ? (
-            <CollegesHubLoader size="md" text="Loading invitation queue..." minHeight="min-h-[220px]" />
-          ) : invitations.length === 0 ? (
-            <div className="text-center py-16 px-4">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center justify-center mx-auto mb-3">
-                <HiOutlineMail size={24} />
-              </div>
-              <p className="font-bold text-slate-800 dark:text-white/80 text-base">No invitations sent yet</p>
-              <p className="text-xs text-slate-500 dark:text-white/40 mt-1 max-w-sm mx-auto">
-                Click "Invite College" above to generate single-use onboarding invitations for new institutions.
-              </p>
-              <button
-                onClick={() => {
-                  setCreatedInviteUrl('');
-                  setInviteForm({ email: '', planId: availablePlans[0]?.id || 'basic' });
-                  setShowInviteModal(true);
-                }}
-                className="btn-primary text-xs mt-4 inline-flex items-center gap-1.5"
-              >
-                <HiOutlinePlus size={16} /> Send First Invitation
-              </button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th className="pl-5">Official Email</th>
-                    <th>Selected Plan</th>
-                    <th>Status</th>
-                    <th>Expires At</th>
-                    <th className="pr-5 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invitations.map(inv => (
-                    <tr key={inv._id} className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition">
-                      <td className="pl-5 py-3.5">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                            <HiOutlineMail size={16} />
-                          </div>
-                          <span className="font-semibold text-slate-900 dark:text-white text-sm">
-                            {inv.email}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td>
-                        <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border capitalize ${getPlanBadgeClass(
-                            inv.planId
-                          )}`}
-                        >
-                          {formatPlanLabel(inv.planId)}
-                        </span>
-                      </td>
-
-                      <td>
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border capitalize ${getStatusBadgeClass(
-                            inv.status
-                          )}`}
-                        >
-                          {inv.status === 'accepted' && <HiOutlineCheckCircle size={13} />}
-                          {inv.status === 'pending' && <HiOutlineClock size={13} />}
-                          {inv.status === 'expired' && <HiOutlineExclamationCircle size={13} />}
-                          {inv.status === 'cancelled' && <HiOutlineBan size={13} />}
-                          {inv.status}
-                        </span>
-                      </td>
-
-                      <td className="text-slate-500 dark:text-white/50 text-xs font-mono">
-                        {inv.expiresAt
-                          ? new Date(inv.expiresAt).toLocaleString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })
-                          : '—'}
-                      </td>
-
-                      <td className="pr-5 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {inv.status === 'pending' && (
-                            <>
-                              <button
-                                onClick={() => handleResend(inv._id)}
-                                className="btn-secondary py-1 px-2.5 text-xs inline-flex items-center gap-1"
-                                title="Resend invitation with fresh 48h token"
-                              >
-                                <HiOutlineRefresh size={14} />
-                                <span>Resend</span>
-                              </button>
-                              <button
-                                onClick={() => handleCancelInvite(inv._id)}
-                                className="btn-danger py-1 px-2.5 text-xs inline-flex items-center gap-1"
-                                title="Cancel invitation"
-                              >
-                                <HiOutlineBan size={14} />
-                                <span>Cancel</span>
-                              </button>
-                            </>
-                          )}
-
-                          {inv.status === 'expired' && (
-                            <button
-                              onClick={() => handleResend(inv._id)}
-                              className="btn-primary py-1 px-2.5 text-xs inline-flex items-center gap-1"
-                            >
-                              <HiOutlineRefresh size={14} />
-                              <span>Re-issue Invite</span>
-                            </button>
-                          )}
-
-                          {inv.status === 'accepted' && (
-                            <span className="text-emerald-600 dark:text-emerald-400 text-xs font-bold inline-flex items-center gap-1">
-                              <HiOutlineCheckCircle size={15} /> Joined Platform
-                            </span>
-                          )}
-
-                          {inv.status === 'cancelled' && (
-                            <span className="text-slate-400 dark:text-white/20 text-xs font-medium">
-                              Cancelled
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+      {/* ── ROW 2: Filter Toolbar ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Search Bar on Left */}
+        <div className="relative flex-1 min-w-[260px] max-w-md h-12 px-4.5 rounded-3xl bg-b-surface2 border border-s-subtle text-body-2 text-t-primary focus-within:border-s-focus shadow-widget transition-all flex items-center">
+          <Icon
+            name="search"
+            className="!size-5 fill-t-secondary shrink-0 mr-2.5 pointer-events-none"
+          />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={
+              isInvitationsMode
+                ? 'Search invitations by official email…'
+                : 'Search colleges by name, code, city, email…'
+            }
+            className="w-full bg-transparent outline-none placeholder:text-t-tertiary"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="p-1 rounded-full text-t-secondary hover:text-t-primary transition-colors cursor-pointer"
+            >
+              <Icon name="close" className="!size-3.5 fill-current" />
+            </button>
           )}
         </div>
-      )}
 
-      {/* Invite College Modal */}
-      {showInviteModal && (
-        <div className="modal-overlay" onClick={() => setShowInviteModal(false)}>
-          <div className="modal-content relative" onClick={e => e.stopPropagation()}>
+        {/* Filters on Right */}
+        <div className="flex items-center gap-2.5">
+          <PlanFilterDropdown
+            value={planFilter}
+            onChange={(val) => setPlanFilter(val)}
+          />
+
+          {!isInvitationsMode && (
             <button
-              onClick={() => setShowInviteModal(false)}
-              className="absolute right-5 top-5 text-slate-400 hover:text-slate-700 dark:text-white/40 dark:hover:text-white transition p-1 rounded-lg"
-              title="Close modal"
+              type="button"
+              onClick={() => setExpiringSoonOnly((prev) => !prev)}
+              title={
+                expiringSoonOnly
+                  ? 'Showing expiring soon (≤30d) — click to clear'
+                  : 'Filter expiring soon (≤30d)'
+              }
+              aria-label="Filter expiring soon"
+              aria-pressed={expiringSoonOnly}
+              className={`flex items-center justify-center size-12 rounded-full border transition-all cursor-pointer ${
+                expiringSoonOnly
+                  ? 'bg-[#EF9D0E]/15 border-[#EF9D0E] text-[#EF9D0E] shadow-depth'
+                  : 'bg-b-surface2 border-s-subtle text-t-secondary hover:text-t-primary hover:border-s-highlight shadow-widget'
+              }`}
             >
-              <HiOutlineX size={20} />
+              <Icon name="hourglass" className="!size-5 fill-current" />
             </button>
+          )}
 
-            <div className="flex items-center gap-3 pr-8">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center justify-center shrink-0">
-                <HiOutlineMail size={20} />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">
-                  Invite College to Academix
-                </h2>
-                <p className="text-slate-500 dark:text-white/40 text-xs">
-                  Generate a secure single-use token for institution self-onboarding
-                </p>
-              </div>
-            </div>
+          {(search || planFilter || expiringSoonOnly) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch('');
+                setPlanFilter('');
+                setExpiringSoonOnly(false);
+              }}
+              className="h-12 px-4 rounded-3xl bg-b-surface1 border border-s-subtle text-caption font-semibold text-t-secondary hover:text-t-primary transition-colors cursor-pointer"
+            >
+              Reset
+            </button>
+          )}
 
-            {!createdInviteUrl ? (
-              <form onSubmit={handleSendInvite} className="space-y-4 mt-5">
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-white/60 uppercase tracking-wider mb-1.5">
-                    Official College Email *
-                  </label>
-                  <div className="relative">
-                    <HiOutlineMail
-                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40 pointer-events-none"
-                      size={18}
-                    />
-                    <input
-                      type="email"
-                      value={inviteForm.email}
-                      onChange={e => setInviteForm({ ...inviteForm, email: e.target.value })}
-                      className="input-field pl-10"
-                      placeholder="e.g. principal@punjabcollege.edu.pk"
-                      required
-                    />
-                  </div>
-                  <p className="text-[11px] text-slate-400 dark:text-white/30 mt-1">
-                    An invitation token valid for 48 hours will be generated for this official address.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-white/60 uppercase tracking-wider mb-1.5">
-                    Initial Subscription Plan *
-                  </label>
-                  <div className="relative">
-                    <HiOutlineSparkles
-                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40 pointer-events-none"
-                      size={18}
-                    />
-                    <select
-                      value={inviteForm.planId}
-                      onChange={e => setInviteForm({ ...inviteForm, planId: e.target.value })}
-                      className="input-field pl-10 capitalize text-sm font-medium"
-                    >
-                      {availablePlans.map(plan => (
-                        <option key={plan.id} value={plan.id}>
-                          {plan.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/[0.06] border border-indigo-200 dark:border-indigo-500/20 text-xs text-indigo-900 dark:text-indigo-300 leading-relaxed flex items-start gap-2.5">
-                  <span className="shrink-0 text-base">🔒</span>
-                  <span>
-                    The College Administrator will securely set up their own account password and complete college details during onboarding.
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3 pt-3">
-                  <button
-                    type="submit"
-                    disabled={submittingInvite}
-                    className="btn-primary flex-1 justify-center py-2.5 text-sm"
-                  >
-                    {submittingInvite ? (
-                      <span className="inline-flex items-center gap-2">
-                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Generating Token...
-                      </span>
-                    ) : (
-                      'Send Secure Invitation'
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowInviteModal(false)}
-                    className="btn-secondary py-2.5 px-4 text-sm"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="space-y-4 mt-5">
-                <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-500/[0.08] border border-emerald-200 dark:border-emerald-500/20 text-center">
-                  <HiOutlineCheckCircle size={36} className="text-emerald-600 dark:text-emerald-400 mx-auto mb-2" />
-                  <h3 className="text-sm font-bold text-emerald-800 dark:text-emerald-400">
-                    Invitation Link Ready!
-                  </h3>
-                  <p className="text-xs text-slate-600 dark:text-white/60 mt-1">
-                    Token valid for 48 hours generated for <strong>{inviteForm.email}</strong>.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-white/60 uppercase tracking-wider mb-1.5">
-                    Single-Use Invitation URL
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      readOnly
-                      value={createdInviteUrl}
-                      className="input-field text-xs font-mono select-all flex-1 py-2"
-                    />
-                    <button
-                      onClick={() => copyToClipboard(createdInviteUrl)}
-                      className={`btn-primary py-2 px-3 text-xs shrink-0 inline-flex items-center gap-1.5 transition ${
-                        copied ? 'bg-emerald-600 text-white' : ''
-                      }`}
-                    >
-                      {copied ? <HiOutlineCheck size={16} /> : <HiOutlineClipboardCopy size={16} />}
-                      <span>{copied ? 'Copied' : 'Copy'}</span>
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setShowInviteModal(false)}
-                  className="btn-secondary w-full justify-center py-2.5 text-sm mt-2"
-                >
-                  Close Window
-                </button>
-              </div>
-            )}
-          </div>
+          {isInvitationsMode && (
+            <button
+              type="button"
+              onClick={() => setShowInviteModal(true)}
+              className="btn-primary h-12 px-5 rounded-3xl shrink-0 inline-flex items-center gap-2 shadow-widget cursor-pointer"
+            >
+              <Icon name="plus" className="!size-4 fill-white" />
+              <span>Invite College</span>
+            </button>
+          )}
         </div>
-      )}
+      </div>
+
+      {/* ── ROW 3: Data Table ── */}
+      <section className="card p-0 overflow-hidden shadow-widget">
+        {!isInvitationsMode ? (
+          <CollegesTable
+            filteredColleges={filteredColleges}
+            navigate={navigate}
+            hasActiveFilters={Boolean(search || planFilter || expiringSoonOnly || selectedCard)}
+            onResetFilters={() => {
+              setSearch('');
+              setPlanFilter('');
+              setExpiringSoonOnly(false);
+              setSelectedCard(null);
+            }}
+          />
+        ) : (
+          <InvitationsTable
+            filteredInvitations={filteredInvitations}
+            onOpenInviteModal={() => setShowInviteModal(true)}
+            onResend={handleResendInvite}
+            onCancel={handleCancelInvite}
+            onCopy={copyToClipboard}
+            copied={copied}
+          />
+        )}
+      </section>
+
+      {/* ── Invite College Slide-Over Drawer ── */}
+      <InviteCollegeDrawer
+        open={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        onInviteSent={fetchInvitations}
+      />
     </div>
   );
 };

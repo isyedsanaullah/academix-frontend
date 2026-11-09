@@ -18,8 +18,12 @@ const ThemeContext = createContext({
 
 const getInitialTheme = () => {
   if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('ui-theme');
-    if (saved === 'light' || saved === 'dark') return saved;
+    try {
+      const saved = localStorage.getItem('ui-theme');
+      if (saved === 'light' || saved === 'dark') return saved;
+    } catch {
+      // ignore storage errors
+    }
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
   return 'light';
@@ -43,6 +47,7 @@ export function ThemeProvider({ children }) {
   // then immediately sync from localStorage / media query in useEffect so React
   // is guaranteed to reconcile data-theme on all [data-app] wrappers.
   const [theme, setThemeState] = useState('light');
+  const [themeMounted, setThemeMounted] = useState(false);
   const [portalTarget, setPortalTarget] = useState(null);
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
@@ -52,6 +57,7 @@ export function ThemeProvider({ children }) {
     const initial = getInitialTheme();
     setThemeState(initial);
     syncHtmlTheme(initial);
+    setThemeMounted(true);
   }, []);
 
   // Observe #app-portal-root so <Toaster /> portals directly inside [data-app]'s #app-portal-root
@@ -72,7 +78,11 @@ export function ThemeProvider({ children }) {
       const resolved = typeof nextTheme === 'function' ? nextTheme(prev) : nextTheme;
       const valid = resolved === 'dark' ? 'dark' : 'light';
       if (typeof window !== 'undefined') {
-        localStorage.setItem('ui-theme', valid);
+        try {
+          localStorage.setItem('ui-theme', valid);
+        } catch {
+          // ignore storage errors
+        }
       }
       syncHtmlTheme(valid);
       return valid;
@@ -194,6 +204,7 @@ export function ThemeProvider({ children }) {
     <ThemeContext.Provider
       value={{
         theme,
+        themeMounted,
         setTheme,
         toggleTheme,
         plan,
@@ -209,7 +220,7 @@ export function ThemeProvider({ children }) {
       ) : (
         <div
           data-app={appType}
-          data-theme={theme}
+          data-theme={themeMounted ? theme : undefined}
           data-plan={plan || undefined}
           data-sub-status={subStatus}
           className="no-print"

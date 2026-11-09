@@ -114,6 +114,12 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className="h-full antialiased dark" suppressHydrationWarning>
       <head>
+        {/* Synchronous theme initializer to prevent flash of wrong theme on reload */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('ui-theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.dataset.theme=t;document.documentElement.classList.remove('light','dark');document.documentElement.classList.add(t);}catch(e){}})();`,
+          }}
+        />
         {/* CollegesHub Official Animated Loader Library */}
         <script src="/collegeshub-loader.js" data-auto="false"></script>
 
