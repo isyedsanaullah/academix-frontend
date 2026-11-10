@@ -184,11 +184,12 @@ const getPageTitle = (pathname) => {
     ),
   };
   if (!pathname) return 'CollegesHub';
-  if (pathname.match(/\/super-admin\/colleges\/.+/)) return 'College Details';
-  if (pathname.match(/\/(admin|registrar|principal)\/students\/.+/)) return 'Student Profile';
-  if (pathname.match(/\/(admin|accountant)\/fees\/receipt\/.+/)) return 'Fee Receipt';
-  if (pathname.startsWith('/admin/results/card/')) return 'Result Card';
-  return map[pathname] || 'CollegesHub';
+  const clean = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+  if (clean.match(/\/super-admin\/colleges\/.+/)) return 'College Details';
+  if (clean.match(/\/(admin|registrar|principal)\/students\/.+/)) return 'Student Profile';
+  if (clean.match(/\/(admin|accountant)\/fees\/receipt\/.+/)) return 'Fee Receipt';
+  if (clean.startsWith('/admin/results/card/')) return 'Result Card';
+  return map[clean] || map[pathname] || 'CollegesHub';
 };
 
 /* ── Build searchable nav items (unchanged business data) ── */
@@ -869,7 +870,8 @@ const DashboardLayout = ({ children }) => {
   const { user } = useAuthStore();
   const { theme, setTheme, toggleTheme, themeMounted, plan, subStatus } =
     useTheme();
-  const pathname = usePathname();
+  const rawPathname = usePathname();
+  const pathname = rawPathname && rawPathname.length > 1 ? rawPathname.replace(/\/+$/, '') : (rawPathname || '');
   const pageTitle = getPageTitle(pathname);
 
   const pathSegment = pathname?.split('/')[1] || '';

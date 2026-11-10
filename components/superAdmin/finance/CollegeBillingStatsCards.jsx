@@ -46,12 +46,22 @@ const CollegeBillingChartTooltip = ({ active, payload, label }) => {
 export default function CollegeBillingStatsCards({
   colleges = [],
   totalCount = 0,
+  summary = null,
   selectedCard = null,
   onCardClick,
   onResetView,
 }) {
-  // Aggregate counts from current college list
+  // Aggregate counts: prefer authoritative summary, fallback gracefully
   const counts = useMemo(() => {
+    if (summary && typeof summary.total === 'number' && summary.total > 0) {
+      return {
+        total: summary.total,
+        active: summary.active ?? 0,
+        trial: summary.trial ?? 0,
+        expired: summary.expired ?? 0,
+      };
+    }
+
     let active = 0;
     let trial = 0;
     let expired = 0;
@@ -65,11 +75,11 @@ export default function CollegeBillingStatsCards({
 
     return {
       total: totalCount || colleges.length,
-      active: active || Math.round((totalCount || colleges.length) * 0.8),
-      trial: trial || Math.round((totalCount || colleges.length) * 0.12),
-      expired: expired || Math.round((totalCount || colleges.length) * 0.08),
+      active,
+      trial,
+      expired,
     };
-  }, [colleges, totalCount]);
+  }, [summary, colleges, totalCount]);
 
   const cards = [
     {

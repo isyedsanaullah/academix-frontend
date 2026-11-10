@@ -29,16 +29,20 @@ const ROLE_LABELS = {
  */
 const isRouteActive = (itemTo, pathname, allRoutes) => {
   if (!itemTo || !pathname) return false;
-  if (pathname === itemTo) return true;
-  const depth = itemTo.split('/').filter(Boolean).length;
-  if (depth <= 1) return pathname === itemTo;
-  if (pathname.startsWith(`${itemTo}/`)) {
+  const cleanPath = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+  const cleanItem = itemTo.length > 1 ? itemTo.replace(/\/+$/, '') : itemTo;
+  if (cleanPath === cleanItem) return true;
+  const depth = cleanItem.split('/').filter(Boolean).length;
+  if (depth <= 1) return cleanPath === cleanItem;
+  if (cleanPath.startsWith(`${cleanItem}/`)) {
     const hasMoreSpecificMatch = allRoutes.some(
-      (other) =>
-        other &&
-        other !== itemTo &&
-        other.length > itemTo.length &&
-        (pathname === other || pathname.startsWith(`${other}/`))
+      (other) => {
+        if (!other) return false;
+        const cleanOther = other.length > 1 ? other.replace(/\/+$/, '') : other;
+        return cleanOther !== cleanItem &&
+          cleanOther.length > cleanItem.length &&
+          (cleanPath === cleanOther || cleanPath.startsWith(`${cleanOther}/`));
+      }
     );
     return !hasMoreSpecificMatch;
   }
@@ -53,7 +57,8 @@ const Sidebar = ({
 }) => {
   const { user } = useAuthStore();
   const { theme, plan, subStatus } = useTheme();
-  const pathname = usePathname();
+  const rawPathname = usePathname();
+  const pathname = rawPathname && rawPathname.length > 1 ? rawPathname.replace(/\/+$/, '') : (rawPathname || '');
   const navRef = useRef(null);
 
   const activeRole = user?.role || roleProp || 'admin';

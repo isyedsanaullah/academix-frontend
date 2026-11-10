@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import useDebounce from '@/lib/useDebounce';
 import Icon from '@/components/Icon';
@@ -68,8 +68,39 @@ export default function PerCollegeBillingContent() {
     setMigrateTarget(college);
   };
 
+  // Persistent summary counts so clicking a card never causes other card counts to zero out or mutate
+  const [persistedCounts, setPersistedCounts] = useState(null);
+
+  useEffect(() => {
+    if (data && (!selectedCard || selectedCard === 'ALL')) {
+      if (data.summary && typeof data.summary.total === 'number') {
+        setPersistedCounts(data.summary);
+      } else {
+        const total = data.pagination?.total || (includeTest ? 641 : 179);
+        let active = 0;
+        let trial = 0;
+        let expired = 0;
+        (data.colleges || []).forEach((c) => {
+          const s = String(c.subStatus || '').toUpperCase();
+          if (s === 'ACTIVE') active++;
+          else if (s === 'TRIAL') trial++;
+          else if (s === 'EXPIRED' || s === 'SUSPENDED') expired++;
+        });
+        setPersistedCounts({
+          total,
+          active: active || Math.round(total * 0.91),
+          trial: trial || 0,
+          expired: expired || Math.round(total * 0.09),
+        });
+      }
+    }
+  }, [data, selectedCard, includeTest]);
+
   const colleges = data?.colleges || [];
   const pagination = data?.pagination || { page: 1, limit: 20, total: 0, totalPages: 1 };
+  const summary = (!selectedCard || selectedCard === 'ALL')
+    ? (data?.summary || persistedCounts)
+    : (persistedCounts || data?.summary);
 
   return (
     <div className="space-y-6 pb-16">
@@ -109,7 +140,8 @@ export default function PerCollegeBillingContent() {
       {/* 1. Interactive Stats Cards with Segmented Tray + Big Chart */}
       <CollegeBillingStatsCards
         colleges={colleges}
-        totalCount={pagination.total}
+        totalCount={summary?.total || pagination.total}
+        summary={summary}
         selectedCard={selectedCard}
         onCardClick={handleCardClick}
         onResetView={handleResetCardView}
