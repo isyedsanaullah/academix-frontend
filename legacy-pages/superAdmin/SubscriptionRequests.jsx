@@ -1,14 +1,29 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
+import useDebounce from '@/lib/useDebounce';
 import SubscriptionRequestsStatsCards from '@/components/superAdmin/subscriptionRequests/SubscriptionRequestsStatsCards';
 import SubscriptionRequestsTable from '@/components/superAdmin/subscriptionRequests/SubscriptionRequestsTable';
-import RequestDetailDrawer from '@/components/superAdmin/subscriptionRequests/RequestDetailDrawer';
-import ReopenRequestDrawer from '@/components/superAdmin/subscriptionRequests/ReopenRequestDrawer';
-import RejectRequestDrawer from '@/components/superAdmin/subscriptionRequests/RejectRequestDrawer';
-import ApproveRequestStudio from '@/components/superAdmin/subscriptionRequests/ApproveRequestStudio';
+
+const RequestDetailDrawer = dynamic(
+  () => import('@/components/superAdmin/subscriptionRequests/RequestDetailDrawer'),
+  { ssr: false }
+);
+const ReopenRequestDrawer = dynamic(
+  () => import('@/components/superAdmin/subscriptionRequests/ReopenRequestDrawer'),
+  { ssr: false }
+);
+const RejectRequestDrawer = dynamic(
+  () => import('@/components/superAdmin/subscriptionRequests/RejectRequestDrawer'),
+  { ssr: false }
+);
+const ApproveRequestStudio = dynamic(
+  () => import('@/components/superAdmin/subscriptionRequests/ApproveRequestStudio'),
+  { ssr: false }
+);
 
 export default function SubscriptionRequests() {
   const [requests, setRequests] = useState([]);
@@ -54,6 +69,8 @@ export default function SubscriptionRequests() {
     });
   }, [counts]);
 
+  const debouncedSearch = useDebounce(searchTerm, 300);
+
   // Fetch list of requests
   const fetchRequests = useCallback(async () => {
     try {
@@ -62,7 +79,7 @@ export default function SubscriptionRequests() {
         page,
         limit: 15,
         status: selectedCard || undefined,
-        search: searchTerm.trim() || undefined,
+        search: debouncedSearch.trim() || undefined,
       };
 
       const res = await api.get('/super-admin/subscription-requests', { params });
@@ -79,33 +96,25 @@ export default function SubscriptionRequests() {
     } finally {
       setLoading(false);
     }
-  }, [selectedCard, searchTerm, page]);
+  }, [selectedCard, debouncedSearch, page]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchRequests();
-    }, 250);
-    return () => clearTimeout(timer);
+    fetchRequests();
   }, [fetchRequests]);
 
   // Handle stat card filter clicks
-  const handleCardClick = (cardId) => {
-    if (selectedCard === cardId) {
-      // Deselect card -> return to all requests
-      setSelectedCard(null);
-    } else {
-      setSelectedCard(cardId);
-    }
+  const handleCardClick = useCallback((cardId) => {
+    setSelectedCard((prev) => (prev === cardId ? null : cardId));
     setPage(1);
-  };
+  }, []);
 
-  const handleResetView = () => {
+  const handleResetView = useCallback(() => {
     setSelectedCard(null);
     setPage(1);
-  };
+  }, []);
 
   // Open full details drawer on row click
-  const handleRowClick = async (request) => {
+  const handleRowClick = useCallback(async (request) => {
     setSelectedRequest(request);
     setDetailDrawerOpen(true);
     setDetailLoading(true);
@@ -132,10 +141,10 @@ export default function SubscriptionRequests() {
     } finally {
       setDetailLoading(false);
     }
-  };
+  }, []);
 
   // Mark request as contacted
-  const handleMarkContacted = async (request) => {
+  const handleMarkContacted = useCallback(async (request) => {
     try {
       setActionLoading(true);
       const res = await api.patch(`/super-admin/subscription-requests/${request.id}/contact`, {
@@ -153,10 +162,10 @@ export default function SubscriptionRequests() {
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [fetchRequests, selectedRequest, handleRowClick]);
 
   // Confirm Re-open Request
-  const handleConfirmReopen = async (note) => {
+  const handleConfirmReopen = useCallback(async (note) => {
     if (!reopenDrawer.request) return;
     try {
       setActionLoading(true);
@@ -176,10 +185,10 @@ export default function SubscriptionRequests() {
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [reopenDrawer.request, fetchRequests, selectedRequest]);
 
   // Confirm Reject Request
-  const handleConfirmReject = async ({ reason, notifyRequester }) => {
+  const handleConfirmReject = useCallback(async ({ reason, notifyRequester }) => {
     if (!rejectDrawer.request) return;
     try {
       setActionLoading(true);
@@ -200,10 +209,10 @@ export default function SubscriptionRequests() {
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [rejectDrawer.request, fetchRequests, selectedRequest]);
 
   // Add internal administrative note
-  const handleAddNote = async (noteText) => {
+  const handleAddNote = useCallback(async (noteText) => {
     if (!selectedRequest || !noteText) return;
     try {
       setActionLoading(true);
@@ -219,10 +228,10 @@ export default function SubscriptionRequests() {
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [selectedRequest, handleRowClick]);
 
   // Resend College Invite
-  const handleResendInvite = async (collegeId) => {
+  const handleResendInvite = useCallback(async (collegeId) => {
     if (!collegeId) return;
     setActionLoading(true);
     try {
@@ -236,7 +245,24 @@ export default function SubscriptionRequests() {
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [selectedRequest, handleRowClick]);
+
+  const handleSearchChange = useCallback((val) => {
+    setSearchTerm(val);
+    setPage(1);
+  }, []);
+
+  const handleOpenApprove = useCallback((req) => {
+    setApprovingRequest(req);
+  }, []);
+
+  const handleOpenReject = useCallback((req) => {
+    setRejectDrawer({ open: true, request: req });
+  }, []);
+
+  const handleOpenReopen = useCallback((req) => {
+    setReopenDrawer({ open: true, request: req });
+  }, []);
 
   // If currently approving a request, render the dedicated multi-phase Studio view
   if (approvingRequest) {
@@ -268,15 +294,12 @@ export default function SubscriptionRequests() {
         requests={requests}
         loading={loading}
         searchTerm={searchTerm}
-        onSearchChange={(val) => {
-          setSearchTerm(val);
-          setPage(1);
-        }}
+        onSearchChange={handleSearchChange}
         onRowClick={handleRowClick}
         onMarkContacted={handleMarkContacted}
-        onOpenApprove={(req) => setApprovingRequest(req)}
-        onOpenReject={(req) => setRejectDrawer({ open: true, request: req })}
-        onReopen={(req) => setReopenDrawer({ open: true, request: req })}
+        onOpenApprove={handleOpenApprove}
+        onOpenReject={handleOpenReject}
+        onReopen={handleOpenReopen}
         onResendInvite={handleResendInvite}
         actionLoading={actionLoading}
         pagination={pagination}
@@ -285,48 +308,54 @@ export default function SubscriptionRequests() {
       />
 
       {/* ── 3. Detail Drawer (SlideOverDrawer showing ALL Details) ── */}
-      <RequestDetailDrawer
-        open={detailDrawerOpen}
-        onClose={() => setDetailDrawerOpen(false)}
-        request={selectedRequest}
-        loading={detailLoading}
-        inviteStatus={inviteStatus}
-        inviteLoading={inviteLoading}
-        onAddNote={handleAddNote}
-        onMarkContacted={handleMarkContacted}
-        onOpenApprove={(req) => {
-          setDetailDrawerOpen(false);
-          setApprovingRequest(req);
-        }}
-        onOpenReject={(req) => {
-          setDetailDrawerOpen(false);
-          setRejectDrawer({ open: true, request: req });
-        }}
-        onReopen={(req) => {
-          setDetailDrawerOpen(false);
-          setReopenDrawer({ open: true, request: req });
-        }}
-        onResendInvite={handleResendInvite}
-        actionLoading={actionLoading}
-      />
+      {detailDrawerOpen && (
+        <RequestDetailDrawer
+          open={detailDrawerOpen}
+          onClose={() => setDetailDrawerOpen(false)}
+          request={selectedRequest}
+          loading={detailLoading}
+          inviteStatus={inviteStatus}
+          inviteLoading={inviteLoading}
+          onAddNote={handleAddNote}
+          onMarkContacted={handleMarkContacted}
+          onOpenApprove={(req) => {
+            setDetailDrawerOpen(false);
+            setApprovingRequest(req);
+          }}
+          onOpenReject={(req) => {
+            setDetailDrawerOpen(false);
+            setRejectDrawer({ open: true, request: req });
+          }}
+          onReopen={(req) => {
+            setDetailDrawerOpen(false);
+            setReopenDrawer({ open: true, request: req });
+          }}
+          onResendInvite={handleResendInvite}
+          actionLoading={actionLoading}
+        />
+      )}
 
       {/* ── 4. Re-open Drawer (SlideOverDrawer replacing old center modal) ── */}
-      <ReopenRequestDrawer
-        open={reopenDrawer.open}
-        onClose={() => setReopenDrawer({ open: false, request: null })}
-        request={reopenDrawer.request}
-        onConfirm={handleConfirmReopen}
-        loading={actionLoading}
-      />
+      {reopenDrawer.open && (
+        <ReopenRequestDrawer
+          open={reopenDrawer.open}
+          onClose={() => setReopenDrawer({ open: false, request: null })}
+          request={reopenDrawer.request}
+          onConfirm={handleConfirmReopen}
+          loading={actionLoading}
+        />
+      )}
 
       {/* ── 5. Reject Drawer (SlideOverDrawer) ── */}
-      <RejectRequestDrawer
-        open={rejectDrawer.open}
-        onClose={() => setRejectDrawer({ open: false, request: null })}
-        request={rejectDrawer.request}
-        onConfirm={handleConfirmReject}
-        loading={actionLoading}
-      />
+      {rejectDrawer.open && (
+        <RejectRequestDrawer
+          open={rejectDrawer.open}
+          onClose={() => setRejectDrawer({ open: false, request: null })}
+          request={rejectDrawer.request}
+          onConfirm={handleConfirmReject}
+          loading={actionLoading}
+        />
+      )}
     </div>
   );
 }

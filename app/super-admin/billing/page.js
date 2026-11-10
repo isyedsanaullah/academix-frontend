@@ -1,16 +1,15 @@
 'use client';
 
+import PageComponent from './_client';
 import AuthGuard from '@/components/common/AuthGuard';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import SuperAdminBillingClient from './_client';
 
-export default function SuperAdminBillingPage() {
+export default function Page() {
   return (
-    <AuthGuard allowedRoles={['superAdmin']}>
+    <AuthGuard allowedRoles={["superAdmin"]}>
       <DashboardLayout>
-        <SuperAdminBillingClient />
+        <PageComponent />
       </DashboardLayout>
     </AuthGuard>
   );
 }
-

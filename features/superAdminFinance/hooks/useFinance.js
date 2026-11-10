@@ -14,12 +14,13 @@ export const FINANCE_QUERY_KEYS = {
   accountants: (params) => ['finance', 'accountants', params]
 };
 
-export function useNavCounts(includeTest = false) {
+export function useNavCounts(includeTest = false, options = {}) {
   return useQuery({
     queryKey: FINANCE_QUERY_KEYS.navCounts(includeTest),
     queryFn: () => financeApi.getNavCounts(includeTest),
-    staleTime: 30 * 1000,
-    refetchInterval: 60 * 1000
+    staleTime: 60 * 1000,
+    refetchInterval: 120 * 1000,
+    ...options
   });
 }
 

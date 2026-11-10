@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import PlanBadge from '@/components/common/PlanBadge';
 import Icon from '@/components/Icon';
 import {
@@ -13,7 +14,7 @@ import {
   HiOutlineExclamationCircle,
 } from 'react-icons/hi';
 
-export default function InvitationsTable({
+function InvitationsTable({
   filteredInvitations = [],
   onOpenInviteModal,
   onResend,
@@ -166,4 +167,6 @@ export default function InvitationsTable({
     </div>
   );
 }
+
+export default memo(InvitationsTable);
 

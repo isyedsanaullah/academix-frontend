@@ -1,17 +1,23 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { useNavigate } from 'react-router-dom';
 import api from '@/services/api';
 import toast from 'react-hot-toast';
 import CollegesHubLoader from '@/components/common/CollegesHubLoader';
 import Icon from '@/components/Icon';
+import useDebounce from '@/lib/useDebounce';
 
 import PlanFilterDropdown from '@/components/superAdmin/colleges/PlanFilterDropdown';
 import CollegesStatsCards from '@/components/superAdmin/colleges/CollegesStatsCards';
 import CollegesTable from '@/components/superAdmin/colleges/CollegesTable';
 import InvitationsTable from '@/components/superAdmin/colleges/InvitationsTable';
-import InviteCollegeDrawer from '@/components/superAdmin/colleges/InviteCollegeDrawer';
+
+const InviteCollegeDrawer = dynamic(
+  () => import('@/components/superAdmin/colleges/InviteCollegeDrawer'),
+  { ssr: false }
+);
 
 const ACTUAL_PLANS = [
   { id: 'starter', name: 'Starter' },
@@ -289,14 +295,27 @@ const Colleges = () => {
     },
   ];
 
-  const handleCardClick = (cardId) => {
+  const handleCardClick = useCallback((cardId) => {
     setSelectedCard((prev) => (prev === cardId ? null : cardId));
-  };
+  }, []);
+
+  const handleResetFilters = useCallback(() => {
+    setSearch('');
+    setPlanFilter('');
+    setExpiringSoonOnly(false);
+    setSelectedCard(null);
+  }, []);
+
+  const handleOpenInviteModal = useCallback(() => {
+    setShowInviteModal(true);
+  }, []);
+
+  const debouncedSearch = useDebounce(search, 300);
 
   /* ── Filtered Colleges List ── */
   const filteredColleges = useMemo(() => {
     return colleges.filter((c) => {
-      const query = search.toLowerCase().trim();
+      const query = debouncedSearch.toLowerCase().trim();
       const matchesSearch =
         !query ||
         c.name?.toLowerCase().includes(query) ||
@@ -344,17 +363,17 @@ const Colleges = () => {
 
       return matchesSearch && matchesPlan && matchesExpiry && matchesCard;
     });
-  }, [colleges, search, planFilter, expiringSoonOnly, selectedCard]);
+  }, [colleges, debouncedSearch, planFilter, expiringSoonOnly, selectedCard]);
 
   /* ── Filtered Invitations List ── */
   const filteredInvitations = useMemo(() => {
     return invitations.filter((inv) => {
-      const query = search.toLowerCase().trim();
+      const query = debouncedSearch.toLowerCase().trim();
       const matchesSearch = !query || inv.email?.toLowerCase().includes(query);
       const matchesPlan = !planFilter || inv.planId === planFilter;
       return matchesSearch && matchesPlan;
     });
-  }, [invitations, search, planFilter]);
+  }, [invitations, debouncedSearch, planFilter]);
 
   const isDefaultView = selectedCard === null;
   const isInvitationsMode = selectedCard === 'invitations';
@@ -510,17 +529,12 @@ const Colleges = () => {
             filteredColleges={filteredColleges}
             navigate={navigate}
             hasActiveFilters={Boolean(search || planFilter || expiringSoonOnly || selectedCard)}
-            onResetFilters={() => {
-              setSearch('');
-              setPlanFilter('');
-              setExpiringSoonOnly(false);
-              setSelectedCard(null);
-            }}
+            onResetFilters={handleResetFilters}
           />
         ) : (
           <InvitationsTable
             filteredInvitations={filteredInvitations}
-            onOpenInviteModal={() => setShowInviteModal(true)}
+            onOpenInviteModal={handleOpenInviteModal}
             onResend={handleResendInvite}
             onCancel={handleCancelInvite}
             onCopy={copyToClipboard}
@@ -530,11 +544,13 @@ const Colleges = () => {
       </section>
 
       {/* ── Invite College Slide-Over Drawer ── */}
-      <InviteCollegeDrawer
-        open={showInviteModal}
-        onClose={() => setShowInviteModal(false)}
-        onInviteSent={fetchInvitations}
-      />
+      {showInviteModal && (
+        <InviteCollegeDrawer
+          open={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
+          onInviteSent={fetchInvitations}
+        />
+      )}
     </div>
   );
 };

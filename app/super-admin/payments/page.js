@@ -6,7 +6,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 
 export default function Page() {
   return (
-    <AuthGuard allowedRoles={['superAdmin']}>
+    <AuthGuard allowedRoles={["superAdmin"]}>
       <DashboardLayout>
         <PageComponent />
       </DashboardLayout>

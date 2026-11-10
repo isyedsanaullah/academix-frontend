@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, Fragment } from 'react';
+import { useState, useMemo, Fragment, memo } from 'react';
 import CollegesHubLoader from '@/components/common/CollegesHubLoader';
 import {
   HiOutlineSearch,
@@ -23,7 +23,7 @@ const PLAN_LABELS = {
   enterprise: 'Enterprise Plan',
 };
 
-export default function SubscriptionRequestsTable({
+function SubscriptionRequestsTable({
   requests = [],
   loading = false,
   searchTerm = '',
@@ -172,12 +172,12 @@ export default function SubscriptionRequestsTable({
                   </td>
                 </tr>
               ) : (
-                groupedData.map((group) => {
+                groupedData.map((group, groupIdx) => {
                   const r = group.primary;
                   const isExpanded = expandedEmails.has(group.email);
 
                   return (
-                    <Fragment key={group.email}>
+                    <Fragment key={group.email || r.id || `group-${groupIdx}`}>
                       {/* Primary Row (Clickable to open Detail Drawer) */}
                       <tr
                         onClick={() => onRowClick(r)}
@@ -378,4 +378,6 @@ export default function SubscriptionRequestsTable({
     </div>
   );
 }
+
+export default memo(SubscriptionRequestsTable);
 

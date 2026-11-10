@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
@@ -200,19 +200,28 @@ export function ThemeProvider({ children }) {
     />
   );
 
+  const contextValue = useMemo(() => ({
+    theme,
+    themeMounted,
+    setTheme,
+    toggleTheme,
+    plan,
+    subStatus,
+    appType,
+    refreshSubscription,
+  }), [
+    theme,
+    themeMounted,
+    setTheme,
+    toggleTheme,
+    plan,
+    subStatus,
+    appType,
+    refreshSubscription,
+  ]);
+
   return (
-    <ThemeContext.Provider
-      value={{
-        theme,
-        themeMounted,
-        setTheme,
-        toggleTheme,
-        plan,
-        subStatus,
-        appType,
-        refreshSubscription,
-      }}
-    >
+    <ThemeContext.Provider value={contextValue}>
       {children}
       {/* Portal <Toaster /> directly inside #app-portal-root (inside [data-app]) when mounted */}
       {portalTarget ? (

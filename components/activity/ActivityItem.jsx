@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import ActivityCategoryIcon from './ActivityCategoryIcon';
 import Icon from '@/components/Icon';
 
-export default function ActivityItem({ activity, isCompact = false }) {
+function ActivityItem({ activity, isCompact = false }) {
   const [expanded, setExpanded] = useState(false);
 
   if (!activity) return null;
@@ -139,3 +139,5 @@ export default function ActivityItem({ activity, isCompact = false }) {
     </div>
   );
 }
+
+export default memo(ActivityItem);

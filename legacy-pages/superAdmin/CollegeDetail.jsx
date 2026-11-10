@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { useParams, useRouter } from 'next/navigation';
 import api from '@/services/api';
 import toast from 'react-hot-toast';
@@ -10,14 +11,24 @@ import Icon from '@/components/Icon';
 import { computeReactiveFeatureMatrix } from '@/lib/featureMatrix';
 
 import CollegeProfileBanner from '@/components/superAdmin/college/CollegeProfileBanner';
-import CollegeEditDrawer from '@/components/superAdmin/college/CollegeEditDrawer';
-import PlanMigrationDrawer from '@/components/superAdmin/college/PlanMigrationDrawer';
 import OverviewTab from '@/components/superAdmin/college/OverviewTab';
 import SubscriptionBillingTab from '@/components/superAdmin/college/SubscriptionBillingTab';
 import FeatureControlsTab from '@/components/superAdmin/college/FeatureControlsTab';
-import FeaturePreviewModal from '@/components/superAdmin/college/FeaturePreviewModal';
 import MessagesTab from '@/components/superAdmin/college/MessagesTab';
 import AuditTrailTab from '@/components/superAdmin/college/AuditTrailTab';
+
+const CollegeEditDrawer = dynamic(
+  () => import('@/components/superAdmin/college/CollegeEditDrawer'),
+  { ssr: false }
+);
+const PlanMigrationDrawer = dynamic(
+  () => import('@/components/superAdmin/college/PlanMigrationDrawer'),
+  { ssr: false }
+);
+const FeaturePreviewModal = dynamic(
+  () => import('@/components/superAdmin/college/FeaturePreviewModal'),
+  { ssr: false }
+);
 
 const CollegeDetail = () => {
   const params = useParams();
@@ -689,44 +700,50 @@ const CollegeDetail = () => {
       )}
 
       {/* ── DRAWERS & MODALS ── */}
-      <CollegeEditDrawer
-        key={showEditDrawer ? `edit-${c.code}-${c.email}-${c.phone}` : 'edit-closed'}
-        open={showEditDrawer}
-        onClose={() => setShowEditDrawer(false)}
-        collegeId={id}
-        collegeName={c.name}
-        initialData={{
-          code: c.code,
-          email: c.email,
-          phone: c.phone,
-          city: c.city,
-          website: c.website,
-        }}
-        onSaved={fetchCollege}
-      />
+      {showEditDrawer && (
+        <CollegeEditDrawer
+          key={`edit-${c.code}-${c.email}-${c.phone}`}
+          open={showEditDrawer}
+          onClose={() => setShowEditDrawer(false)}
+          collegeId={id}
+          collegeName={c.name}
+          initialData={{
+            code: c.code,
+            email: c.email,
+            phone: c.phone,
+            city: c.city,
+            website: c.website,
+          }}
+          onSaved={fetchCollege}
+        />
+      )}
 
-      <PlanMigrationDrawer
-        open={showPlanConfirmModal}
-        onClose={() => {
-          setShowPlanConfirmModal(false);
-          setPendingPlan(null);
-        }}
-        collegeId={id}
-        collegeName={c.name}
-        currentPlan={currentPlan}
-        targetPlan={pendingPlan}
-        onConfirmed={fetchCollege}
-      />
+      {showPlanConfirmModal && (
+        <PlanMigrationDrawer
+          open={showPlanConfirmModal}
+          onClose={() => {
+            setShowPlanConfirmModal(false);
+            setPendingPlan(null);
+          }}
+          collegeId={id}
+          collegeName={c.name}
+          currentPlan={currentPlan}
+          targetPlan={pendingPlan}
+          onConfirmed={fetchCollege}
+        />
+      )}
 
-      <FeaturePreviewModal
-        open={previewModalOpen}
-        onClose={() => setPreviewModalOpen(false)}
-        previewData={previewData}
-        overrideReason={overrideReason}
-        setOverrideReason={setOverrideReason}
-        savingFeatures={savingFeatures}
-        onSave={handleSaveOverrides}
-      />
+      {previewModalOpen && (
+        <FeaturePreviewModal
+          open={previewModalOpen}
+          onClose={() => setPreviewModalOpen(false)}
+          previewData={previewData}
+          overrideReason={overrideReason}
+          setOverrideReason={setOverrideReason}
+          savingFeatures={savingFeatures}
+          onSave={handleSaveOverrides}
+        />
+      )}
     </div>
   );
 };

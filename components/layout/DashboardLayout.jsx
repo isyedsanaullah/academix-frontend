@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -22,6 +22,11 @@ const getPageTitle = (pathname) => {
     '/super-admin': 'Platform Command Center',
     '/super-admin/colleges': 'College Management',
     '/super-admin/subscription-requests': 'Subscription Requests',
+    '/super-admin/finance': 'Accounting Overview',
+    '/super-admin/finance/overview': 'Accounting Overview',
+    '/super-admin/finance/payments': 'Payments History',
+    '/super-admin/finance/colleges': 'Per-College Billing',
+    '/super-admin/finance/accountants': 'Accountant Details',
     '/super-admin/payments': 'Payments & Accounts',
     '/super-admin/billing': 'Billing Queue',
     '/super-admin/analytics': 'Platform Analytics',
@@ -334,7 +339,7 @@ const buildSearchItems = (role) => {
 };
 
 /* ── Core 2.0 Header Search Dropdown (Attached directly below search bar) ── */
-const HeaderSearchDropdown = ({ role, autoFocus, onCloseMobile }) => {
+const HeaderSearchDropdown = memo(({ role, autoFocus, onCloseMobile }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const router = useRouter();
@@ -442,6 +447,7 @@ const HeaderSearchDropdown = ({ role, autoFocus, onCloseMobile }) => {
                 <button
                   key={item.to}
                   type="button"
+                  onMouseEnter={() => router.prefetch?.(item.to)}
                   onClick={() => handleSelect(item.to)}
                   className="group flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left transition hover:bg-b-highlight focus-visible:bg-b-highlight focus-visible:outline-none cursor-pointer"
                 >
@@ -465,10 +471,10 @@ const HeaderSearchDropdown = ({ role, autoFocus, onCloseMobile }) => {
       )}
     </div>
   );
-};
+});
 
 /* ── Core 2.0 Notifications Slide-Over / Popover (Portaled inside #app-portal-root) ── */
-const NotificationsDrawer = ({ open, onClose, role }) => {
+const NotificationsDrawer = memo(({ open, onClose, role }) => {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -597,10 +603,10 @@ const NotificationsDrawer = ({ open, onClose, role }) => {
   );
 
   return portalRoot ? createPortal(content, portalRoot) : content;
-};
+});
 
 /* ── Core 2.0 User Profile Dropdown (Portaled or Anchored inside [data-app]) ── */
-const ProfileDropdown = ({
+const ProfileDropdown = memo(({
   open,
   onClose,
   user,
@@ -850,7 +856,7 @@ const ProfileDropdown = ({
   );
 
   return portalRoot ? createPortal(content, portalRoot) : content;
-};
+});
 
 /* ── Core 2.0 DashboardLayout Shell ── */
 const DashboardLayout = ({ children }) => {
@@ -885,7 +891,7 @@ const DashboardLayout = ({ children }) => {
     }
   }, [compactStorageKey]);
 
-  const toggleSidebarCompact = () => {
+  const toggleSidebarCompact = useCallback(() => {
     setSidebarCompact((prev) => {
       const next = !prev;
       try {
@@ -896,9 +902,9 @@ const DashboardLayout = ({ children }) => {
       }
       return next;
     });
-  };
+  }, [compactStorageKey]);
 
-  const handleHeaderMenuToggle = () => {
+  const handleHeaderMenuToggle = useCallback(() => {
     if (
       typeof window !== 'undefined' &&
       window.matchMedia('(min-width: 1280px)').matches
@@ -907,7 +913,12 @@ const DashboardLayout = ({ children }) => {
     } else {
       setSidebarOpen((prev) => !prev);
     }
-  };
+  }, [toggleSidebarCompact]);
+
+  const handleCloseSidebar = useCallback(() => setSidebarOpen(false), []);
+  const handleCloseNotif = useCallback(() => setNotifOpen(false), []);
+  const handleCloseProfile = useCallback(() => setProfileOpen(false), []);
+  const handleCloseMobileSearch = useCallback(() => setMobileSearchOpen(false), []);
 
   useEffect(() => {
     setSidebarOpen(false);
@@ -927,6 +938,8 @@ const DashboardLayout = ({ children }) => {
   const hasMobileBottomBar =
     activeRole === 'student' && !isFullscreenStudentPlayer(pathname);
 
+  const isChatPage = pathname?.endsWith('/ai/chat');
+
   return (
     <div
       data-app={appType}
@@ -934,7 +947,7 @@ const DashboardLayout = ({ children }) => {
       data-plan={!isSuperAdmin ? plan || 'starter' : undefined}
       data-sub-status={subStatus}
       data-role={activeRole}
-      className={`min-h-screen bg-b-surface1 text-t-primary font-inter transition-[padding,background-color,color] duration-250 ease-out motion-reduce:transition-none ${
+      className={`min-h-screen ${isChatPage ? 'h-screen max-h-screen overflow-hidden' : ''} bg-b-surface1 text-t-primary font-inter transition-[padding,background-color,color] duration-250 ease-out motion-reduce:transition-none ${
         sidebarCompact
           ? 'xl:pl-22'
           : 'xl:pl-85 max-4xl:xl:pl-70 max-3xl:xl:pl-60'
@@ -943,7 +956,7 @@ const DashboardLayout = ({ children }) => {
       {/* Fixed Core 2.0 Sidebar (Separated by background contrast & spacing only) */}
       <Sidebar
         mobileOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
+        onClose={handleCloseSidebar}
         role={activeRole}
         compact={sidebarCompact}
         onToggleCompact={toggleSidebarCompact}
@@ -953,7 +966,7 @@ const DashboardLayout = ({ children }) => {
       {sidebarOpen && (
         <div
           className="no-print fixed inset-0 z-30 bg-b-surface1/75 backdrop-blur-xs xl:hidden transition-opacity"
-          onClick={() => setSidebarOpen(false)}
+          onClick={handleCloseSidebar}
           aria-hidden="true"
         />
       )}
@@ -1108,7 +1121,7 @@ const DashboardLayout = ({ children }) => {
             <HeaderSearchDropdown
               role={activeRole}
               autoFocus
-              onCloseMobile={() => setMobileSearchOpen(false)}
+              onCloseMobile={handleCloseMobileSearch}
             />
           </div>
         )}
@@ -1117,12 +1130,22 @@ const DashboardLayout = ({ children }) => {
       {/* Main Content Area (Clean spacing between header and page content) */}
       <div
         className={`pt-20 max-md:pt-16 ${
-          hasMobileBottomBar ? 'max-lg:pb-24 pb-8' : 'pb-8'
+          isChatPage
+            ? 'h-full flex flex-col overflow-hidden pb-0'
+            : hasMobileBottomBar
+              ? 'max-lg:pb-24 pb-8'
+              : 'pb-8'
         }`}
       >
         <SubscriptionExpiryBanner />
 
-        <main className="center-with-sidebar pt-2 max-md:pt-1">
+        <main
+          className={
+            isChatPage
+              ? 'w-full flex-1 flex flex-col overflow-hidden min-h-0'
+              : 'center-with-sidebar pt-2 max-md:pt-1'
+          }
+        >
           {children}
         </main>
       </div>
@@ -1140,13 +1163,13 @@ const DashboardLayout = ({ children }) => {
       {showNotifications && (
         <NotificationsDrawer
           open={notifOpen}
-          onClose={() => setNotifOpen(false)}
+          onClose={handleCloseNotif}
           role={activeRole}
         />
       )}
       <ProfileDropdown
         open={profileOpen}
-        onClose={() => setProfileOpen(false)}
+        onClose={handleCloseProfile}
         user={user}
         plan={plan}
         subStatus={subStatus}

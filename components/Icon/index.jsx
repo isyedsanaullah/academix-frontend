@@ -1,6 +1,43 @@
 'use client';
 
 import React from 'react';
+import { HugeiconsIcon } from '@hugeicons/react';
+import {
+  HiSquares2X2, HiOutlineSquares2X2,
+  HiBuildingOffice2, HiOutlineBuildingOffice2,
+  HiClipboardDocumentList, HiOutlineClipboardDocumentList,
+  HiCreditCard, HiOutlineCreditCard,
+  HiChartBar, HiOutlineChartBar,
+  HiCurrencyDollar, HiOutlineCurrencyDollar,
+  HiUser, HiOutlineUser,
+  HiSparkles, HiOutlineSparkles,
+  HiClock, HiOutlineClock,
+  HiTrash, HiOutlineTrash,
+  HiCog6Tooth, HiOutlineCog6Tooth,
+  HiAcademicCap, HiOutlineAcademicCap,
+  HiClipboardDocumentCheck, HiOutlineClipboardDocumentCheck,
+  HiCalendarDays, HiOutlineCalendarDays,
+  HiDocumentText, HiOutlineDocumentText,
+  HiBookOpen, HiOutlineBookOpen,
+  HiDocumentDuplicate, HiOutlineDocumentDuplicate,
+  HiBeaker, HiOutlineBeaker,
+  HiShieldCheck, HiOutlineShieldCheck,
+  HiQrCode, HiOutlineQrCode,
+  HiArrowUpTray, HiOutlineArrowUpTray,
+  HiStar, HiOutlineStar,
+  HiBuildingLibrary, HiOutlineBuildingLibrary,
+  HiExclamationCircle, HiOutlineExclamationCircle,
+  HiBriefcase, HiOutlineBriefcase,
+  HiUserGroup, HiOutlineUserGroup,
+  HiMegaphone, HiOutlineMegaphone,
+  HiRectangleStack, HiOutlineRectangleStack,
+  HiNewspaper, HiOutlineNewspaper,
+  HiQueueList, HiOutlineQueueList,
+  HiIdentification, HiOutlineIdentification,
+  HiBanknotes, HiOutlineBanknotes,
+  HiArrowLeftOnRectangle, HiOutlineArrowLeftOnRectangle,
+  HiXMark, HiOutlineXMark
+} from 'react-icons/hi2';
 
 /**
  * Unified 24x24 Icon System for CESMS / CollegesHub
@@ -1857,10 +1894,140 @@ function adaptFillClassToStroke(className = '') {
   return extra.length ? `${className} ${extra.join(' ')}` : className;
 }
 
-const Icon = ({ className = '', name, fill, style, title, ...rest }) => {
-  if (typeof name === 'function' && !name.iconName) {
+/**
+ * Dual outline (unfilled stroke) and solid (filled) navigation icons.
+ * When an item is inactive: renders the outline version (completely unfilled).
+ * When an item is active: renders the solid version (filled with CollegesHub brand color).
+ */
+export const DUAL_NAV_ICONS = {
+  'dashboard': { outline: HiOutlineSquares2X2, solid: HiSquares2X2 },
+  'grid': { outline: HiOutlineRectangleStack, solid: HiRectangleStack },
+  'template': { outline: HiOutlineRectangleStack, solid: HiRectangleStack },
+  'building': { outline: HiOutlineBuildingOffice2, solid: HiBuildingOffice2 },
+  'office-building': { outline: HiOutlineBuildingOffice2, solid: HiBuildingOffice2 },
+  'clipboard-list': { outline: HiOutlineClipboardDocumentList, solid: HiClipboardDocumentList },
+  'wallet': { outline: HiOutlineCreditCard, solid: HiCreditCard },
+  'credit-card': { outline: HiOutlineCreditCard, solid: HiCreditCard },
+  'cash': { outline: HiOutlineBanknotes, solid: HiBanknotes },
+  'chart': { outline: HiOutlineChartBar, solid: HiChartBar },
+  'chart-bar': { outline: HiOutlineChartBar, solid: HiChartBar },
+  'usd-circle': { outline: HiOutlineCurrencyDollar, solid: HiCurrencyDollar },
+  'dollar': { outline: HiOutlineCurrencyDollar, solid: HiCurrencyDollar },
+  'currency-dollar': { outline: HiOutlineCurrencyDollar, solid: HiCurrencyDollar },
+  'profile': { outline: HiOutlineUser, solid: HiUser },
+  'user': { outline: HiOutlineUser, solid: HiUser },
+  'sparkles': { outline: HiOutlineSparkles, solid: HiSparkles },
+  'clock': { outline: HiOutlineClock, solid: HiClock },
+  'trash': { outline: HiOutlineTrash, solid: HiTrash },
+  'cog': { outline: HiOutlineCog6Tooth, solid: HiCog6Tooth },
+  'settings': { outline: HiOutlineCog6Tooth, solid: HiCog6Tooth },
+  'academic-cap': { outline: HiOutlineAcademicCap, solid: HiAcademicCap },
+  'clipboard-check': { outline: HiOutlineClipboardDocumentCheck, solid: HiClipboardDocumentCheck },
+  'calendar': { outline: HiOutlineCalendarDays, solid: HiCalendarDays },
+  'document-text': { outline: HiOutlineDocumentText, solid: HiDocumentText },
+  'book-open': { outline: HiOutlineBookOpen, solid: HiBookOpen },
+  'document-duplicate': { outline: HiOutlineDocumentDuplicate, solid: HiDocumentDuplicate },
+  'beaker': { outline: HiOutlineBeaker, solid: HiBeaker },
+  'shield-check': { outline: HiOutlineShieldCheck, solid: HiShieldCheck },
+  'qrcode': { outline: HiOutlineQrCode, solid: HiQrCode },
+  'upload': { outline: HiOutlineArrowUpTray, solid: HiArrowUpTray },
+  'cloud-upload': { outline: HiOutlineArrowUpTray, solid: HiArrowUpTray },
+  'star': { outline: HiOutlineStar, solid: HiStar },
+  'star-stroke': { outline: HiOutlineStar, solid: HiStar },
+  'star-fill': { outline: HiOutlineStar, solid: HiStar },
+  'library': { outline: HiOutlineBuildingLibrary, solid: HiBuildingLibrary },
+  'exclamation': { outline: HiOutlineExclamationCircle, solid: HiExclamationCircle },
+  'briefcase': { outline: HiOutlineBriefcase, solid: HiBriefcase },
+  'user-group': { outline: HiOutlineUserGroup, solid: HiUserGroup },
+  'promote': { outline: HiOutlineMegaphone, solid: HiMegaphone },
+  'megaphone': { outline: HiOutlineMegaphone, solid: HiMegaphone },
+  'speakerphone': { outline: HiOutlineMegaphone, solid: HiMegaphone },
+  'newspaper': { outline: HiOutlineNewspaper, solid: HiNewspaper },
+  'layers': { outline: HiOutlineQueueList, solid: HiQueueList },
+  'collection': { outline: HiOutlineQueueList, solid: HiQueueList },
+  'id-card': { outline: HiOutlineIdentification, solid: HiIdentification },
+  'identification': { outline: HiOutlineIdentification, solid: HiIdentification },
+  'logout': { outline: HiOutlineArrowLeftOnRectangle, solid: HiArrowLeftOnRectangle },
+  'close': { outline: HiOutlineXMark, solid: HiXMark }
+};
+
+export function createNavIcon(OutlineComponent, SolidComponent, name) {
+  const NavIcon = ({ active = false, className = '', style, title, ...props }) => {
+    const Component = active ? SolidComponent : OutlineComponent;
+    if (!Component) return null;
+
+    if (Array.isArray(Component)) {
+      return (
+        <HugeiconsIcon
+          icon={Component}
+          size={20}
+          strokeWidth={1.5}
+          className={className}
+          style={style}
+          {...props}
+        />
+      );
+    }
+
+    return (
+      <Component
+        data-ui-icon={active ? 'solid' : 'outline'}
+        data-active={active ? 'true' : 'false'}
+        aria-hidden={title ? undefined : 'true'}
+        role={title ? 'img' : undefined}
+        className={className}
+        style={style}
+        {...props}
+      >
+        {title ? <title>{title}</title> : null}
+      </Component>
+    );
+  };
+
+  NavIcon.displayName = `NavIcon(${name || 'custom'})`;
+  NavIcon.iconName = name;
+  NavIcon.outline = OutlineComponent;
+  NavIcon.solid = SolidComponent;
+  return NavIcon;
+}
+
+const Icon = ({ className = '', name, fill, style, title, active, ...rest }) => {
+  if (typeof name === 'function') {
     const CustomComp = name;
-    return <CustomComp className={className} style={style} {...rest} />;
+    return (
+      <CustomComp
+        className={className}
+        style={style}
+        active={active}
+        title={title}
+        fill={fill}
+        {...rest}
+      />
+    );
+  }
+
+  // If active is explicitly passed, resolve dual-state icon
+  if (typeof active === 'boolean') {
+    const resolvedKey = resolveIconName(name);
+    const dual = DUAL_NAV_ICONS[resolvedKey] || DUAL_NAV_ICONS[name];
+    if (dual) {
+      const Target = active ? dual.solid : dual.outline;
+      if (Target) {
+        return (
+          <Target
+            data-ui-icon={active ? 'solid' : 'outline'}
+            data-active={active ? 'true' : 'false'}
+            className={className}
+            style={style}
+            aria-hidden={title ? undefined : 'true'}
+            role={title ? 'img' : undefined}
+            {...rest}
+          >
+            {title ? <title>{title}</title> : null}
+          </Target>
+        );
+      }
+    }
   }
 
   const key = resolveIconName(name);
@@ -1920,6 +2087,10 @@ const Icon = ({ className = '', name, fill, style, title, ...rest }) => {
 const iconComponentCache = new Map();
 export function createIcon(iconKey) {
   const resolved = resolveIconName(iconKey);
+  const dual = DUAL_NAV_ICONS[resolved] || DUAL_NAV_ICONS[iconKey];
+  if (dual) {
+    return createNavIcon(dual.outline, dual.solid, resolved);
+  }
   if (iconComponentCache.has(resolved)) return iconComponentCache.get(resolved);
   const Comp = (props) => <Icon name={resolved} {...props} />;
   Comp.displayName = `Icon(${resolved})`;

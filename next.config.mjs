@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'url';
 import path from 'path';
+import withBundleAnalyzer from '@next/bundle-analyzer';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -63,11 +64,29 @@ const nextConfig = {
         },
       }),
 
-  webpack: (config, { webpack }) => {
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+  },
+
+  webpack: (config, { webpack, isServer }) => {
     config.resolve.alias['react-router-dom'] = path.resolve(
       __dirname,
       'lib/react-router-dom-compat.js'
     );
+
+    if (!isServer) {
+      config.optimization = config.optimization || {};
+      config.optimization.splitChunks = config.optimization.splitChunks || {};
+      config.optimization.splitChunks.cacheGroups = {
+        ...(config.optimization.splitChunks.cacheGroups || {}),
+        recharts: {
+          test: /[\\/]node_modules[\\/](recharts|d3-[^\\/]+)[\\/]/,
+          name: 'recharts-vendor',
+          chunks: 'all',
+          priority: 30,
+        },
+      };
+    }
 
     config.plugins.push(
       new webpack.DefinePlugin({
@@ -88,4 +107,8 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+const withAnalyzer = withBundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+});
+
+export default withAnalyzer(nextConfig);

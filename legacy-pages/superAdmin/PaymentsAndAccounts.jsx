@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import useDebounce from '../../lib/useDebounce';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import CollegesHubLoader from '../../components/common/CollegesHubLoader';
@@ -337,9 +338,13 @@ const PaymentsAndAccounts = () => {
     };
   }, [unifiedPayments, pendingQueue]);
 
+  const debouncedSearch = useDebounce(search, 300);
+  const debouncedCollegeSearch = useDebounce(collegeSearch, 300);
+  const debouncedAccountantSearch = useDebounce(accountantSearch, 300);
+
   /* ── Filtered & Sorted Payments History ── */
   const filteredPayments = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = debouncedSearch.trim().toLowerCase();
     const fromTime = dateFrom ? new Date(`${dateFrom}T00:00:00`).getTime() : null;
     const toTime = dateTo ? new Date(`${dateTo}T23:59:59`).getTime() : null;
 
@@ -379,7 +384,7 @@ const PaymentsAndAccounts = () => {
     });
   }, [
     unifiedPayments,
-    search,
+    debouncedSearch,
     statusFilter,
     planFilter,
     collegeFilter,
@@ -397,11 +402,11 @@ const PaymentsAndAccounts = () => {
 
   useEffect(() => {
     setPage(1);
-  }, [search, statusFilter, planFilter, collegeFilter, dateFrom, dateTo]);
+  }, [debouncedSearch, statusFilter, planFilter, collegeFilter, dateFrom, dateTo]);
 
   /* ── Per-College Billing Rollup ── */
   const collegeLedgers = useMemo(() => {
-    const q = collegeSearch.trim().toLowerCase();
+    const q = debouncedCollegeSearch.trim().toLowerCase();
     return colleges
       .map((c) => {
         const cid = c.id || c._id;
@@ -452,18 +457,18 @@ const PaymentsAndAccounts = () => {
           .toLowerCase()
           .includes(q);
       });
-  }, [colleges, unifiedPayments, collegeSearch]);
+  }, [colleges, unifiedPayments, debouncedCollegeSearch]);
 
   /* ── Filtered Accountants List ── */
   const filteredAccountants = useMemo(() => {
-    const q = accountantSearch.trim().toLowerCase();
+    const q = debouncedAccountantSearch.trim().toLowerCase();
     if (!q) return accountants;
     return accountants.filter((a) =>
       `${a.name} ${a.collegeName} ${a.collegeCode} ${a.email} ${a.phone}`
         .toLowerCase()
         .includes(q)
     );
-  }, [accountants, accountantSearch]);
+  }, [accountants, debouncedAccountantSearch]);
 
   /* ── Sort Toggle Helper ── */
   const handleSort = (col) => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -60,7 +60,7 @@ const Sidebar = ({
   const isSuperAdmin = activeRole === 'superAdmin';
   const isCompactDesktop = Boolean(compact && !mobileOpen);
 
-  const { data: navCounts } = useNavCounts(false);
+  const { data: navCounts } = useNavCounts(false, { enabled: isSuperAdmin });
 
   const effectiveFeatures =
     user?.college?.effectiveFeatures || user?.college?.subscription?.features || null;
@@ -399,11 +399,12 @@ const Sidebar = ({
                 )}
 
                 <Icon
-                  name={iconName}
+                  name={item.icon || iconName}
+                  active={isActive}
                   className={`relative z-2 !size-5 shrink-0 transition-colors ${
                     isActive
-                      ? 'fill-[var(--accent,var(--primary-01))]'
-                      : 'fill-t-secondary group-hover:fill-t-primary'
+                      ? 'text-[var(--accent,var(--primary-01))] fill-[var(--accent,var(--primary-01))]'
+                      : 'text-t-secondary group-hover:text-t-primary'
                   }`}
                 />
                 {!isCompactDesktop && (
@@ -482,11 +483,12 @@ const Sidebar = ({
                     </div>
                   )}
                   <Icon
-                    name={iconName}
+                    name={item.icon || iconName}
+                    active={isCategoryActive || isFlyoutOpen}
                     className={`relative z-2 !size-5 shrink-0 transition-colors ${
                       isCategoryActive || isFlyoutOpen
-                        ? 'fill-[var(--accent,var(--primary-01))]'
-                        : 'fill-t-secondary group-hover:fill-t-primary'
+                        ? 'text-[var(--accent,var(--primary-01))] fill-[var(--accent,var(--primary-01))]'
+                        : 'text-t-secondary group-hover:text-t-primary'
                     }`}
                   />
                 </button>
@@ -544,13 +546,14 @@ const Sidebar = ({
                 )}
 
                 <Icon
-                  name={iconName}
+                  name={item.icon || iconName}
+                  active={isCategoryActive}
                   className={`relative z-2 !size-5 shrink-0 transition-colors ${
                     isCategoryActive
-                      ? 'fill-[var(--accent,var(--primary-01))]'
+                      ? 'text-[var(--accent,var(--primary-01))] fill-[var(--accent,var(--primary-01))]'
                       : isOpen
-                        ? 'fill-t-primary'
-                        : 'fill-t-secondary group-hover:fill-t-primary'
+                        ? 'text-t-primary'
+                        : 'text-t-secondary group-hover:text-t-primary'
                   }`}
                 />
                 <span className="relative z-2 truncate text-left">
@@ -715,8 +718,9 @@ const Sidebar = ({
           >
             <div className="flex items-center gap-2.5 px-3 py-2 mb-1">
               <Icon
-                name={flyoutCategory.icon?.iconName || 'dashboard'}
-                className="!size-4 fill-[var(--accent,var(--primary-01))]"
+                name={flyoutCategory.icon || flyoutCategory.icon?.iconName || 'dashboard'}
+                active={true}
+                className="!size-4 shrink-0 text-[var(--accent,var(--primary-01))] fill-[var(--accent,var(--primary-01))]"
               />
               <span className="text-sub-title-2 font-semibold text-t-primary">
                 {flyoutCategory.label}
@@ -792,4 +796,4 @@ const Sidebar = ({
   );
 };
 
-export default Sidebar;
+export default memo(Sidebar);
