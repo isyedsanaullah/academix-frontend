@@ -4,7 +4,7 @@
     "private": true,
     "scripts": {
         "dev": "next dev --webpack",
-        "build": "next build --webpack",
+        "build": "cross-env NODE_OPTIONS=--max-old-space-size=4096 next build --webpack",
         "start": "next start",
         "lint": "eslint",
         "build:static": "cross-env NODE_OPTIONS=--max-old-space-size=4096 NEXT_STATIC_EXPORT=true NEXT_PUBLIC_API_URL=https://academix-backend-8zcg.onrender.com/api NEXT_PUBLIC_ROOT_DOMAIN=collegeshub.org next build --webpack",

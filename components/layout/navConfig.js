@@ -68,6 +68,14 @@ export const NAV = {
       ],
     },
     {
+      id: 'third-party-usage',
+      label: 'Third-Party Usage',
+      icon: HiOutlineCollection,
+      children: [
+        { to: '/super-admin/usage/ai', icon: HiOutlineSparkles, label: 'AI API Usage' },
+      ],
+    },
+    {
       id: 'insights-ai',
       label: 'Insights & AI',
       icon: HiOutlineChartBar,

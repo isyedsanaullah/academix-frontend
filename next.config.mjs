@@ -19,6 +19,11 @@ const isStaticExport = process.env.NEXT_STATIC_EXPORT === 'true';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Limit workers to 1 to prevent OOM on machines with < 8GB RAM
+  experimental: {
+    workerThreads: false,
+    cpus: 1,
+  },
   // ── Static export for Hostinger (Apache shared hosting) ──────────────────
   ...(isStaticExport
     ? {
@@ -27,11 +32,6 @@ const nextConfig = {
         trailingSlash: true,
         // Disable image optimisation (not available in static export)
         images: { unoptimized: true },
-        // Limit workers to 1 to prevent OOM on machines with < 8GB RAM
-        experimental: {
-          workerThreads: false,
-          cpus: 1,
-        },
       }
     : {
         turbopack: {
