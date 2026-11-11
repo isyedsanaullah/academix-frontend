@@ -80,13 +80,19 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  // 2FA states ('none' | 'enroll' | 'validate' | 'recover')
+  // 2FA states ('none' | 'enroll' | 'validate' | 'recover' | 'email-otp')
   const [twoFaMode, setTwoFaMode] = useState('none');
   const [enrollToken, setEnrollToken] = useState('');
   const [preAuthToken, setPreAuthToken] = useState('');
   const [twoFaSetupData, setTwoFaSetupData] = useState(null);
   const [twoFaCode, setTwoFaCode] = useState('');
   const [backupCode, setBackupCode] = useState('');
+  const [emailOtpCode, setEmailOtpCode] = useState('');
+  const [emailSentTo, setEmailSentTo] = useState('');
+  const [emailResendCooldown, setEmailResendCooldown] = useState(0);
+  const [attemptsRemaining, setAttemptsRemaining] = useState(null);
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
+  const [totpSecondsLeft, setTotpSecondsLeft] = useState(30);
 
   // Step in root flow: 'code' -> 'credentials' (after slide animation)
   const [step, setStep] = useState('code');
@@ -111,6 +117,36 @@ export default function Login() {
     void el.offsetWidth;
     el.classList.add('login-shake');
   };
+
+  // Live TOTP cycle timer (30-second window countdown)
+  useEffect(() => {
+    if (twoFaMode !== 'validate' && twoFaMode !== 'enroll') return;
+    const updateTotp = () => {
+      const sec = 30 - (Math.floor(Date.now() / 1000) % 30);
+      setTotpSecondsLeft(sec);
+    };
+    updateTotp();
+    const interval = setInterval(updateTotp, 1000);
+    return () => clearInterval(interval);
+  }, [twoFaMode]);
+
+  // Lockout countdown timer
+  useEffect(() => {
+    if (lockoutSeconds <= 0) return;
+    const timer = setInterval(() => {
+      setLockoutSeconds((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [lockoutSeconds]);
+
+  // Email OTP resend cooldown timer
+  useEffect(() => {
+    if (emailResendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setEmailResendCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [emailResendCooldown]);
 
   // Auto-resolve college code if ?code= URL param is present (e.g. from public profile login button)
   useEffect(() => {
@@ -401,6 +437,10 @@ export default function Login() {
   // ─── 2C. Handle 2FA Login Code Validation (/auth/2fa/validate) ─────────────
   const handleValidate2FA = async (e) => {
     e.preventDefault();
+    if (lockoutSeconds > 0) {
+      shake();
+      return toast.error(`Account is temporarily locked. Please wait ${Math.ceil(lockoutSeconds / 60)} more minutes.`);
+    }
     const clean = twoFaCode.replace(/\s+/g, '');
     if (clean.length !== 6) {
       shake();
@@ -413,12 +453,76 @@ export default function Login() {
         code: clean,
       });
       if (res.data?.success && res.data?.token) {
+        setAttemptsRemaining(null);
+        setLockoutSeconds(0);
         const userData = await complete2FASession(res.data.token, res.data.user);
         finalizeAuthenticatedRoute(userData);
       }
     } catch (err) {
       shake();
-      toast.error(err.response?.data?.message || 'Invalid 6-digit code');
+      const data = err.response?.data || {};
+      if (data.attemptsRemaining !== undefined) {
+        setAttemptsRemaining(data.attemptsRemaining);
+      }
+      if (data.lockedUntil || data.lockedMinutes || data.remainingMs) {
+        const ms = data.remainingMs || (data.lockedMinutes ? data.lockedMinutes * 60 * 1000 : 30 * 60 * 1000);
+        setLockoutSeconds(Math.ceil(ms / 1000));
+      }
+      toast.error(data.message || 'Invalid 6-digit code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─── 2D. Handle 2FA Email OTP Dispatch (/auth/2fa/email-otp) ───────────────
+  const handleRequestEmailOtp = async () => {
+    if (loading || emailResendCooldown > 0) return;
+    setLoading(true);
+    try {
+      const res = await api.post('/auth/2fa/email-otp', { preAuthToken });
+      if (res.data?.success) {
+        setEmailSentTo(res.data.maskedEmail || email || 'your email');
+        setEmailResendCooldown(60);
+        setEmailOtpCode('');
+        setTwoFaMode('email-otp');
+        toast.success(res.data.message || 'Verification code sent to your email!');
+      }
+    } catch (err) {
+      shake();
+      toast.error(err.response?.data?.message || 'Failed to send email verification code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─── 2E. Handle 2FA Email OTP Verification (/auth/2fa/verify-email-otp) ─────
+  const handleVerifyEmailOtp = async (e) => {
+    e.preventDefault();
+    const clean = emailOtpCode.replace(/\s+/g, '');
+    if (clean.length !== 6) {
+      shake();
+      return toast.error('Please enter the 6-digit code sent to your email');
+    }
+    setLoading(true);
+    try {
+      const res = await api.post('/auth/2fa/verify-email-otp', {
+        preAuthToken,
+        code: clean,
+      });
+      if (res.data?.success && res.data?.token) {
+        setAttemptsRemaining(null);
+        setLockoutSeconds(0);
+        const userData = await complete2FASession(res.data.token, res.data.user);
+        toast.success('Email identity verified!');
+        finalizeAuthenticatedRoute(userData);
+      }
+    } catch (err) {
+      shake();
+      const data = err.response?.data || {};
+      if (data.attemptsRemaining !== undefined) {
+        setAttemptsRemaining(data.attemptsRemaining);
+      }
+      toast.error(data.message || 'Invalid email verification code');
     } finally {
       setLoading(false);
     }
@@ -881,21 +985,25 @@ export default function Login() {
                           {twoFaMode === 'enroll'
                             ? 'Set Up Authenticator'
                             : twoFaMode === 'validate'
-                              ? 'Enter Authenticator Code'
-                              : twoFaMode === 'recover'
-                                ? 'Backup Code Recovery'
-                                : 'Welcome back'}
+                              ? 'Two-Factor Verification'
+                              : twoFaMode === 'email-otp'
+                                ? 'Email Verification'
+                                : twoFaMode === 'recover'
+                                  ? 'Backup Code Recovery'
+                                  : 'Welcome back'}
                         </h1>
                         <p className="text-sm leading-relaxed text-fg-muted">
                           {twoFaMode === 'enroll'
                             ? 'Scan the QR code below in Google Authenticator or Authy, then enter the 6-digit code to activate 2FA.'
                             : twoFaMode === 'validate'
-                              ? 'Enter the 6-digit verification code generated by your authenticator app.'
-                              : twoFaMode === 'recover'
-                                ? 'Enter one of your 10-character single-use backup recovery codes.'
-                                : isSuperAdmin
-                                  ? 'Enter your Super Admin credentials to enter the platform console.'
-                                  : `Sign in with your ${activeCollege?.name || 'College'} account.`}
+                              ? 'Enter the 6-digit verification code from your authenticator app.'
+                              : twoFaMode === 'email-otp'
+                                ? `Enter the 6-digit verification code sent to ${emailSentTo || 'your email'}.`
+                                : twoFaMode === 'recover'
+                                  ? 'Enter one of your 10-character single-use backup recovery codes.'
+                                  : isSuperAdmin
+                                    ? 'Enter your Super Admin credentials to enter the platform console.'
+                                    : `Sign in with your ${activeCollege?.name || 'College'} account.`}
                         </p>
                       </div>
 
@@ -932,9 +1040,15 @@ export default function Login() {
                           )}
 
                           <div>
-                            <label htmlFor="twofa-enroll-code" className="field-label">
-                              6-Digit Authenticator Code
-                            </label>
+                            <div className="flex items-center justify-between text-xs text-fg-muted font-medium mb-1.5">
+                              <label htmlFor="twofa-enroll-code" className="field-label mb-0">
+                                6-Digit Authenticator Code
+                              </label>
+                              <span className="flex items-center gap-1.5 font-mono text-[11px] font-semibold text-accent bg-accent/10 px-2 py-0.5 rounded-full">
+                                <span className="h-1.5 w-1.5 rounded-full bg-accent animate-ping" />
+                                Refreshes in {totpSecondsLeft}s
+                              </span>
+                            </div>
                             <input
                               id="twofa-enroll-code"
                               type="text"
@@ -968,10 +1082,47 @@ export default function Login() {
                       {/* ── Mode 2: 2FA 6-Digit Code Validation ── */}
                       {twoFaMode === 'validate' && (
                         <form onSubmit={handleValidate2FA} className="flex flex-col gap-4">
+                          {/* Account Locked Alert */}
+                          {lockoutSeconds > 0 && (
+                            <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3.5 text-xs text-red-700 dark:text-red-300 flex items-start gap-3">
+                              <HiOutlineLockClosed className="h-5 w-5 shrink-0 mt-0.5 text-red-500 animate-pulse" />
+                              <div className="min-w-0">
+                                <p className="font-bold text-sm">Account Temporarily Locked</p>
+                                <p className="mt-0.5 text-xs opacity-90 leading-relaxed">
+                                  Too many failed 2FA attempts. For your security, this account is locked for:
+                                </p>
+                                <p className="mt-1 font-mono text-base font-extrabold text-red-600 dark:text-red-400">
+                                  {Math.floor(lockoutSeconds / 60)}m {String(lockoutSeconds % 60).padStart(2, '0')}s
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Warning for Remaining Attempts */}
+                          {attemptsRemaining !== null && attemptsRemaining < 5 && lockoutSeconds <= 0 && (
+                            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2.5">
+                              <HiOutlineExclamationCircle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
+                              <div className="min-w-0">
+                                <p className="font-semibold">
+                                  {attemptsRemaining} {attemptsRemaining === 1 ? 'attempt' : 'attempts'} remaining
+                                </p>
+                                <p className="mt-0.5 text-[11px] opacity-90">
+                                  After 5 consecutive failures, login will be locked for 30 minutes.
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
                           <div>
-                            <label htmlFor="twofa-validate-code" className="field-label">
-                              6-Digit Authenticator Code
-                            </label>
+                            <div className="flex items-center justify-between text-xs text-fg-muted font-medium mb-1.5">
+                              <label htmlFor="twofa-validate-code" className="field-label mb-0">
+                                6-Digit Authenticator Code
+                              </label>
+                              <span className="flex items-center gap-1.5 font-mono text-[11px] font-semibold text-accent bg-accent/10 px-2.5 py-0.5 rounded-full">
+                                <span className="h-1.5 w-1.5 rounded-full bg-accent animate-ping" />
+                                Refreshes in {totpSecondsLeft}s
+                              </span>
+                            </div>
                             <input
                               id="twofa-validate-code"
                               type="text"
@@ -981,32 +1132,115 @@ export default function Login() {
                               onChange={(e) => setTwoFaCode(e.target.value.replace(/\D/g, ''))}
                               placeholder="000000"
                               autoFocus
-                              className="input-field min-h-12 text-center font-mono text-lg font-bold tracking-[0.35em]"
+                              disabled={lockoutSeconds > 0}
+                              className="input-field min-h-12 text-center font-mono text-lg font-bold tracking-[0.35em] disabled:opacity-50"
                             />
                           </div>
 
                           <button
                             type="submit"
-                            disabled={loading || twoFaCode.length !== 6}
-                            className="btn-primary min-h-12 w-full"
+                            disabled={loading || twoFaCode.length !== 6 || lockoutSeconds > 0}
+                            className="btn-primary min-h-12 w-full disabled:cursor-not-allowed"
                           >
                             {loading ? (
                               <>
                                 <Spinner />
                                 <span>Verifying...</span>
                               </>
+                            ) : lockoutSeconds > 0 ? (
+                              <span>Locked out ({Math.floor(lockoutSeconds / 60)}m {String(lockoutSeconds % 60).padStart(2, '0')}s)</span>
                             ) : (
                               <span>Verify &amp; Sign In</span>
                             )}
                           </button>
 
+                          {/* Fallback & Alternative Verification Options */}
+                          <div className="relative my-1">
+                            <div className="absolute inset-0 flex items-center">
+                              <div className="w-full border-t border-line" />
+                            </div>
+                            <div className="relative flex justify-center text-[10px] uppercase tracking-wider">
+                              <span className="bg-card px-2.5 text-fg-muted font-semibold">Or verify another way</span>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={handleRequestEmailOtp}
+                            disabled={loading}
+                            className="btn-secondary min-h-11 w-full flex items-center justify-center gap-2 text-xs font-semibold"
+                          >
+                            <HiOutlineMail className="h-4 w-4 text-accent" />
+                            <span>Send code to verified Email</span>
+                          </button>
+
                           <button
                             type="button"
                             onClick={() => setTwoFaMode('recover')}
-                            className="text-center text-xs font-semibold text-accent hover:underline"
+                            className="text-center text-xs font-semibold text-accent hover:underline pt-1"
                           >
-                            Lost your authenticator device? Use a backup code &rarr;
+                            Lost device? Use a 10-character backup code &rarr;
                           </button>
+                        </form>
+                      )}
+
+                      {/* ── Mode 2B: 2FA Email OTP Verification ── */}
+                      {twoFaMode === 'email-otp' && (
+                        <form onSubmit={handleVerifyEmailOtp} className="flex flex-col gap-4">
+                          <div className="rounded-xl border border-line bg-card-2 p-3.5 text-center">
+                            <p className="text-xs text-fg-muted">We sent a 6-digit verification code to:</p>
+                            <p className="mt-1 font-semibold text-fg text-sm select-all">{emailSentTo || email}</p>
+                          </div>
+
+                          <div>
+                            <label htmlFor="twofa-email-code" className="field-label">
+                              6-Digit Email Code
+                            </label>
+                            <input
+                              id="twofa-email-code"
+                              type="text"
+                              inputMode="numeric"
+                              maxLength={6}
+                              value={emailOtpCode}
+                              onChange={(e) => setEmailOtpCode(e.target.value.replace(/\D/g, ''))}
+                              placeholder="000000"
+                              autoFocus
+                              className="input-field min-h-12 text-center font-mono text-lg font-bold tracking-[0.35em]"
+                            />
+                          </div>
+
+                          <button
+                            type="submit"
+                            disabled={loading || emailOtpCode.length !== 6}
+                            className="btn-primary min-h-12 w-full"
+                          >
+                            {loading ? (
+                              <>
+                                <Spinner />
+                                <span>Verifying Code...</span>
+                              </>
+                            ) : (
+                              <span>Verify Email Code &amp; Sign In</span>
+                            )}
+                          </button>
+
+                          <div className="flex items-center justify-between text-xs pt-1">
+                            <button
+                              type="button"
+                              onClick={handleRequestEmailOtp}
+                              disabled={loading || emailResendCooldown > 0}
+                              className="font-semibold text-accent hover:underline disabled:opacity-50"
+                            >
+                              {emailResendCooldown > 0 ? `Resend code in ${emailResendCooldown}s` : 'Resend Email Code'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setTwoFaMode('validate')}
+                              className="font-semibold text-fg-muted hover:text-fg hover:underline"
+                            >
+                              &larr; Use Authenticator App
+                            </button>
+                          </div>
                         </form>
                       )}
 
