@@ -68,7 +68,8 @@ const ApiKeyManager = () => {
     setTesting(true);
     setTestResult(null);
     try {
-      const { data } = await api.post('/ai/api-key/test');
+      const payload = newKey.trim() ? { apiKey: newKey.trim() } : {};
+      const { data } = await api.post('/ai/api-key/test', payload);
       const isRateLimited = data.data?.rateLimited;
       setTestResult({
         success: true,
@@ -81,7 +82,7 @@ const ApiKeyManager = () => {
         success: false,
         message: err.response?.data?.message || 'Test failed',
       });
-      toast.error('Key test failed');
+      toast.error(err.response?.data?.message || 'Key test failed');
     } finally {
       setTesting(false);
     }
