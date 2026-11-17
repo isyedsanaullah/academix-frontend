@@ -42,13 +42,18 @@ const PLANS = [
     best: 'Small and new colleges',
     monthly: 2999,
     yearly: 32989,
-    recommended: true,
-    services: '33 services: academic foundation, daily attendance register, timetable, cash vouchers, audit trail & file vault',
+    liveCount: 26,
+    totalCount: 33,
+    services: '26 live today (33 total): academic foundation, daily attendance register, timetable, cash vouchers, audit trail (30d) & recycle bin (30d)',
     students: '300',
     extra: 'Not available: upgrade to Standard',
     staff: '20',
+    admins: '2 admins (fixed)',
+    campuses: '1 campus',
     storage: '5 GB (10 MB/file)',
     apps: 'Manual desk intake',
+    emails: '3,000 emails / mo',
+    restore: 'Recycle bin only (30d)',
     support: 'Email support',
     cta: 'Request Starter',
   },
@@ -58,67 +63,65 @@ const PLANS = [
     best: 'Established private & degree colleges',
     monthly: 5999,
     yearly: 65989,
-    services: 'Everything in Starter plus 55 more (88 total): gate QR, 3-copy bank challans, payroll, parent portal & AI Lite',
+    recommended: true,
+    liveCount: 70,
+    totalCount: 88,
+    services: '70 live today (88 total): gate QR, 3-copy challans, payroll, AI quiz & translation (AI Lite 1M), + Library/Canteen add-on options',
     students: '750',
     extra: 'PKR 15 per student (+50% cap)',
     staff: '50',
-    storage: '25 GB (25 MB/file)',
-    apps: '50 / year',
+    admins: '5 admins (fixed)',
+    campuses: '1 campus',
+    storage: '25 GB (max 45 GB w/ 2 add-on blocks)',
+    apps: '50 / year (max 100 w/ 2 packs)',
+    emails: '10,000 emails / mo',
+    restore: 'Recycle bin only (30d)',
     support: 'In-app chat, business hours',
     cta: 'Request Standard',
   },
   {
     id: 'premium',
     name: 'Premium',
-    best: 'Growing institutions & 2-campus colleges',
-    monthly: 10999,
-    yearly: 120989,
-    services: 'Everything in Standard plus 53 more (141 total): 2 campuses, Library & Canteen POS FREE, AI Plus tutor',
-    students: '1,500',
-    extra: 'PKR 12 per student (+50% cap)',
-    staff: '100',
-    storage: '100 GB (50 MB/file)',
-    apps: '150 / year',
-    support: 'Priority chat',
+    best: 'Growing & multi-campus institutions (up to 3 campuses)',
+    monthly: 14999,
+    yearly: 164989,
+    liveCount: 86,
+    totalCount: 153,
+    services: '86 live today (153 total): 2 campuses included, Library & Canteen free, AI Full (20M credits, 20/day tutor, Ask-Your-Data, Agent), N05 ZIP backup',
+    students: '2,000',
+    extra: 'PKR 10 per student (+50% / 3,000)',
+    staff: '150',
+    admins: '15 admins (fixed)',
+    campuses: '2 campuses (+1 add-on -> 3 max)',
+    storage: '150 GB (max 300 GB w/ add-ons)',
+    apps: '300 / year (max 600 w/ packs)',
+    emails: '25,000 emails / mo',
+    restore: '1 self-service ZIP backup / mo (N05)',
+    support: 'Priority chat & onboarding',
     cta: 'Request Premium',
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    best: 'Multi-campus groups & large institutions',
-    monthly: 17999,
-    yearly: 197989,
-    services: 'All 161 services: 3 campuses, Transport/Hostel/Accounting FREE, Autonomous AI Admin Agent & REST API',
-    students: '3,000',
-    extra: 'PKR 8 per student (Unlimited)',
-    staff: '200',
-    storage: '300 GB (100 MB/file)',
-    apps: '400 / year',
-    support: 'Dedicated manager & SLA',
-    cta: 'Request Enterprise',
   },
 ];
 
 const COMPARISON_ROWS = [
-  { label: 'Price per month', v: ['PKR 2,999', 'PKR 5,999', 'PKR 10,999', 'PKR 17,999'] },
-  { label: 'Price per year (1 Mo FREE)', v: ['PKR 32,989 (save 2,999)', 'PKR 65,989 (save 5,999)', 'PKR 120,989 (save 10,999)', 'PKR 197,989 (save 17,999)'] },
-  { label: '14-Day Free Trial', v: ['Yes, all features', 'Yes, all features', 'Yes, all features', 'Yes, all features'] },
-  { label: 'Best for', v: ['Small and new colleges', 'Private single-campus colleges', 'Growing colleges (2 campuses)', 'Large groups (3+ campuses)'] },
-  { label: 'Students included', v: ['300', '750', '1,500', '3,000'] },
-  { label: 'Extra student, per month', v: ['Not available: upgrade', 'PKR 15 (+50% cap)', 'PKR 12 (+50% cap)', 'PKR 8 (Unlimited)'] },
-  { label: 'Staff accounts included', v: ['20', '50', '100', '200'] },
-  { label: 'Administrator accounts', v: ['2 admins', '5 admins', '10 admins', '25 admins'] },
-  { label: 'Campuses under one admin', v: ['1 campus', '1 campus', '2 campuses', '3 campuses (+PKR 3,000 / extra)'] },
-  { label: 'File storage & max file size', v: ['5 GB (10 MB/file)', '25 GB (25 MB/file)', '100 GB (50 MB/file)', '300 GB (100 MB/file)'] },
-  { label: 'Online applications per year', v: ['Manual desk intake', '50 / year', '150 / year', '400 / year'] },
-  { label: 'AI Intelligence Suite', v: ['No', 'AI Lite (1M credits/mo, 20 quizzes)', 'AI Plus (5M credits/mo, 150 quizzes, OCR, Ask-Your-Data)', 'AI Full (40M credits/mo, Autonomous Agent, Auto-Fixer)'] },
-  { label: 'Student AI Tutor Chat', v: ['Disabled', 'Disabled', '10 msgs / student / day', '30 msgs / student / day'] },
-  { label: 'Monthly Data Exports (N01)', v: ['3 CSV / mo (max 1k rows)', '60 CSV / mo (max 10k rows)', 'Unlimited CSV, 60 PDF / mo', 'Unlimited CSV/PDF (1M technical ceiling)'] },
-  { label: 'Included Operations Modules', v: ['Base Academic Core', 'Base + Gate QR, Challans, Payroll', '+ Library (N35) & Canteen (#98) FREE', '+ Transport (N36), Hostel (N37), Accounting (N40) FREE'] },
-  { label: 'Self-Service Backup (N05)', v: ['Offboarding export only', 'Offboarding export only', 'Offboarding export only', '1 self-service ZIP / month'] },
-  { label: 'Public API & Webhooks (N06)', v: ['No', 'No', 'No', 'Included (100,000 calls / mo)'] },
-  { label: 'Support SLA', v: ['Email support', 'In-app chat, business hours', 'Priority chat', 'Dedicated manager & custom SLA'] },
-  { label: 'Services in total', v: ['33 services', '88 services', '141 services', '161 services (All)'] },
+  { label: 'Price per month', v: ['PKR 2,999', 'PKR 5,999', 'PKR 14,999'] },
+  { label: 'Price per year (1 Mo FREE)', v: ['PKR 32,989 (save 2,999)', 'PKR 65,989 (save 5,999)', 'PKR 164,989 (save 14,999)'] },
+  { label: 'Live / Total Services', v: ['26 live / 33 total', '70 live / 88 total', '86 live / 153 total (+9 add-ons)'] },
+  { label: 'Best for', v: ['Small & new colleges', 'Single-campus private colleges', 'Multi-campus & AI colleges (2–3 campuses)'] },
+  { label: 'Students included', v: ['300', '750', '2,000'] },
+  { label: 'Extra student / month', v: ['Not available: upgrade', 'PKR 15 (+50% cap -> 1,125)', 'PKR 10 (+50% cap -> 3,000)'] },
+  { label: 'Staff accounts included', v: ['20', '50 (+50% @ PKR 120)', '150 (+50% @ PKR 90)'] },
+  { label: 'Administrator accounts', v: ['2 admins (fixed)', '5 admins (fixed)', '15 admins (fixed)'] },
+  { label: 'Campuses under one admin', v: ['1 campus', '1 campus', '2 campuses (+1 @ PKR 3,000 -> 3 max)'] },
+  { label: 'File storage & max upload', v: ['5 GB (10 MB/file, max 15 GB)', '25 GB (25 MB/file, max 45 GB)', '150 GB (100 MB/file, max 300 GB)'] },
+  { label: 'Online applications / year', v: ['Manual desk intake', '50 / year (max 100)', '300 / year (max 600)'] },
+  { label: 'Monthly bulk emails (2FA exempt)', v: ['3,000 / mo', '10,000 / mo', '25,000 / mo'] },
+  { label: 'AI Intelligence Suite', v: ['No', 'AI Lite (1M credits/mo, 20 quizzes, 30 translations)', 'AI Full (20M credits/mo, Tutor, Agent, Ask-Your-Data)'] },
+  { label: 'Student AI Tutor Chat (#99)', v: ['Disabled', 'Disabled', '20 msgs / student / day'] },
+  { label: 'Message Credits (when live)', v: ['Disabled', 'Disabled', '300 credits / mo (SMS/WA Coming soon)'] },
+  { label: 'Monthly Exports & Reports', v: ['3 CSV / mo (1k rows)', '60 CSV + 60 PDF (10k rows)', 'Unlimited fair-use (100k rows) + 30 scheduled'] },
+  { label: 'Operations Modules', v: ['Base Academic Core', 'Library & Canteen add-ons (PKR 800/mo Coming soon)', 'Library (#N35) & Canteen (#98) Included Free'] },
+  { label: 'Backup & Restore Policy', v: ['Recycle bin only (30d)', 'Recycle bin only (30d)', '90d recycle bin + 1 self-service ZIP/mo (N05)'] },
+  { label: 'Audit Trail Retention (#23)', v: ['30 days', '90 days', '365 days'] },
 ];
 
 const CORE_FEATURES = [
@@ -135,11 +138,11 @@ const PREMIUM_FEATURES = [
   { icon: HiOutlineShieldCheck, title: 'Gate QR auto-attendance & ID cards', desc: 'Daily attendance marked automatically by gate QR scans, with instant barcode/QR ID cards.', plan: 'Standard' },
   { icon: HiOutlineCash, title: '3-copy bank challans and payroll', desc: 'Kuickpay/1Link ready bank challans, fee defaulters ledger, staff salary and pay slips.', plan: 'Standard' },
   { icon: HiOutlineClipboardList, title: 'Online admissions and merit lists', desc: 'Public application portal, quota reservations, matric merit calculation and desk intake.', plan: 'Standard' },
-  { icon: HiOutlineChatAlt2, title: 'Parent Portal PWA', desc: 'Dedicated mobile web app for parents with live attendance, marks, challans and absence alerts.', plan: 'Standard' },
-  { icon: HiOutlineLocationMarker, title: 'Universal master timetable & conflict solver', desc: 'Campus-wide timetable builder with conflict detection, teacher substitutions and room matrix.', plan: 'Standard' },
-  { icon: HiOutlineCpuChip, title: 'AI Quiz generator & document OCR', desc: 'Generate MCQs and exams from textbook PDFs, plus OCR scanning of student marksheets.', plan: 'Standard (AI Lite) / Premium' },
-  { icon: HiOutlineFolderOpen, title: 'Library management & Canteen POS', desc: 'Book cataloging, barcode circulation, student borrowing, and cafeteria touch POS ledger.', plan: 'Premium (Free) / Std Add-on' },
-  { icon: HiOutlineSparkles, title: 'Autonomous AI Admin Agent & Ask-Your-Data', desc: 'Execute admin actions with one-click proposals, natural language data queries, and AI student tutor.', plan: 'Enterprise' },
+  { icon: HiOutlineChatAlt2, title: 'Parent Portal PWA', desc: 'Dedicated mobile web app for parents with live attendance, marks, challans and absence alerts.', status: 'Coming soon', plan: 'Premium' },
+  { icon: HiOutlineLocationMarker, title: 'Universal master timetable & conflict solver', desc: 'Campus-wide timetable builder with conflict detection, teacher substitutions and room matrix.', status: 'Limited', plan: 'Premium' },
+  { icon: HiOutlineCpuChip, title: 'AI Quiz generator & document OCR', desc: 'Generate MCQs and exams from textbook PDFs, plus OCR scanning of student marksheets.', status: 'Full', plan: 'Standard (AI Lite) / Premium' },
+  { icon: HiOutlineFolderOpen, title: 'Library management & Canteen POS', desc: 'Book cataloging, barcode circulation, student borrowing, and cafeteria touch POS ledger.', status: 'Add-on', plan: 'Premium Free / Std Add-on (Coming soon)' },
+  { icon: HiOutlineSparkles, title: 'Autonomous AI Admin Agent & Ask-Your-Data', desc: 'Approval-gated admin proposals, natural language analytics, and AI student tutor (20 msgs/day).', status: 'Full', plan: 'Premium' },
 ];
 
 const STEPS = [
@@ -229,9 +232,15 @@ function SectionHeading({ title, children }) {
   );
 }
 
-function FeatureRow({ icon: Icon, title, desc, tone = 'blue', status = 'Available now', plan }) {
+function FeatureRow({ icon: Icon, title, desc, tone = 'blue', status = 'Full', plan }) {
   const box = tone === 'green' ? 'bg-[#DFF2E5] text-[#1F7A3A]' : 'bg-[#E8F0FA] text-[#0A4D94]';
-  const chip = status === 'Available now' ? 'bg-[#DFF2E5] text-[#1F7A3A]' : status === 'Coming soon' ? 'bg-[#EEF2F7] text-[#52657C]' : 'bg-[#FFF1D6] text-[#8A5A00]';
+  const chip = (status === 'Full' || status === 'Available now')
+    ? 'bg-[#DFF2E5] text-[#1F7A3A]'
+    : status === 'Coming soon'
+      ? 'bg-[#EEF2F7] text-[#52657C]'
+      : status === 'Add-on'
+        ? 'bg-[#EDE9FE] text-[#6D28D9]'
+        : 'bg-[#FFF1D6] text-[#8A5A00]';
   return (
     <li className="flex gap-4 px-1 py-4">
       <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg ${box}`}>
@@ -431,9 +440,9 @@ export default function JoinPage() {
 
               <motion.ul {...rise(0.32)} className="mt-10 grid gap-3 text-[15px] text-[#DCE8F7] sm:grid-cols-1">
                 {[
-                  'Plans from PKR 2,999 per month',
+                  'Three clear plans from PKR 2,999 / month (Starter, Standard, Premium)',
                   'Yearly billing includes 1 Month FREE (11 months billed for 12 months access)',
-                  '155 live services available today with 14-day free trial on all plans',
+                  '86 live services verified today out of 162 cataloged services (14-day free trial)',
                 ].map((t, i) => (
                   <li key={t} className="flex items-center gap-3">
                     <DrawCheck size={20} className="text-[#3DBE63]" delay={0.8 + i * 0.25} />
@@ -510,15 +519,20 @@ export default function JoinPage() {
               </div>
             </div>
 
-            <div className="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-12 grid gap-6 md:grid-cols-3">
               {PLANS.map((plan) => {
                 const rec = !!plan.recommended;
                 const sub = rec ? 'text-[#A9C2E2]' : 'text-[#52657C]';
                 return (
                   <article key={plan.id}
                     className={`relative flex flex-col rounded-2xl p-6 ${rec ? 'bg-[#061E3D] text-white shadow-[0_24px_48px_-20px_rgba(6,30,61,0.55)]' : 'border border-[#DDE6F0] bg-white'}`}>
-                    {rec && <span className="ch-badge absolute -top-3 left-6 rounded-full bg-[#3DBE63] px-3.5 py-1 text-xs font-bold text-[#06264A]">Recommended now</span>}
-                    <h3 className="ch-display text-2xl font-bold">{plan.name}</h3>
+                    {rec && <span className="ch-badge absolute -top-3 left-6 rounded-full bg-[#3DBE63] px-3.5 py-1 text-xs font-bold text-[#06264A]">Most Popular</span>}
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="ch-display text-2xl font-bold">{plan.name}</h3>
+                      <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${rec ? 'bg-white/15 text-[#DCE8F7]' : 'bg-[#E8F0FA] text-[#0A4D94]'}`}>
+                        {plan.liveCount} live / {plan.totalCount} total
+                      </span>
+                    </div>
                     <p className={`mt-1 min-h-[40px] text-sm ${sub}`}>{plan.best}</p>
 
                     <div className="mt-4 min-h-[84px]">
@@ -529,10 +543,10 @@ export default function JoinPage() {
                       <p className={`mt-1 text-sm ${sub}`}>{annual ? `PKR ${fmt(plan.monthly)} x 11 months billed (1 Mo FREE)` : 'Billed monthly'}</p>
                     </div>
 
-                    <p className={`min-h-[60px] border-t pt-4 text-sm leading-relaxed ${rec ? 'border-white/15 text-[#DCE8F7]' : 'border-[#DDE6F0] text-[#26405C]'}`}>{plan.services}</p>
+                    <p className={`min-h-[68px] border-t pt-4 text-sm leading-relaxed ${rec ? 'border-white/15 text-[#DCE8F7]' : 'border-[#DDE6F0] text-[#26405C]'}`}>{plan.services}</p>
 
                     <dl className="mt-2 text-sm">
-                      {[['Students included', plan.students], ['Extra students', plan.extra], ['Staff accounts', plan.staff], ['File storage', plan.storage], ['Applications a year', plan.apps], ['Support', plan.support]].map(([k, v]) => (
+                      {[['Students included', plan.students], ['Extra students', plan.extra], ['Staff / Admins', `${plan.staff} staff · ${plan.admins}`], ['Campuses', plan.campuses], ['File storage', plan.storage], ['Applications a year', plan.apps], ['Monthly emails', plan.emails], ['Backup / Restore', plan.restore], ['Support', plan.support]].map(([k, v]) => (
                         <div key={k} className={`flex justify-between gap-3 border-b py-2.5 last:border-0 ${rec ? 'border-white/10' : 'border-[#EEF2F7]'}`}>
                           <dt className={sub}>{k}</dt>
                           <dd className="text-right font-semibold">{v}</dd>
@@ -550,25 +564,46 @@ export default function JoinPage() {
               })}
             </div>
 
+            {/* ── CUSTOM QUOTE BANNER (>3,000 students or 4+ campuses) ── */}
+            <div className="mt-8 rounded-2xl border border-[#DDE6F0] bg-[#F8FAFC] p-6 sm:p-7 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <span className="inline-flex items-center rounded-full bg-[#E8F0FA] px-3 py-0.5 text-[11px] font-bold text-[#0A4D94]">
+                  Custom Quote · Above 3,000 Students or 4+ Campuses
+                </span>
+                <h3 className="ch-display mt-2 text-xl font-bold text-[#0E2238]">
+                  Need capacity beyond 3,000 students or 4 or more campuses?
+                </h3>
+                <p className="mt-1 text-sm text-[#52657C]">
+                  Premium supports up to 3,000 students (with extra student add-ons) and up to 3 campuses (with 1 extra campus add-on). Larger groups receive a tailored Custom Quote.
+                </p>
+              </div>
+              <button
+                onClick={() => router.push('/request-subscription?plan=custom_quote')}
+                className="shrink-0 inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#061E3D] px-6 text-sm font-bold text-white hover:bg-[#0A4D94] transition-colors"
+              >
+                Request Custom Quote <HiArrowRight size={16} />
+              </button>
+            </div>
+
             {/* ── PLATFORM READINESS STATUS ───────────────────── */}
-            <div className="mt-12 rounded-2xl border border-[#CCE0F5] bg-gradient-to-br from-[#F0F7FF] to-[#E5F1FC] p-6 sm:p-8">
+            <div className="mt-8 rounded-2xl border border-[#CCE0F5] bg-gradient-to-br from-[#F0F7FF] to-[#E5F1FC] p-6 sm:p-8">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <div className="inline-flex items-center gap-2 rounded-full bg-[#0A4D94]/10 px-3 py-1 text-xs font-bold text-[#0A4D94]">
                     <span className="h-2 w-2 rounded-full bg-[#1F7A3A] animate-pulse" />
-                    Platform Status: All 13 Phases Complete
+                    Transparent Status: Full · Limited · Add-on · Coming soon
                   </div>
                   <h3 className="ch-display mt-2 text-xl font-bold text-[#061E3D] sm:text-2xl">
-                    155 Services Live & Ready Today Across All Tiers
+                    86 Live Services Ready Today · 162 Total Across Plans & 9 Add-ons
                   </h3>
                   <p className="mt-1.5 max-w-[85ch] text-sm leading-relaxed text-[#3B4F68]">
-                    From academic foundations and daily registers to gate QR scanners, 3-copy bank challans, payroll, parent portal, library, canteen POS, multi-campus governance, double-entry accounting and autonomous AI agents with Google Gemini — 155 services are active today. Only 6 hardware and external carrier integrations (#79 Biometrics, #82 Payment Gateway, #84 SMS, #85 WhatsApp, N12 Custom Domain, N14 SSO) remain on the roadmap.
+                    Every plan clearly separates what is <strong>Live</strong> today (26 in Starter, 70 in Standard, 86 in Premium) from upcoming <strong>Coming soon</strong> roadmap services and 9 optional <strong>Add-on</strong> modules. Starter and Standard restore deleted records via the <strong>Recycle bin only (30 days)</strong>; Premium includes monthly self-service backup exports (N05).
                   </p>
                 </div>
                 <div className="shrink-0">
                   <a href="/services"
                     className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#0A4D94] px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#083f7a]">
-                    Explore 161 Services Catalog <HiArrowRight size={16} />
+                    Explore 162 Services Catalog <HiArrowRight size={16} />
                   </a>
                 </div>
               </div>
@@ -599,87 +634,87 @@ export default function JoinPage() {
                     <li className="pt-2.5 first:pt-0">
                       <div className="flex justify-between font-semibold text-[#0E2238]">
                         <span>Extra Student</span>
-                        <span className="text-[#0A4D94]">PKR 15 / 12 / 8 / mo</span>
+                        <span className="text-[#0A4D94]">PKR 15 / 10 / mo</span>
                       </div>
-                      <p className="mt-0.5 text-xs text-[#64748B]">Std: PKR 15 (+50% cap) · Prem: PKR 12 (+50% cap) · Ent: PKR 8 (Unlimited)</p>
+                      <p className="mt-0.5 text-xs text-[#64748B]">Std: PKR 15 (+50% cap) · Prem: PKR 10 (+50% cap → 3,000 max)</p>
                     </li>
                     <li className="pt-2.5">
                       <div className="flex justify-between font-semibold text-[#0E2238]">
                         <span>Extra Staff Account</span>
-                        <span className="text-[#0A4D94]">PKR 120 / 100 / 80 / mo</span>
+                        <span className="text-[#0A4D94]">PKR 120 / 90 / mo</span>
                       </div>
-                      <p className="mt-0.5 text-xs text-[#64748B]">Std: PKR 120 · Prem: PKR 100 · Ent: PKR 80 (+50% cap on Std/Prem)</p>
+                      <p className="mt-0.5 text-xs text-[#64748B]">Std: PKR 120 (+50% cap) · Prem: PKR 90 (+50% cap → 225 max)</p>
                     </li>
                     <li className="pt-2.5">
                       <div className="flex justify-between font-semibold text-[#0E2238]">
-                        <span>Extra Admin Seat</span>
-                        <span className="text-[#0A4D94]">PKR 400 / 350 / 250 / mo</span>
+                        <span>Administrator Cap</span>
+                        <span className="text-[#52657C]">Fixed: 2 / 5 / 15</span>
                       </div>
-                      <p className="mt-0.5 text-xs text-[#64748B]">Std: Max 2 extra · Prem: Max 5 extra · Ent: Unlimited</p>
+                      <p className="mt-0.5 text-xs text-[#64748B]">Admin seats are fixed by tier (Starter 2, Standard 5, Premium 15)</p>
                     </li>
                     <li className="pt-2.5">
                       <div className="flex justify-between font-semibold text-[#0E2238]">
                         <span>Extra 10 GB Storage</span>
-                        <span className="text-[#0A4D94]">PKR 600 – 400 / mo</span>
+                        <span className="text-[#0A4D94]">PKR 600 / 500 / 400</span>
                       </div>
-                      <p className="mt-0.5 text-xs text-[#64748B]">Starter: PKR 600 (max 1) · Std: PKR 500 (max 2) · Prem: PKR 450 · Ent: PKR 400</p>
+                      <p className="mt-0.5 text-xs text-[#64748B]">Starter: max 1 (+10 GB → 15 GB) · Std: max 2 (+20 GB → 45 GB) · Prem: max 15 (300 GB)</p>
                     </li>
                     <li className="pt-2.5">
                       <div className="flex justify-between font-semibold text-[#0E2238]">
                         <span>Online Admissions (25-Pk)</span>
-                        <span className="text-[#0A4D94]">PKR 2,500 – 1,500 / yr</span>
+                        <span className="text-[#0A4D94]">PKR 2,500 / 1,800 / yr</span>
                       </div>
-                      <p className="mt-0.5 text-xs text-[#64748B]">Valid for 1 full year · Std: max 2 packs · Prem: max 6 packs · Ent: unlimited</p>
+                      <p className="mt-0.5 text-xs text-[#64748B]">Valid 1 year · Std: PKR 2,500 (max 2 packs) · Prem: PKR 1,800 (max 12 packs)</p>
                     </li>
                   </ul>
                 </div>
 
-                {/* Modules Card */}
+                {/* Modules Card (9 Add-ons — Coming soon badges) */}
                 <div className="flex flex-col rounded-2xl border border-[#DDE6F0] bg-[#F8FAFC] p-6">
                   <div className="flex items-center gap-3">
                     <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#E6F4EA] text-[#1F7A3A]">
                       <HiOutlineCollection size={22} />
                     </span>
                     <div>
-                      <h4 className="text-base font-bold text-[#0E2238]">Modular Operations</h4>
-                      <p className="text-xs text-[#52657C]">Add auxiliary modules flexibly</p>
+                      <h4 className="text-base font-bold text-[#0E2238]">9 Optional Add-On Modules</h4>
+                      <p className="text-xs text-[#52657C]">Coming soon — purchase unlocks as each goes live</p>
                     </div>
                   </div>
                   <ul className="mt-5 space-y-3 divide-y divide-[#E2E8F0] text-sm">
                     <li className="pt-2.5 first:pt-0">
                       <div className="flex justify-between font-semibold text-[#0E2238]">
-                        <span>Library Management (N35)</span>
-                        <span className="text-[#1F7A3A]">PKR 800 / mo</span>
+                        <span>Library (N35) &amp; Canteen POS (#98)</span>
+                        <span className="text-[#8A5A00] text-xs font-bold">Coming soon · PKR 800/mo</span>
                       </div>
-                      <p className="mt-0.5 text-xs text-[#64748B]">Standard add-on · <strong className="text-[#1F7A3A]">FREE on Premium & Enterprise</strong></p>
+                      <p className="mt-0.5 text-xs text-[#64748B]">Standard add-on · <strong className="text-[#1F7A3A]">Included Free on Premium</strong></p>
                     </li>
                     <li className="pt-2.5">
                       <div className="flex justify-between font-semibold text-[#0E2238]">
-                        <span>Canteen POS Module (#98)</span>
-                        <span className="text-[#1F7A3A]">PKR 800 / mo</span>
+                        <span>Transport (N36) &amp; Hostel (N37)</span>
+                        <span className="text-[#8A5A00] text-xs font-bold">Coming soon · PKR 1,200/mo</span>
                       </div>
-                      <p className="mt-0.5 text-xs text-[#64748B]">Standard add-on · <strong className="text-[#1F7A3A]">FREE on Premium & Enterprise</strong></p>
+                      <p className="mt-0.5 text-xs text-[#64748B]">Available on Standard &amp; Premium when live</p>
                     </li>
                     <li className="pt-2.5">
                       <div className="flex justify-between font-semibold text-[#0E2238]">
-                        <span>Transport Fleet (N36)</span>
-                        <span className="text-[#1F7A3A]">PKR 1,200 / mo</span>
+                        <span>Accounting (N40) &amp; Staff HR (N42)</span>
+                        <span className="text-[#8A5A00] text-xs font-bold">Coming soon · PKR 2,500 / 1,500</span>
                       </div>
-                      <p className="mt-0.5 text-xs text-[#64748B]">Std & Prem add-on · <strong className="text-[#1F7A3A]">FREE on Enterprise</strong></p>
+                      <p className="mt-0.5 text-xs text-[#64748B]">Premium add-on · Accounting PKR 2,500/mo · Staff HR PKR 1,500/mo</p>
                     </li>
                     <li className="pt-2.5">
                       <div className="flex justify-between font-semibold text-[#0E2238]">
-                        <span>Hostel Management (N37)</span>
-                        <span className="text-[#1F7A3A]">PKR 1,200 / mo</span>
+                        <span>Governance Pack (N13–N16) &amp; API (N06)</span>
+                        <span className="text-[#8A5A00] text-xs font-bold">Coming soon · PKR 4,000 / 2,500</span>
                       </div>
-                      <p className="mt-0.5 text-xs text-[#64748B]">Std & Prem add-on · <strong className="text-[#1F7A3A]">FREE on Enterprise</strong></p>
+                      <p className="mt-0.5 text-xs text-[#64748B]">White-label, SSO, IP Allow-list, Legal Hold (PKR 4,000) · Public API (PKR 2,500)</p>
                     </li>
                     <li className="pt-2.5">
                       <div className="flex justify-between font-semibold text-[#0E2238]">
-                        <span>Multi-Campus Expansion</span>
+                        <span>Extra Campus Slot (Campus #3)</span>
                         <span className="text-[#1F7A3A]">PKR 3,000 / mo</span>
                       </div>
-                      <p className="mt-0.5 text-xs text-[#64748B]">Per additional campus on Enterprise · (Starter/Std: 1, Prem: 2, Ent: 3 included)</p>
+                      <p className="mt-0.5 text-xs text-[#64748B]">Premium includes 2 campuses (+1 add-on → 3 max; 4+ = Custom Quote)</p>
                     </li>
                   </ul>
                 </div>
@@ -691,8 +726,8 @@ export default function JoinPage() {
                       <HiOutlineSparkles size={22} />
                     </span>
                     <div>
-                      <h4 className="text-base font-bold text-[#0E2238]">AI & Communications</h4>
-                      <p className="text-xs text-[#52657C]">Top up intelligence tokens & credits</p>
+                      <h4 className="text-base font-bold text-[#0E2238]">AI &amp; Message Credits</h4>
+                      <p className="text-xs text-[#52657C]">Haiku-equivalent AI credits &amp; message top-ups</p>
                     </div>
                   </div>
                   <ul className="mt-5 space-y-3 divide-y divide-[#E2E8F0] text-sm">
@@ -701,35 +736,35 @@ export default function JoinPage() {
                         <span>1M AI Credits Pack</span>
                         <span className="text-[#7C3AED]">PKR 500</span>
                       </div>
-                      <p className="mt-0.5 text-xs text-[#64748B]">Top-up for quiz generation, OCR marksheets & lesson plans</p>
+                      <p className="mt-0.5 text-xs text-[#64748B]">Standard AI Lite top-up (1x Lite, 20x Standard, 40x Advanced)</p>
                     </li>
                     <li className="pt-2.5">
                       <div className="flex justify-between font-semibold text-[#0E2238]">
                         <span>5M AI Credits Pack</span>
-                        <span className="text-[#7C3AED]">PKR 2,000 / 1,500</span>
+                        <span className="text-[#7C3AED]">PKR 1,800</span>
                       </div>
-                      <p className="mt-0.5 text-xs text-[#64748B]">Bulk discount: PKR 2,000 on Premium · PKR 1,500 on Enterprise</p>
+                      <p className="mt-0.5 text-xs text-[#64748B]">Premium bulk AI pack (20M credits included monthly)</p>
                     </li>
                     <li className="pt-2.5">
                       <div className="flex justify-between font-semibold text-[#0E2238]">
-                        <span>AI Tutor Daily Cap</span>
-                        <span className="text-[#7C3AED]">10 – 30 msgs / day</span>
+                        <span>AI Tutor Daily Cap (#99)</span>
+                        <span className="text-[#7C3AED]">20 msgs / day</span>
                       </div>
-                      <p className="mt-0.5 text-xs text-[#64748B]">Premium: 10 msgs/student/day · Enterprise: 30 msgs/student/day</p>
+                      <p className="mt-0.5 text-xs text-[#64748B]">Included for Premium students (Starter/Standard: Disabled)</p>
                     </li>
                     <li className="pt-2.5">
                       <div className="flex justify-between font-semibold text-[#0E2238]">
                         <span>Message Credits (SMS/WA)</span>
-                        <span className="text-[#7C3AED]">Packs from PKR 2,000</span>
+                        <span className="text-[#8A5A00] text-xs font-bold">Coming soon · Prem only</span>
                       </div>
-                      <p className="mt-0.5 text-xs text-[#64748B]">500 credits: PKR 2,000 · 2,000: PKR 7,500 · 5,000: PKR 18,000</p>
+                      <p className="mt-0.5 text-xs text-[#64748B]">300/mo free in Premium · Packs: 500 (PKR 2k) / 2,000 (7.5k) / 5,000 (18k)</p>
                     </li>
                     <li className="pt-2.5">
                       <div className="flex justify-between font-semibold text-[#0E2238]">
-                        <span>Credit Expiry Rule</span>
+                        <span>Purchased Credit Expiry</span>
                         <span className="text-[#7C3AED]">Never Expire</span>
                       </div>
-                      <p className="mt-0.5 text-xs text-[#64748B]">Purchased credit packs roll over indefinitely while subscribed</p>
+                      <p className="mt-0.5 text-xs text-[#64748B]">Purchased AI &amp; Message packs roll over indefinitely while active</p>
                     </li>
                   </ul>
                 </div>
@@ -787,7 +822,7 @@ export default function JoinPage() {
             <SectionHeading title="Compare plans side by side" />
             <div className="mt-10 overflow-x-auto rounded-2xl border border-[#DDE6F0] bg-white">
               <table className="w-full min-w-[760px] border-collapse text-left">
-                <caption className="sr-only">Comparison of Starter, Standard, Premium and Enterprise plans</caption>
+                <caption className="sr-only">Comparison of Starter, Standard, and Premium plans</caption>
                 <thead>
                   <tr className="border-b border-[#DDE6F0]">
                     <th scope="col" className="sticky left-0 w-[24%] bg-white px-4 py-4 text-sm font-semibold text-[#52657C]">Feature</th>
@@ -928,8 +963,7 @@ export default function JoinPage() {
                           <option>Starter plan</option>
                           <option>Standard plan</option>
                           <option>Premium plan</option>
-                          <option>Enterprise plan</option>
-                          <option>Custom plan</option>
+                          <option>Custom Quote (&gt;3,000 students or 4+ campuses)</option>
                         </select>
                       </div>
                       <div>

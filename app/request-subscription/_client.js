@@ -39,7 +39,7 @@ const FALLBACK_PLANS = [
   {
     planId: 'starter',
     name: 'Starter',
-    description: 'Run college day-to-day on 1 screen',
+    description: 'Academic foundation for small & new colleges (26 live / 33 total)',
     monthlyPrice: 2999,
     yearlyPrice: 32989,
     limits: { maxStudents: 300, maxStaff: 20, maxAdmins: 2, maxCampuses: 1, maxStorageBytes: 5368709120, maxApplications: 0 },
@@ -47,7 +47,7 @@ const FALLBACK_PLANS = [
   {
     planId: 'standard',
     name: 'Standard',
-    description: 'Admissions, fees, board exams & staff',
+    description: 'Admissions, fees, board exams & AI Lite (70 live / 88 total)',
     monthlyPrice: 5999,
     yearlyPrice: 65989,
     limits: { maxStudents: 750, maxStaff: 50, maxAdmins: 5, maxCampuses: 1, maxStorageBytes: 26843545600, maxApplications: 50 },
@@ -55,28 +55,19 @@ const FALLBACK_PLANS = [
   {
     planId: 'premium',
     name: 'Premium',
-    description: 'Parents, results analysis, AI help, 2 campuses',
-    monthlyPrice: 10999,
-    yearlyPrice: 120989,
-    limits: { maxStudents: 1500, maxStaff: 100, maxAdmins: 10, maxCampuses: 2, maxStorageBytes: 107374182400, maxApplications: 150 },
-  },
-  {
-    planId: 'enterprise',
-    name: 'Enterprise',
-    description: 'Full AI, autonomous agent, 3 campuses, API',
-    monthlyPrice: 17999,
-    yearlyPrice: 197989,
-    limits: { maxStudents: 3000, maxStaff: 200, maxAdmins: 25, maxCampuses: 3, maxStorageBytes: 322122547200, maxApplications: 400 },
+    description: 'Full AI suite, 2–3 campuses, Library & Canteen free (86 live / 153 total)',
+    monthlyPrice: 14999,
+    yearlyPrice: 164989,
+    limits: { maxStudents: 2000, maxStaff: 150, maxAdmins: 15, maxCampuses: 2, maxStorageBytes: 161061273600, maxApplications: 300 },
   },
 ];
 
-const SERVICE_COUNTS = { starter: 33, standard: 88, premium: 141, enterprise: 162 };
+const SERVICE_COUNTS = { starter: 33, standard: 88, premium: 153, addonOnly: 9 };
 
 const CANONICAL_PLAN_PRICES = {
   starter: { monthly: 2999, yearly: 32989 },
   standard: { monthly: 5999, yearly: 65989 },
-  premium: { monthly: 10999, yearly: 120989 },
-  enterprise: { monthly: 17999, yearly: 197989 },
+  premium: { monthly: 14999, yearly: 164989 },
 };
 
 function getPlanPrice(plan, cycle) {
@@ -99,16 +90,14 @@ function getPlanPrice(plan, cycle) {
 
 const AI_TIERS = {
   starter: { label: 'None', color: 'text-fg-muted' },
-  standard: { label: 'AI Lite', color: 'text-sky-600 dark:text-sky-400' },
-  premium: { label: 'AI Plus', color: 'text-violet-600 dark:text-violet-400' },
-  enterprise: { label: 'AI Full + Agent', color: 'text-emerald-600 dark:text-emerald-400' },
+  standard: { label: 'AI Lite (1M)', color: 'text-sky-600 dark:text-sky-400' },
+  premium: { label: 'AI Full + Agent (20M)', color: 'text-violet-600 dark:text-violet-400' },
 };
 
 const MSG_CREDITS = {
-  starter: 'Add-on only',
-  standard: 'Add-on only',
-  premium: '200 / mo',
-  enterprise: '600 / mo',
+  starter: 'Disabled',
+  standard: 'Disabled',
+  premium: '300 / mo (Coming soon)',
 };
 
 const PLAN_THEME = {
@@ -184,7 +173,7 @@ function PlanCard({ plan, cycle, counts, isSelected, onSelect }) {
   const price = getPlanPrice(plan, cycle);
   const monthlyEquivalent = cycle === 'yearly' ? Math.round(price / 11) : price;
   const isMostPopular = pid === 'standard';
-  const isBestValue = pid === 'enterprise';
+  const isBestValue = pid === 'premium';
   const serviceCount = counts[pid] || SERVICE_COUNTS[pid] || '?';
   const lim = plan.limits || {};
 
@@ -392,7 +381,8 @@ function SubscriptionRequestContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const initialPlan = searchParams?.get('plan')?.toLowerCase() || 'standard';
+  const initialRaw = searchParams?.get('plan')?.toLowerCase() || 'standard';
+  const initialPlan = initialRaw === 'enterprise' ? 'premium' : initialRaw;
   const initialCycle = searchParams?.get('cycle')?.toLowerCase() === 'yearly' ? 'yearly' : 'monthly';
 
   const [plans, setPlans] = useState([]);
@@ -448,8 +438,16 @@ function SubscriptionRequestContent() {
     return () => { mounted = false; };
   }, []);
 
-  const activePlans = useMemo(() => (plans.length > 0 ? plans : FALLBACK_PLANS), [plans]);
-  const currentPlan = useMemo(() => activePlans.find(p => p.planId === selectedPlanId) || activePlans[1] || FALLBACK_PLANS[1], [activePlans, selectedPlanId]);
+  const activePlans = useMemo(() => {
+    const src = plans.length > 0 ? plans : FALLBACK_PLANS;
+    return src.filter(p => p.planId !== 'enterprise');
+  }, [plans]);
+  const currentPlan = useMemo(() => {
+    if (selectedPlanId === 'custom_quote') {
+      return { planId: 'custom_quote', name: 'Custom Quote (>3,000 students / 4+ campuses)' };
+    }
+    return activePlans.find(p => p.planId === selectedPlanId) || activePlans[1] || FALLBACK_PLANS[1];
+  }, [activePlans, selectedPlanId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -624,7 +622,7 @@ function SubscriptionRequestContent() {
             <div className="text-center space-y-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-card px-3 py-1 text-[11px] font-bold text-fg-muted">
                 <HiOutlineCollection size={13} />
-                162 Services · 4 Tiers · PKR Pricing
+                3 Plans + 9 Add-ons · 86 Live / 162 Services · PKR Pricing
               </span>
               <h1 className="text-2xl sm:text-3xl font-black text-fg tracking-tight">
                 Compare Plans &amp; Pricing
@@ -646,17 +644,39 @@ function SubscriptionRequestContent() {
             {plansLoading && activePlans.length === 0 ? (
               <CollegesHubLoader size="sm" text="Fetching available tiers…" minHeight="min-h-[200px]" />
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {activePlans.map(plan => (
-                  <PlanCard
-                    key={plan.planId}
-                    plan={plan}
-                    cycle={billingCycle}
-                    counts={counts}
-                    isSelected={plan.planId === selectedPlanId}
-                    onSelect={setSelectedPlanId}
-                  />
-                ))}
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {activePlans.map(plan => (
+                    <PlanCard
+                      key={plan.planId}
+                      plan={plan}
+                      cycle={billingCycle}
+                      counts={counts}
+                      isSelected={plan.planId === selectedPlanId}
+                      onSelect={setSelectedPlanId}
+                    />
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedPlanId('custom_quote');
+                    document.getElementById('request-form')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className={`w-full rounded-2xl border-2 p-4 text-left transition flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 ${
+                    selectedPlanId === 'custom_quote'
+                      ? 'border-[#0A4D94] bg-[#0A4D94]/5 ring-2 ring-[#0A4D94]/20'
+                      : 'border-line bg-card hover:border-line-strong'
+                  }`}
+                >
+                  <div>
+                    <p className="text-sm font-black text-fg">Custom Quote — Above 3,000 Students or 4 or More Campuses</p>
+                    <p className="text-xs text-fg-muted">Premium covers up to 3,000 students and 3 campuses. Select Custom Quote for larger multi-campus institutions.</p>
+                  </div>
+                  <span className="shrink-0 text-xs font-bold text-[#0A4D94] dark:text-brand-blue-400">
+                    {selectedPlanId === 'custom_quote' ? '✓ Selected' : 'Select Custom Quote →'}
+                  </span>
+                </button>
               </div>
             )}
 

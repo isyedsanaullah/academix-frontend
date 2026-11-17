@@ -6,7 +6,7 @@ const TIERS = [
   { key: 'starter', label: 'Starter Tier', bg: 'bg-blue-500', barBg: 'bg-blue-500/20' },
   { key: 'standard', label: 'Standard Tier', bg: 'bg-emerald-500', barBg: 'bg-emerald-500/20' },
   { key: 'premium', label: 'Premium Tier', bg: 'bg-purple-500', barBg: 'bg-purple-500/20' },
-  { key: 'enterprise', label: 'Enterprise Tier', bg: 'bg-amber-500', barBg: 'bg-amber-500/20' },
+  { key: 'enterprise', label: 'Legacy Enterprise', bg: 'bg-amber-500', barBg: 'bg-amber-500/20' },
   { key: 'addons_credits', label: 'Add-ons & Credits', bg: 'bg-cyan-500', barBg: 'bg-cyan-500/20' },
 ];
 

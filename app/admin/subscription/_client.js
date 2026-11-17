@@ -83,12 +83,11 @@ const PAYMENT_STATUS_THEME = {
   REJECTED: { label: 'Rejected',       cls: 'bg-red-500/10 text-red-700 dark:text-red-400', icon: HiOutlineXCircle },
 };
 
-const PLAN_ORDER = { starter: 1, standard: 2, premium: 3, enterprise: 4 };
+const PLAN_ORDER = { starter: 1, standard: 2, premium: 3, enterprise: 3 };
 const PLAN_PRICES = {
-  starter:    { monthly: 2999,  yearly: 32989 },
-  standard:   { monthly: 5999,  yearly: 65989 },
-  premium:    { monthly: 10999, yearly: 120989 },
-  enterprise: { monthly: 17999, yearly: 197989 },
+  starter:  { monthly: 2999,  yearly: 32989 },
+  standard: { monthly: 5999,  yearly: 65989 },
+  premium:  { monthly: 14999, yearly: 164989 },
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -181,16 +180,16 @@ function SectionHeader({ icon: Icon, title, subtitle, action }) {
 }
 
 // ─── Payment Proof Form ───────────────────────────────────────────────────────
-function PaymentProofForm({ mode, currentPlan, billingCycle: currentCycle, onSuccess, onCancel }) {
+function PaymentProofForm({ mode, currentPlan, billingCycle: currentCycle, initialLineItems = [], onSuccess, onCancel }) {
   const [formData, setFormData] = useState({
     type: mode === 'upgrade' ? 'UPGRADE' : mode === 'addon' ? 'ADDON_ORDER' : 'RENEWAL',
-    planId: currentPlan,
+    planId: currentPlan === 'enterprise' ? 'premium' : currentPlan,
     billingCycle: currentCycle || 'MONTHLY',
     paymentMethod: '',
     transactionId: '',
     screenshotUrl: '',
     amountPaid: '',
-    lineItems: [],
+    lineItems: initialLineItems,
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -231,8 +230,9 @@ function PaymentProofForm({ mode, currentPlan, billingCycle: currentCycle, onSuc
     }
   };
 
-  const upgradePlans = Object.keys(PLAN_PRICES).filter(p => PLAN_ORDER[p] > PLAN_ORDER[currentPlan]);
-  const price = PLAN_PRICES[formData.planId]?.[formData.billingCycle === 'YEARLY' ? 'yearly' : 'monthly'];
+  const upgradePlans = Object.keys(PLAN_PRICES).filter(p => PLAN_ORDER[p] > (PLAN_ORDER[currentPlan] || 1));
+  const effectivePlan = formData.planId === 'enterprise' ? 'premium' : formData.planId;
+  const price = PLAN_PRICES[effectivePlan]?.[formData.billingCycle === 'YEARLY' ? 'yearly' : 'monthly'];
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -445,14 +445,63 @@ export default function AdminSubscriptionPage() {
   const lim = effectiveLimits || {};
   const storageUsedGb = (usage?.storageBytes || 0) / 1073741824;
   const storageLimitGb = (lim.maxStorageBytes || 0) / 1073741824;
-  const canUpgrade = PLAN_ORDER[planId] < PLAN_ORDER['enterprise'];
+  const canUpgrade = (PLAN_ORDER[planId] || 1) < PLAN_ORDER.premium;
+
+  // Compute >=80% quota utilization warnings across meters
+  const highUsageAlerts = [];
+  const pushAlert = (label, used, limit) => {
+    if (limit > 0 && (used / limit) >= 0.8) {
+      highUsageAlerts.push({ label, pct: Math.min(100, Math.round((used / limit) * 100)) });
+    }
+  };
+  pushAlert('Students', usage?.students || 0, lim.maxStudents || 0);
+  pushAlert('Staff', usage?.staff || 0, lim.maxStaff || 0);
+  pushAlert('Storage', storageUsedGb, storageLimitGb);
+  pushAlert('Online Applications', usage?.applications || 0, lim.maxApplications || 0);
+  pushAlert('Monthly Emails', usage?.emailsSent || 0, lim.emailsMonthly || 0);
+  if (credits?.ai?.warning80Pct) {
+    highUsageAlerts.push({ label: 'Monthly AI Credits', pct: Math.round(credits.ai.utilizationPct || 80) });
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
-      <div>
-        <h1 className="text-xl font-black text-fg tracking-tight">Subscription & Billing</h1>
-        <p className="text-xs text-fg-muted mt-0.5">Manage your plan, usage, add-ons, and payment history.</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-black text-fg tracking-tight">Subscription &amp; Billing</h1>
+          <p className="text-xs text-fg-muted mt-0.5">Manage your plan, usage, add-ons, and payment history.</p>
+        </div>
+        {sub.isCustomQuote && (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-300 dark:border-indigo-700 bg-indigo-500/10 px-3 py-1 text-xs font-bold text-indigo-700 dark:text-indigo-300">
+            Custom Quote Deal
+          </span>
+        )}
       </div>
+
+      {/* ── Grandfathering Countdown Banner ── */}
+      {sub.grandfatheredUntil && (
+        <div className="rounded-2xl border border-amber-300 dark:border-amber-700 bg-amber-50/80 dark:bg-amber-500/10 p-4 flex items-start gap-3">
+          <HiOutlineClock size={20} className="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Legacy Allowance Grandfathering Active</p>
+            <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+              Your legacy capacity limits remain protected until <strong>{fmtDate(sub.grandfatheredUntil)}</strong>. Standard 3-plan renewal pricing applies at your next billing renewal.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── >=80% High Utilization Alert Banner ── */}
+      {highUsageAlerts.length > 0 && (
+        <div className="rounded-2xl border border-amber-300 dark:border-amber-700 bg-amber-50/80 dark:bg-amber-500/10 p-4 flex items-start gap-3">
+          <HiOutlineExclamationCircle size={20} className="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Approaching Plan Quota Limit (&ge;80%)</p>
+            <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+              {highUsageAlerts.map(a => `${a.label} (${a.pct}%)`).join(' · ')} — consider an add-on block or plan upgrade before reaching 100%.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── Trial Banner ── */}
       {subStatus === 'TRIAL' && (
@@ -583,6 +632,8 @@ export default function AdminSubscriptionPage() {
           <UsageMeter icon={HiOutlineUsers} label="Staff" used={usage?.staff || 0} limit={lim.maxStaff || 0} />
           <UsageMeter icon={HiOutlineServer} label="Storage" used={Math.round(storageUsedGb * 100) / 100} limit={Math.round(storageLimitGb * 100) / 100} unit=" GB" />
           <UsageMeter icon={HiOutlineDocumentText} label="Online Applications (yearly)" used={usage?.applications || 0} limit={lim.maxApplications || 0} />
+          <UsageMeter icon={HiOutlineLightningBolt} label="Monthly Bulk Emails (2FA exempt)" used={usage?.emailsSent || 0} limit={lim.emailsMonthly || 0} />
+          <UsageMeter icon={HiOutlineShieldCheck} label="Administrator Seats (Fixed Cap)" used={usage?.admins || 0} limit={lim.maxAdmins || 0} />
         </div>
       </div>
 
@@ -652,12 +703,20 @@ export default function AdminSubscriptionPage() {
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {addonCatalog.filter(a => a.isAvailable).map(addon => {
-                  const qty = addonQty[addon.addonType] || 0;
+                  const purchasable = addon.isPurchasable !== false;
+                  const qty = purchasable ? (addonQty[addon.addonType] || 0) : 0;
                   return (
-                    <div key={addon.id || addon.addonType} className="rounded-xl border border-line bg-card-2 p-4 space-y-2">
+                    <div key={addon.id || addon.addonType} className={`rounded-xl border border-line bg-card-2 p-4 space-y-2 ${!purchasable ? 'opacity-75' : ''}`}>
                       <div className="flex justify-between items-start gap-2">
                         <div>
-                          <p className="text-xs font-semibold text-fg">{addon.name}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-xs font-semibold text-fg">{addon.name}</p>
+                            {!purchasable && (
+                              <span className="inline-flex items-center rounded-full border border-amber-300 dark:border-amber-700 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400">
+                                Coming soon
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[11px] text-fg-muted">
                             PKR {addon.unitPriceMonthlyPkr?.toLocaleString()}/mo · Max: {addon.remainingUnitsAllowed ?? '—'} more
                           </p>
@@ -669,16 +728,20 @@ export default function AdminSubscriptionPage() {
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
+                          disabled={!purchasable || qty <= 0}
                           onClick={() => setAddonQty(p => ({ ...p, [addon.addonType]: Math.max(0, (p[addon.addonType] || 0) - 1) }))}
-                          className="w-7 h-7 rounded-lg border border-line bg-card flex items-center justify-center text-fg-muted hover:text-fg transition"
+                          className="w-7 h-7 rounded-lg border border-line bg-card flex items-center justify-center text-fg-muted hover:text-fg transition disabled:opacity-40 disabled:cursor-not-allowed"
                         >−</button>
                         <span className="w-8 text-center text-xs font-bold text-fg">{qty}</span>
                         <button
                           type="button"
+                          disabled={!purchasable}
                           onClick={() => setAddonQty(p => ({ ...p, [addon.addonType]: Math.min(addon.remainingUnitsAllowed ?? 99, (p[addon.addonType] || 0) + 1) }))}
-                          className="w-7 h-7 rounded-lg border border-line bg-card flex items-center justify-center text-fg-muted hover:text-fg transition"
+                          className="w-7 h-7 rounded-lg border border-line bg-card flex items-center justify-center text-fg-muted hover:text-fg transition disabled:opacity-40 disabled:cursor-not-allowed"
                         >+</button>
-                        {qty > 0 && (
+                        {!purchasable ? (
+                          <span className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">Not purchasable until live</span>
+                        ) : qty > 0 && (
                           <span className="text-xs text-fg-muted ml-1">
                             = PKR {((addon.unitPriceMonthlyPkr || 0) * qty).toLocaleString()}/mo
                           </span>
@@ -698,6 +761,7 @@ export default function AdminSubscriptionPage() {
                     mode="addon"
                     currentPlan={planId}
                     billingCycle={billingCycle}
+                    initialLineItems={Object.entries(addonQty).filter(([, q]) => q > 0).map(([addonType, quantity]) => ({ addonType, quantity }))}
                     onSuccess={() => { setAddonQty({}); handleFormSuccess(); }}
                     onCancel={() => setAddonQty({})}
                   />

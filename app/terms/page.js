@@ -9,10 +9,9 @@ export const metadata = {
 };
 
 const PLAN_ROWS = [
-  ['Starter', '2,999', '32,989', '300', '20', '5 GB'],
-  ['Standard', '5,999', '65,989', '750', '50', '25 GB'],
-  ['Premium', '10,999', '120,989', '1,500', '100', '100 GB'],
-  ['Enterprise', '17,999', '197,989', '3,000', '200', '300 GB'],
+  ['Starter', '2,999', '32,989', '300', '20 (2 admins)', '5 GB (10 MB/file)'],
+  ['Standard', '5,999', '65,989', '750', '50 (5 admins)', '25 GB (25 MB/file)'],
+  ['Premium', '14,999', '164,989', '2,000', '150 (15 admins)', '150 GB (100 MB/file)'],
 ];
 
 const SECTIONS = [
@@ -43,32 +42,31 @@ const SECTIONS = [
         </tbody>
       </table>
     </div>
-    <H3>Extras & Add-On Catalog</H3>
+    <H3>Extras &amp; Add-On Catalog</H3>
     <UL items={[
-      'Extra students: PKR 15 (Standard), PKR 12 (Premium) or PKR 8 (Enterprise) per student per month (+50% dynamic cap on Standard and Premium; unlimited on Enterprise). Starter does not sell extra students.',
-      'Extra staff accounts: PKR 120 (Standard), PKR 100 (Premium) or PKR 80 (Enterprise) per staff per month (+50% dynamic cap).',
-      'Extra administrator accounts: PKR 400 (Standard, max 2 extra), PKR 350 (Premium, max 5 extra), or PKR 250 (Enterprise, unlimited).',
-      'Extra storage: PKR 600 (Starter, max 10 GB), PKR 500 (Standard, max 20 GB), PKR 450 (Premium, max 100 GB), or PKR 400 (Enterprise, unlimited) per 10 GB block per month.',
-      'Online application packs (25 applications / yr): PKR 2,500 (Standard, max 2 packs), PKR 2,000 (Premium, max 6 packs), or PKR 1,500 (Enterprise, unlimited).',
-      'Modular operational add-ons: Library Management (N35) and Canteen POS (#98) at PKR 800/mo on Standard (included free on Premium and Enterprise). Transport Management (N36) and Hostel Management (N37) at PKR 1,200/mo on Standard and Premium (included free on Enterprise).',
-      'AI credit packs: 1M credits at PKR 500; 5M credits at PKR 2,000 (Premium) or PKR 1,500 (Enterprise). Standard includes AI Lite (1M credits/mo), Premium includes AI Plus (5M credits/mo), Enterprise includes AI Full (40M credits/mo).',
-      'Multi-campus slots: Starter and Standard are strictly 1 campus. Premium includes 2 campuses. Enterprise includes 3 campuses, with additional campuses available at PKR 3,000/mo each.',
-      'SMS and WhatsApp alerts use prepaid credits at provider gateway cost plus margin when carrier integrations are connected. Online payment gateway fees are passed directly to the college.',
-      '14-Day Free Trial: Every tier includes a 14-day free trial with full tier features enabled.',
+      'Extra students: PKR 15 (Standard) or PKR 10 (Premium) per student per month (+50% dynamic cap). Starter does not sell extra students.',
+      'Extra staff accounts: PKR 120 (Standard) or PKR 90 (Premium) per staff per month (+50% dynamic cap).',
+      'Administrator accounts: Fixed cap of 2 (Starter), 5 (Standard), or 15 (Premium) — paid extra admin seats are not sold separately.',
+      'Extra storage (10 GB blocks): PKR 600 (Starter, max 1 block -> 15 GB), PKR 500 (Standard, max 2 blocks -> 45 GB), or PKR 400 (Premium, max 15 blocks -> 300 GB).',
+      'Online application packs (25 applications / yr): PKR 2,500 (Standard, max 2 packs -> 100/yr) or PKR 1,800 (Premium, max 12 packs -> 600/yr).',
+      '9 Optional Add-On Modules & Control Packs (Coming soon): Library (N35) & Canteen POS (#98) are included free in Premium and priced at PKR 800/mo on Standard; Transport (N36) & Hostel (N37) at PKR 1,200/mo; Accounting (N40) at PKR 2,500/mo; Staff HR (N42) at PKR 1,500/mo; Governance Pack (N13–N16) at PKR 4,000/mo; Public API (N06) at PKR 2,500/mo. All non-live modules remain non-purchasable until launched.',
+      'AI credit packs: 1M Haiku-token credits at PKR 500 (Standard, includes 1M/mo); 5M credits at PKR 1,800 (Premium, includes 20M/mo). Multipliers: 1x Lite, 20x Standard, 40x Advanced.',
+      'Multi-campus & Custom Quote: Starter and Standard include 1 campus. Premium includes 2 campuses (+1 extra campus add-on at PKR 3,000/mo up to 3 max). Institutions needing above 3,000 students or 4 or more campuses receive a tailored Custom Quote.',
+      'Mandatory Admin Security (Proposed by the plan, not in the source file): Two-factor authentication is mandatory for Admins and Principals on all plans following a 7-day setup grace window.',
     ]} />
-    <P>Payment is due at the start of each billing period. We may change prices with reasonable advance notice.</P>
+    <P>Payment is due at the start of each billing period. Existing active subscriptions continue unchanged for their already settled billing period and transition cleanly at the next renewal with advance notice.</P>
   </>) },
   { id: 'limits', title: 'Limits and upgrades', content: (<>
     <P>Each plan has limits for students, staff accounts, storage, online admission applications, audit log history and campuses. A college with more than 300 students needs Standard or higher. A college can move to a higher plan at any time with immediate pro-rated credit for unused days.</P>
     <P>Please contact the developer or use the in-app subscription portal to discuss your capacity before choosing a plan.</P>
   </>) },
   { id: 'service-status', title: 'What is ready and what is coming', content: (<>
-    <P>155 academic, financial, operational, and AI services are live and active today across 13 implementation phases. Only 6 hardware and external carrier integrations (#79 Biometrics, #82 Payment Gateway, #84 SMS, #85 WhatsApp, N12 Custom Domain, N14 SSO) remain on the roadmap.</P>
-    <P>When an upcoming integration or service is released, it appears automatically for colleges on a plan that includes it. No manual migration is needed.</P>
-    <Note>Starter, Standard, Premium and Enterprise all run fully live today on the central high-performance cloud infrastructure.</Note>
+    <P>86 core academic, financial, operational, and AI services are verified live and active today out of 162 cataloged services across Starter, Standard, Premium, and 9 optional add-on modules. Unbuilt or roadmap capabilities display a Coming soon badge and cannot be purchased until live.</P>
+    <P>When an upcoming integration or service is released, it appears automatically for colleges on a plan that includes it.</P>
+    <Note>Starter and Standard recover deleted items via the Recycle bin only (30-day retention). Monthly self-service ZIP backup exports (N05) are included in Premium (90-day recycle bin retention).</Note>
   </>) },
-  { id: 'plan-changes', title: 'Changing plans and your data', content: (<>
-    <P>Changing plans never deletes your existing data. After a downgrade, services above your new plan become read-only for 30 days, and your data is kept safe in cold archives for 90 days.</P>
+  { id: 'plan-changes', title: 'Changing plans and offboarding data export', content: (<>
+    <P>Changing plans never deletes your existing data. Following cancellation or expiry, college Administrators and Principals retain access to a one-time full CSV/archive offboarding data copy export for 30 days (Proposed by the plan, not in the source file).</P>
   </>) },
   { id: 'late-payment', title: 'Late payment and suspension', content: (<>
     <P>If a payment is late, you keep full access for 7 days, then read-only access for 14 days. After that, the workspace is suspended.</P>
@@ -96,11 +94,11 @@ export default function TermsPage() {
   return (
     <LegalLayout
       title="Terms & Conditions"
-      updated="November 6, 2026"
+      updated="November 18, 2026"
       summary={[
-        'Four monthly plans, from PKR 2,999. Yearly billing includes 1 Month FREE (11 months billed for 12 months access).',
-        '155 live services available today across 13 complete implementation phases.',
-        'Changing plans never deletes your data; 30-day grace and 90-day archive retention.',
+        'Three monthly plans (Starter PKR 2,999, Standard PKR 5,999, Premium PKR 14,999); yearly billing includes 1 Month FREE.',
+        '86 live services active today out of 162 cataloged services; Coming soon add-ons remain locked until live.',
+        'Recycle bin only on Starter/Standard (30d); 30-day post-cancellation Admin export & 7-day Admin 2FA grace (Proposed by the plan, not in the source file).',
       ]}
       sections={SECTIONS}
       other={{ href: '/privacy', label: 'Privacy Policy' }}

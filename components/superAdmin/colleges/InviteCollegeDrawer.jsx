@@ -16,7 +16,7 @@ const ACTUAL_PLANS = [
   { id: 'starter', name: 'Starter' },
   { id: 'standard', name: 'Standard' },
   { id: 'premium', name: 'Premium' },
-  { id: 'enterprise', name: 'Enterprise' },
+  { id: 'custom_quote', name: 'Custom Quote' },
 ];
 
 export default function InviteCollegeDrawer({
@@ -123,10 +123,10 @@ export default function InviteCollegeDrawer({
                       )}
                     </div>
                     <p className="text-[11px] text-t-tertiary">
-                      {plan.id === 'starter' && 'Essential core tools'}
-                      {plan.id === 'standard' && 'Expanding institutions'}
-                      {plan.id === 'premium' && 'Advanced multi-program'}
-                      {plan.id === 'enterprise' && 'Full platform suite'}
+                      {plan.id === 'starter' && 'Essential core tools (26 live)'}
+                      {plan.id === 'standard' && 'Expanding institutions (70 live)'}
+                      {plan.id === 'premium' && 'Full AI & multi-campus (86 live)'}
+                      {plan.id === 'custom_quote' && '>3,000 students / 4+ campuses'}
                     </p>
                   </button>
                 );

@@ -41,7 +41,7 @@ const SECTIONS = [
     <P>This is designed to prevent one college from reaching another college’s data.</P>
   </>) },
   { id: 'ai-features', title: 'AI features', content: (<>
-    <P>AI features are part of the Enterprise plan. They include an AI tutor, a PDF knowledge library and quiz, paper and MCQ generators. Colleges on other plans do not use these features.</P>
+    <P>Standard plans include AI Lite (quiz generation and notice translation), and Premium plans include AI Full (Tutor Chat, PDF Knowledge Library, Ask-Your-Data, OCR, and approval-gated AI Admin Agent). Colleges on Starter do not send data to AI providers.</P>
     <UL items={[
       <><strong>What is sent:</strong> text you type, syllabus text or PDF files you upload to an AI tool may be sent to the configured AI provider (Google Gemini) to produce the result you asked for.</>,
       <><strong>Training:</strong> material sent for generation travels over secure API channels and is not used by the provider to train public models.</>,
@@ -59,7 +59,7 @@ const SECTIONS = [
   { id: 'data-sharing', title: 'Sharing with others', content: (<>
     <P>We do not sell, rent or trade student, teacher or college data. We share information only with:</P>
     <UL items={[
-      <><strong>AI provider:</strong> Google Gemini, only when an Enterprise college uses an AI feature.</>,
+      <><strong>AI provider:</strong> Google Gemini, only when a Standard or Premium college uses an AI feature.</>,
       <><strong>Infrastructure providers:</strong> the hosting company that runs our databases and servers.</>,
       <><strong>Authorities:</strong> when a court order or the law requires it, or to defend a legal claim.</>,
     ]} />
@@ -68,9 +68,9 @@ const SECTIONS = [
   { id: 'retention', title: 'How long we keep data', content: (<>
     <UL items={[
       'Your data is kept while your subscription is active.',
-      'Audit logs are kept for 30 days on Starter, 90 days on Standard, 180 days on Premium and 365 days on Enterprise.',
-      'Changing plans never deletes existing data. After a downgrade, services above your new plan become read-only for 30 days and your data is kept for 90 days.',
-      'If a payment is late, you keep full access for 7 days, then read-only access for 14 days, then the workspace is suspended.',
+      'Audit logs are retained for 30 days on Starter, 90 days on Standard, and 365 days on Premium.',
+      'Recycle bin retention is 30 days on Starter and Standard (Recycle bin only), and 90 days on Premium, subject to active Legal Holds.',
+      'Following cancellation or expiry, college Administrators retain access to export a one-time offboarding data archive for 30 days (Proposed by the plan, not in the source file).',
     ]} />
     <P>When a subscription ends, we keep data for a cleanup window and then deactivate or securely delete it. Contact us before leaving to agree how your data is returned or deleted.</P>
   </>) },

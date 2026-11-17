@@ -22,11 +22,11 @@ import { apiGet } from '@/lib/api';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PLAN_OPTIONS = [
-  { id: 'all', label: 'All Plans' },
+  { id: 'all', label: 'All Services' },
   { id: 'starter', label: 'Starter' },
   { id: 'standard', label: 'Standard' },
   { id: 'premium', label: 'Premium' },
-  { id: 'enterprise', label: 'Enterprise' },
+  { id: 'addonOnly', label: 'Add-ons' },
 ];
 
 const PLAN_THEME = {
@@ -48,7 +48,7 @@ const PLAN_THEME = {
     btn: 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-800',
     btnActive: 'bg-violet-600 text-white border-violet-600',
   },
-  enterprise: {
+  addonOnly: {
     badge: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700',
     dot: 'bg-emerald-500',
     btn: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
@@ -70,9 +70,19 @@ const CATEGORY_ICONS = {
 };
 
 // ─── Plan Badge ───────────────────────────────────────────────────────────────
-function PlanBadge({ plan }) {
-  const theme = PLAN_THEME[plan] || PLAN_THEME.starter;
-  const label = plan.charAt(0).toUpperCase() + plan.slice(1);
+function PlanBadge({ plan, addonOnly }) {
+  if (addonOnly || !plan) {
+    const theme = PLAN_THEME.addonOnly;
+    return (
+      <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wide ${theme.badge}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${theme.dot}`} />
+        Add-on
+      </span>
+    );
+  }
+  const normalizedPlan = plan === 'enterprise' ? 'premium' : plan;
+  const theme = PLAN_THEME[normalizedPlan] || PLAN_THEME.starter;
+  const label = normalizedPlan.charAt(0).toUpperCase() + normalizedPlan.slice(1);
   return (
     <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wide ${theme.badge}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${theme.dot}`} />
@@ -92,7 +102,7 @@ function StatusBadge({ status }) {
   }
   return (
     <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 dark:border-amber-700 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400">
-      <HiOutlineClock size={10} /> Roadmap
+      <HiOutlineClock size={10} /> Coming soon
     </span>
   );
 }
@@ -123,7 +133,7 @@ function ServiceCard({ service }) {
 
         {/* Badges */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <PlanBadge plan={service.startsIn} />
+          <PlanBadge plan={service.startsIn} addonOnly={service.addonOnly} />
           <StatusBadge status={service.status} />
           {open
             ? <HiOutlineChevronUp size={15} className="text-fg-muted ml-1 shrink-0" />
@@ -214,7 +224,7 @@ function CategoryTab({ category, isActive, count, onClick }) {
 export default function ServicesClient() {
   const [allServices, setAllServices] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [summary, setSummary] = useState({ total: 162, live: 86, comingSoon: 76, starter: 33, standard: 88, premium: 141, enterprise: 162 });
+  const [summary, setSummary] = useState({ total: 162, live: 86, comingSoon: 76, starter: 33, standard: 88, premium: 153, addonOnly: 9 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -271,9 +281,13 @@ export default function ServicesClient() {
     }
 
     if (activePlan !== 'all') {
-      const planLevels = { starter: 1, standard: 2, premium: 3, enterprise: 4 };
-      const targetLevel = planLevels[activePlan] ?? 0;
-      result = result.filter(s => (planLevels[s.startsIn] ?? 0) <= targetLevel);
+      if (activePlan === 'addonOnly') {
+        result = result.filter(s => Boolean(s.addonOnly) || !s.startsIn);
+      } else {
+        const planLevels = { starter: 1, standard: 2, premium: 3, enterprise: 3 };
+        const targetLevel = planLevels[activePlan] ?? 0;
+        result = result.filter(s => !s.addonOnly && s.startsIn && (planLevels[s.startsIn] ?? 99) <= targetLevel);
+      }
     }
 
     if (debouncedSearch.trim()) {
@@ -572,10 +586,10 @@ export default function ServicesClient() {
                   Compare Plans & Pricing →
                 </Link>
                 <Link
-                  href="/request-subscription?plan=enterprise"
+                  href="/request-subscription?plan=custom_quote"
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-bold text-white hover:bg-white/10 transition"
                 >
-                  Request Enterprise Demo
+                  Request Custom Quote (4+ Campuses)
                 </Link>
               </div>
             </div>

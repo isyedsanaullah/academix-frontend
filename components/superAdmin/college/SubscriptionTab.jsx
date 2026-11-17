@@ -744,11 +744,10 @@ export default function SubscriptionTab({ collegeId, collegeName, onSubscription
                   onChange={e => setAssignForm({ ...assignForm, plan: e.target.value })}
                   className="w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-transparent px-3 py-2 text-slate-800 dark:text-white focus:outline-none focus:border-indigo-600"
                 >
-                  <option value="starter">Starter / Basic</option>
+                  <option value="starter">Starter</option>
                   <option value="standard">Standard</option>
                   <option value="premium">Premium</option>
-                  <option value="enterprise">Enterprise</option>
-                  <option value="custom">Custom Plan</option>
+                  <option value="custom_quote">Custom Quote (&gt;3,000 / 4+ Campuses)</option>
                 </select>
               </div>
 

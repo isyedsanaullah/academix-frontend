@@ -7,7 +7,7 @@ const ACTUAL_PLANS = [
   { id: 'starter', name: 'Starter' },
   { id: 'standard', name: 'Standard' },
   { id: 'premium', name: 'Premium' },
-  { id: 'enterprise', name: 'Enterprise' },
+  { id: 'enterprise', name: 'Enterprise (Legacy)' },
 ];
 
 export default function PlanFilterDropdown({ value, onChange }) {

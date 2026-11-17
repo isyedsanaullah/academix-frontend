@@ -64,7 +64,7 @@ const INSTITUTION_TEMPLATES = [
     name: 'University & Enterprise Multi-Campus',
     desc: 'Comprehensive multi-faculty university with full platform capabilities, multi-campus, and enterprise controls.',
     icon: HiOutlineLibrary,
-    recommendedPlan: 'enterprise',
+    recommendedPlan: 'premium',
     badge: 'Full Suite',
     features: [
       'core-academic', 'students', 'teachers', 'subjects', 'classes', 'sections',
