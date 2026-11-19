@@ -48,6 +48,8 @@ const getPageTitle = (pathname) => {
     '/admin/teachers': 'Teachers',
     '/admin/employees': 'Employees',
     '/admin/subscription': 'Subscription & Billing',
+    '/admin/choose-plan': 'Choose Your Plan',
+    '/admin/renew': 'Renew Subscription',
     '/admin/treasury': 'Treasury & Cashflow Ledger',
     '/admin/fees': 'Fee Management',
     '/admin/fees/defaulters': 'Fee Defaulters',

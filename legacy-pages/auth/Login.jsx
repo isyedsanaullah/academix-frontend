@@ -347,6 +347,18 @@ export default function Login() {
       return;
     }
 
+    // ── Guard E: Redirect locked college accounts cleanly ──────────────
+    if (userData.college?.isLocked) {
+      if (userData.role === 'admin') {
+        toast('Your trial or subscription has ended. Please renew to restore access.');
+        router.push('/admin/renew');
+        return;
+      }
+      logout();
+      router.push('/subscription-inactive');
+      return;
+    }
+
     const collegeDisplayName = resolvedCollege?.name || tenantProfile?.name || 'College';
     toast.success(`Welcome back to ${collegeDisplayName}, ${userData.name}!`);
     router.push(roleRedirects[userData.role] || '/');

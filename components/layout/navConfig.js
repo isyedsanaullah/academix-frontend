@@ -57,10 +57,11 @@ export const NAV = {
       ],
     },
     {
-      id: 'finance',
-      label: 'Finance',
+      id: 'accounts-billing',
+      label: 'Accounts / Billing',
       icon: HiOutlineCreditCard,
       children: [
+        { to: '/super-admin/billing', icon: HiOutlineClipboardCheck, label: 'Subscriptions & Billing' },
         { to: '/super-admin/finance/overview', icon: HiOutlineChartBar, label: 'Accounting Overview', badgeKey: 'accountingOverview' },
         { to: '/super-admin/finance/payments', icon: HiOutlineCurrencyDollar, label: 'Payments History', badgeKey: 'paymentsHistory' },
         { to: '/super-admin/finance/colleges', icon: HiOutlineOfficeBuilding, label: 'Per-College Billing', badgeKey: 'perCollegeBilling' },

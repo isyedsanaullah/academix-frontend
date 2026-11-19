@@ -12,8 +12,9 @@ RewriteEngine On
 RewriteCond %{HTTP_HOST} ^collegeshub\.org$ [NC]
 RewriteRule ^(.*)$ https://www.collegeshub.org/$1 [L,R=301,QSA]
 
-# ── 2. Force HTTPS for all domains and subdomains ─────────────
+# ── 2. Force HTTPS for all domains and subdomains (Cloudflare-safe) ────
 RewriteCond %{HTTPS} off
+RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
 # ── 3. SEO & Static Assets: Pass through directly ────────────

@@ -33,28 +33,21 @@ import {
   HiOutlineRefresh,
   HiOutlineLightningBolt,
   HiOutlineShieldCheck,
-  HiOutlineChevronDown,
-  HiOutlineChevronUp,
   HiOutlineDocumentText,
   HiOutlineArrowUp,
   HiOutlinePlusCircle,
   HiOutlineBadgeCheck,
   HiOutlineXCircle,
 } from 'react-icons/hi';
-import toast from 'react-hot-toast';
 import CollegesHubLoader from '@/components/common/CollegesHubLoader';
-import { apiGet, apiPost } from '@/lib/api';
+import PlanCheckoutWizard from '@/components/subscription/PlanCheckoutWizard';
+import { apiGet } from '@/lib/api';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function fmtDate(d) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('en-PK', { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
-function fmtBytes(bytes) {
-  if (!bytes) return '0 GB';
-  return (bytes / 1073741824).toFixed(2) + ' GB';
+  return new Date(d).toLocaleDateString('en-PK', { timeZone: 'Asia/Karachi', year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function fmtNum(n) {
@@ -70,24 +63,19 @@ const PLAN_THEME = {
 };
 
 const STATUS_THEME = {
-  ACTIVE:    { label: 'Active',    cls: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700' },
-  TRIAL:     { label: 'Trial',     cls: 'bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-300 dark:border-sky-700' },
-  EXPIRED:   { label: 'Expired',   cls: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-300 dark:border-red-700' },
-  SUSPENDED: { label: 'Suspended', cls: 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-300 dark:border-orange-700' },
-  PENDING:   { label: 'Pending',   cls: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700' },
+  ACTIVE:          { label: 'Active',          cls: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700' },
+  TRIAL:           { label: 'Free Trial',      cls: 'bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-300 dark:border-sky-700' },
+  PENDING_PAYMENT: { label: 'Pending Payment', cls: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700' },
+  EXPIRED:         { label: 'Expired',         cls: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-300 dark:border-red-700' },
+  DEACTIVATED:     { label: 'Deactivated',     cls: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-300 dark:border-red-700' },
+  SUSPENDED:       { label: 'Suspended',       cls: 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-300 dark:border-orange-700' },
+  PENDING:         { label: 'Pending',         cls: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700' },
 };
 
 const PAYMENT_STATUS_THEME = {
   PENDING:  { label: 'Pending Review', cls: 'bg-amber-500/10 text-amber-700 dark:text-amber-400', icon: HiOutlineClock },
   APPROVED: { label: 'Approved',       cls: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400', icon: HiOutlineCheckCircle },
   REJECTED: { label: 'Rejected',       cls: 'bg-red-500/10 text-red-700 dark:text-red-400', icon: HiOutlineXCircle },
-};
-
-const PLAN_ORDER = { starter: 1, standard: 2, premium: 3, enterprise: 3 };
-const PLAN_PRICES = {
-  starter:  { monthly: 2999,  yearly: 32989 },
-  standard: { monthly: 5999,  yearly: 65989 },
-  premium:  { monthly: 14999, yearly: 164989 },
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -179,213 +167,23 @@ function SectionHeader({ icon: Icon, title, subtitle, action }) {
   );
 }
 
-// ─── Payment Proof Form ───────────────────────────────────────────────────────
-function PaymentProofForm({ mode, currentPlan, billingCycle: currentCycle, initialLineItems = [], onSuccess, onCancel }) {
-  const [formData, setFormData] = useState({
-    type: mode === 'upgrade' ? 'UPGRADE' : mode === 'addon' ? 'ADDON_ORDER' : 'RENEWAL',
-    planId: currentPlan === 'enterprise' ? 'premium' : currentPlan,
-    billingCycle: currentCycle || 'MONTHLY',
-    paymentMethod: '',
-    transactionId: '',
-    screenshotUrl: '',
-    amountPaid: '',
-    lineItems: initialLineItems,
-  });
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.paymentMethod.trim()) { toast.error('Payment method is required'); return; }
-    if (!formData.transactionId.trim()) { toast.error('Transaction ID is required'); return; }
-    if (!formData.screenshotUrl.trim()) { toast.error('Screenshot URL is required'); return; }
-
-    setSubmitting(true);
-    try {
-      const payload = {
-        type: formData.type,
-        planId: formData.planId,
-        billingCycle: formData.billingCycle,
-        paymentMethod: formData.paymentMethod.trim(),
-        transactionId: formData.transactionId.trim(),
-        screenshotUrl: formData.screenshotUrl.trim(),
-        amountPaid: formData.amountPaid ? Number(formData.amountPaid) : undefined,
-        lineItems: formData.lineItems,
-      };
-      const res = await apiPost('/subscription/submit-payment', payload);
-      if (res?.success) {
-        toast.success('Payment proof submitted! Awaiting Super Admin verification.');
-        onSuccess?.();
-      } else {
-        throw new Error(res?.message || 'Submission failed');
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.message || err.message || 'Submission failed');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const upgradePlans = Object.keys(PLAN_PRICES).filter(p => PLAN_ORDER[p] > (PLAN_ORDER[currentPlan] || 1));
-  const effectivePlan = formData.planId === 'enterprise' ? 'premium' : formData.planId;
-  const price = PLAN_PRICES[effectivePlan]?.[formData.billingCycle === 'YEARLY' ? 'yearly' : 'monthly'];
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {mode === 'upgrade' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-bold text-fg-muted mb-1.5 uppercase tracking-wider">Upgrade To *</label>
-            <select
-              name="planId" value={formData.planId}
-              onChange={handleChange}
-              className="w-full rounded-xl border border-line bg-card-2 px-3 py-2.5 text-xs text-fg focus:border-[#0A4D94] focus:outline-none focus:ring-4 focus:ring-[#0A4D94]/10 transition"
-            >
-              {upgradePlans.map(p => (
-                <option key={p} value={p}>
-                  {p.charAt(0).toUpperCase() + p.slice(1)} — PKR {
-                    formData.billingCycle === 'YEARLY'
-                      ? PLAN_PRICES[p].yearly.toLocaleString() + '/yr'
-                      : PLAN_PRICES[p].monthly.toLocaleString() + '/mo'
-                  }
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-fg-muted mb-1.5 uppercase tracking-wider">Billing Cycle *</label>
-            <select
-              name="billingCycle" value={formData.billingCycle}
-              onChange={handleChange}
-              className="w-full rounded-xl border border-line bg-card-2 px-3 py-2.5 text-xs text-fg focus:border-[#0A4D94] focus:outline-none focus:ring-4 focus:ring-[#0A4D94]/10 transition"
-            >
-              <option value="MONTHLY">Monthly</option>
-              <option value="YEARLY">Yearly (1 Month FREE)</option>
-            </select>
-          </div>
-        </div>
-      )}
-
-      {mode === 'renewal' && (
-        <div>
-          <label className="block text-xs font-bold text-fg-muted mb-1.5 uppercase tracking-wider">Billing Cycle *</label>
-          <select
-            name="billingCycle" value={formData.billingCycle}
-            onChange={handleChange}
-            className="w-full rounded-xl border border-line bg-card-2 px-3 py-2.5 text-xs text-fg focus:border-[#0A4D94] focus:outline-none focus:ring-4 focus:ring-[#0A4D94]/10 transition"
-          >
-            <option value="MONTHLY">Monthly — PKR {PLAN_PRICES[currentPlan]?.monthly?.toLocaleString()}</option>
-            <option value="YEARLY">Yearly — PKR {PLAN_PRICES[currentPlan]?.yearly?.toLocaleString()} (1 Month FREE)</option>
-          </select>
-        </div>
-      )}
-
-      {/* Expected amount info */}
-      {price && (
-        <div className="rounded-lg border border-blue-200/50 dark:border-brand-blue-400/20 bg-blue-50/60 dark:bg-brand-blue-500/5 px-3 py-2.5">
-          <p className="text-xs text-fg-muted">
-            Expected payment: <strong className="text-fg">PKR {price.toLocaleString()}</strong>
-            {formData.billingCycle === 'YEARLY' && <span className="text-emerald-600 dark:text-emerald-400 ml-1">(saves 1 month)</span>}
-          </p>
-        </div>
-      )}
-
-      {/* Payment fields */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-bold text-fg-muted mb-1.5 uppercase tracking-wider">Payment Method *</label>
-          <input
-            type="text" name="paymentMethod" value={formData.paymentMethod}
-            onChange={handleChange} disabled={submitting}
-            placeholder="e.g. Bank Transfer, EasyPaisa, JazzCash"
-            className="w-full rounded-xl border border-line bg-card-2 px-3 py-2.5 text-xs text-fg placeholder:text-fg-faint focus:border-[#0A4D94] focus:outline-none focus:ring-4 focus:ring-[#0A4D94]/10 transition"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-bold text-fg-muted mb-1.5 uppercase tracking-wider">Transaction ID / Reference *</label>
-          <input
-            type="text" name="transactionId" value={formData.transactionId}
-            onChange={handleChange} disabled={submitting}
-            placeholder="e.g. TXN-123456789"
-            className="w-full rounded-xl border border-line bg-card-2 px-3 py-2.5 text-xs text-fg placeholder:text-fg-faint focus:border-[#0A4D94] focus:outline-none focus:ring-4 focus:ring-[#0A4D94]/10 transition"
-            required
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-bold text-fg-muted mb-1.5 uppercase tracking-wider">Screenshot / Proof URL *</label>
-          <input
-            type="url" name="screenshotUrl" value={formData.screenshotUrl}
-            onChange={handleChange} disabled={submitting}
-            placeholder="https://drive.google.com/..."
-            className="w-full rounded-xl border border-line bg-card-2 px-3 py-2.5 text-xs text-fg placeholder:text-fg-faint focus:border-[#0A4D94] focus:outline-none focus:ring-4 focus:ring-[#0A4D94]/10 transition"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-bold text-fg-muted mb-1.5 uppercase tracking-wider">Amount Paid (PKR)</label>
-          <input
-            type="number" name="amountPaid" value={formData.amountPaid}
-            onChange={handleChange} disabled={submitting}
-            placeholder="Leave blank to use expected amount"
-            className="w-full rounded-xl border border-line bg-card-2 px-3 py-2.5 text-xs text-fg placeholder:text-fg-faint focus:border-[#0A4D94] focus:outline-none focus:ring-4 focus:ring-[#0A4D94]/10 transition"
-          />
-        </div>
-      </div>
-
-      <div className="flex gap-3 pt-2">
-        <button
-          type="submit" disabled={submitting}
-          className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-[#0A4D94] hover:bg-[#083e78] py-2.5 px-5 text-xs font-bold text-white shadow transition disabled:opacity-50"
-        >
-          {submitting ? (
-            <><div className="h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" /> Submitting…</>
-          ) : (
-            <><HiOutlineDocumentText size={14} /> Submit Payment Proof</>
-          )}
-        </button>
-        <button
-          type="button" onClick={onCancel}
-          className="rounded-xl border border-line bg-card-2 px-4 py-2.5 text-xs font-semibold text-fg-muted hover:text-fg transition"
-        >
-          Cancel
-        </button>
-      </div>
-    </form>
-  );
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function AdminSubscriptionPage() {
   const [sub, setSub] = useState(null);
-  const [addonCatalog, setAddonCatalog] = useState([]);
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
-  const [showUpgradeForm, setShowUpgradeForm] = useState(false);
-  const [showRenewalForm, setShowRenewalForm] = useState(false);
-  const [showAddonSection, setShowAddonSection] = useState(false);
-  const [addonQty, setAddonQty] = useState({});
+  const [showCheckoutWizard, setShowCheckoutWizard] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const [subRes, catalogRes, historyRes] = await Promise.all([
+      const [subRes, historyRes] = await Promise.all([
         apiGet('/subscription/current'),
-        apiGet('/subscription/addon-catalog'),
         apiGet('/subscription/payment-history'),
       ]);
       if (subRes?.success) setSub(subRes.data);
-      if (catalogRes?.success) setAddonCatalog(catalogRes.data?.items || []);
       if (historyRes?.success) setPayments(historyRes.data || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load subscription data.');
@@ -398,12 +196,10 @@ export default function AdminSubscriptionPage() {
     let mounted = true;
     Promise.all([
       apiGet('/subscription/current'),
-      apiGet('/subscription/addon-catalog'),
       apiGet('/subscription/payment-history'),
-    ]).then(([subRes, catalogRes, historyRes]) => {
+    ]).then(([subRes, historyRes]) => {
       if (!mounted) return;
       if (subRes?.success) setSub(subRes.data);
-      if (catalogRes?.success) setAddonCatalog(catalogRes.data?.items || []);
       if (historyRes?.success) setPayments(historyRes.data || []);
     }).catch(err => {
       if (!mounted) return;
@@ -415,11 +211,9 @@ export default function AdminSubscriptionPage() {
     return () => { mounted = false; };
   }, []);
 
-  const handleFormSuccess = useCallback(() => {
-    setShowUpgradeForm(false);
-    setShowRenewalForm(false);
-    fetchAll();
-  }, [fetchAll]);
+  const handleWizardStatusChange = useCallback((nextSub) => {
+    if (nextSub) setSub(nextSub);
+  }, []);
 
   if (loading) return <CollegesHubLoader size="md" text="Loading subscription details…" minHeight="min-h-[400px]" />;
 
@@ -439,13 +233,13 @@ export default function AdminSubscriptionPage() {
 
   const {
     planId, billingCycle, subStatus, trialEndsAt, periodEnd,
+    daysRemaining, activeSubscription,
     effectiveLimits, usage, credits, activeAddons, pendingPayment
   } = sub;
 
   const lim = effectiveLimits || {};
   const storageUsedGb = (usage?.storageBytes || 0) / 1073741824;
   const storageLimitGb = (lim.maxStorageBytes || 0) / 1073741824;
-  const canUpgrade = (PLAN_ORDER[planId] || 1) < PLAN_ORDER.premium;
 
   // Compute >=80% quota utilization warnings across meters
   const highUsageAlerts = [];
@@ -505,14 +299,24 @@ export default function AdminSubscriptionPage() {
 
       {/* ── Trial Banner ── */}
       {subStatus === 'TRIAL' && (
-        <div className="rounded-2xl border border-sky-300 dark:border-sky-700 bg-sky-50/80 dark:bg-sky-500/10 p-4 flex items-start gap-3">
-          <HiOutlineLightningBolt size={20} className="text-sky-600 dark:text-sky-400 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-bold text-sky-800 dark:text-sky-300">Free Trial Active</p>
-            <p className="text-xs text-sky-700 dark:text-sky-400 mt-0.5">
-              Your trial expires on <strong>{fmtDate(trialEndsAt || periodEnd)}</strong>. Submit payment proof to activate your subscription and retain all data.
-            </p>
+        <div className="rounded-2xl border border-sky-300 dark:border-sky-700 bg-sky-50/80 dark:bg-sky-500/10 p-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <HiOutlineLightningBolt size={20} className="text-sky-600 dark:text-sky-400 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-bold text-sky-800 dark:text-sky-300">
+                Free Trial Active{typeof daysRemaining === 'number' ? ` · ${daysRemaining} day${daysRemaining === 1 ? '' : 's'} remaining` : ''}
+              </p>
+              <p className="text-xs text-sky-700 dark:text-sky-400 mt-0.5">
+                Your trial expires on <strong>{fmtDate(trialEndsAt || periodEnd)}</strong>. Choose a plan and submit your UBL bank transfer proof to activate your subscription.
+              </p>
+            </div>
           </div>
+          <Link
+            href="/admin/choose-plan"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#0A4D94] hover:bg-[#083D77] px-4 py-2 text-xs font-bold text-white shadow transition"
+          >
+            Choose Plan &amp; Pay →
+          </Link>
         </div>
       )}
 
@@ -542,7 +346,7 @@ export default function AdminSubscriptionPage() {
 
       {/* ── Plan Summary ── */}
       <div className="rounded-2xl border border-line bg-card p-6">
-        <SectionHeader icon={HiOutlineBadgeCheck} title="Current Plan" subtitle="Subscription overview and billing period" />
+        <SectionHeader icon={HiOutlineBadgeCheck} title="Current Plan" subtitle="Subscription overview, price lock, and billing period" />
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div>
             <p className="text-[11px] text-fg-muted uppercase tracking-wider font-semibold mb-1">Plan</p>
@@ -562,55 +366,40 @@ export default function AdminSubscriptionPage() {
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div className="mt-5 flex flex-wrap gap-2">
-          {!pendingPayment && !showRenewalForm && !showUpgradeForm && (
-            <>
-              <button
-                type="button"
-                onClick={() => { setShowRenewalForm(true); setShowUpgradeForm(false); }}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-card-2 px-4 py-2 text-xs font-semibold text-fg hover:border-line-strong transition"
-              >
-                <HiOutlineRefresh size={14} /> Renew Subscription
-              </button>
-              {canUpgrade && (
-                <button
-                  type="button"
-                  onClick={() => { setShowUpgradeForm(true); setShowRenewalForm(false); }}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#0A4D94] hover:bg-[#083e78] px-4 py-2 text-xs font-bold text-white transition"
-                >
-                  <HiOutlineArrowUp size={14} /> Upgrade Plan
-                </button>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Renewal form */}
-        {showRenewalForm && (
-          <div className="mt-5 rounded-xl border border-line bg-card-2 p-4">
-            <h3 className="text-xs font-bold text-fg mb-3">Submit Renewal Payment</h3>
-            <PaymentProofForm
-              mode="renewal"
-              currentPlan={planId}
-              billingCycle={billingCycle}
-              onSuccess={handleFormSuccess}
-              onCancel={() => setShowRenewalForm(false)}
-            />
+        {activeSubscription && (
+          <div className="mt-4 rounded-xl border border-[#299A49]/30 bg-emerald-50/60 dark:bg-emerald-500/10 px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 text-[#1F7A3A] dark:text-emerald-300 font-bold">
+              <HiOutlineShieldCheck size={16} />
+              <span>
+                Term Price Locked: PKR {Number(activeSubscription.totalPkr ?? activeSubscription.planPricePkr ?? 0).toLocaleString()} ({activeSubscription.billingCycle})
+              </span>
+            </div>
+            <span className="text-[11px] text-fg-muted">
+              Protected through {fmtDate(activeSubscription.endsAt || periodEnd)}
+            </span>
           </div>
         )}
 
-        {/* Upgrade form */}
-        {showUpgradeForm && canUpgrade && (
-          <div className="mt-5 rounded-xl border border-line bg-card-2 p-4">
-            <h3 className="text-xs font-bold text-fg mb-3">Submit Upgrade Payment</h3>
-            <PaymentProofForm
-              mode="upgrade"
-              currentPlan={planId}
-              billingCycle={billingCycle}
-              onSuccess={handleFormSuccess}
-              onCancel={() => setShowUpgradeForm(false)}
-            />
+        {/* Action buttons */}
+        <div className="mt-5 flex flex-wrap gap-2">
+          <Link
+            href="/admin/choose-plan"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#0A4D94] hover:bg-[#083e78] px-4 py-2 text-xs font-bold text-white transition"
+          >
+            <HiOutlineArrowUp size={14} /> Choose Plan, Add-Ons &amp; Voucher
+          </Link>
+          <button
+            type="button"
+            onClick={() => setShowCheckoutWizard(v => !v)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-card-2 px-4 py-2 text-xs font-semibold text-fg hover:border-line-strong transition cursor-pointer"
+          >
+            <HiOutlineRefresh size={14} /> {showCheckoutWizard ? 'Hide Checkout & Invoices' : 'Manage Invoices & Upload Proof'}
+          </button>
+        </div>
+
+        {showCheckoutWizard && (
+          <div className="mt-6 pt-6 border-t border-line">
+            <PlanCheckoutWizard onStatusChange={handleWizardStatusChange} />
           </div>
         )}
       </div>
@@ -678,99 +467,21 @@ export default function AdminSubscriptionPage() {
         </div>
       )}
 
-      {/* ── Add-on Catalog ── */}
-      {addonCatalog.length > 0 && (
-        <div className="rounded-2xl border border-line bg-card p-6">
-          <SectionHeader
-            icon={HiOutlineCollection}
-            title="Request Add-ons"
-            subtitle="Expand capacity or unlock modules for your plan"
-            action={
-              <button
-                type="button"
-                onClick={() => setShowAddonSection(o => !o)}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-fg-muted hover:text-fg transition"
-              >
-                {showAddonSection ? <><HiOutlineChevronUp size={15} /> Hide</> : <><HiOutlineChevronDown size={15} /> Show</>}
-              </button>
-            }
-          />
-
-          {showAddonSection && (
-            <div className="space-y-3">
-              <p className="text-xs text-fg-muted">
-                Select the add-on(s) you need, then submit a payment proof. Super Admin will verify and activate.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {addonCatalog.filter(a => a.isAvailable).map(addon => {
-                  const purchasable = addon.isPurchasable !== false;
-                  const qty = purchasable ? (addonQty[addon.addonType] || 0) : 0;
-                  return (
-                    <div key={addon.id || addon.addonType} className={`rounded-xl border border-line bg-card-2 p-4 space-y-2 ${!purchasable ? 'opacity-75' : ''}`}>
-                      <div className="flex justify-between items-start gap-2">
-                        <div>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className="text-xs font-semibold text-fg">{addon.name}</p>
-                            {!purchasable && (
-                              <span className="inline-flex items-center rounded-full border border-amber-300 dark:border-amber-700 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400">
-                                Coming soon
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-fg-muted">
-                            PKR {addon.unitPriceMonthlyPkr?.toLocaleString()}/mo · Max: {addon.remainingUnitsAllowed ?? '—'} more
-                          </p>
-                        </div>
-                        <span className="text-xs font-black text-[#0A4D94] dark:text-brand-blue-400 shrink-0">
-                          PKR {addon.unitPriceMonthlyPkr?.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          disabled={!purchasable || qty <= 0}
-                          onClick={() => setAddonQty(p => ({ ...p, [addon.addonType]: Math.max(0, (p[addon.addonType] || 0) - 1) }))}
-                          className="w-7 h-7 rounded-lg border border-line bg-card flex items-center justify-center text-fg-muted hover:text-fg transition disabled:opacity-40 disabled:cursor-not-allowed"
-                        >−</button>
-                        <span className="w-8 text-center text-xs font-bold text-fg">{qty}</span>
-                        <button
-                          type="button"
-                          disabled={!purchasable}
-                          onClick={() => setAddonQty(p => ({ ...p, [addon.addonType]: Math.min(addon.remainingUnitsAllowed ?? 99, (p[addon.addonType] || 0) + 1) }))}
-                          className="w-7 h-7 rounded-lg border border-line bg-card flex items-center justify-center text-fg-muted hover:text-fg transition disabled:opacity-40 disabled:cursor-not-allowed"
-                        >+</button>
-                        {!purchasable ? (
-                          <span className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">Not purchasable until live</span>
-                        ) : qty > 0 && (
-                          <span className="text-xs text-fg-muted ml-1">
-                            = PKR {((addon.unitPriceMonthlyPkr || 0) * qty).toLocaleString()}/mo
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {Object.values(addonQty).some(q => q > 0) && (
-                <div className="rounded-xl border border-blue-200/60 dark:border-brand-blue-400/20 bg-blue-50/60 dark:bg-brand-blue-500/5 p-4 mt-2">
-                  <p className="text-xs font-semibold text-fg mb-3">
-                    Submit payment for selected add-ons:
-                  </p>
-                  <PaymentProofForm
-                    mode="addon"
-                    currentPlan={planId}
-                    billingCycle={billingCycle}
-                    initialLineItems={Object.entries(addonQty).filter(([, q]) => q > 0).map(([addonType, quantity]) => ({ addonType, quantity }))}
-                    onSuccess={() => { setAddonQty({}); handleFormSuccess(); }}
-                    onCancel={() => setAddonQty({})}
-                  />
-                </div>
-              )}
-            </div>
-          )}
+      {/* ── Choose Add-ons CTA ── */}
+      <div className="rounded-2xl border border-line bg-card p-5 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-black text-fg">Need Extra Students, Storage, or Campuses?</h3>
+          <p className="text-xs text-fg-muted mt-0.5">
+            Select add-ons dynamically from the live catalog and include them in your bank transfer voucher.
+          </p>
         </div>
-      )}
+        <Link
+          href="/admin/choose-plan"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-card-2 px-4 py-2 text-xs font-bold text-[#0A4D94] dark:text-brand-blue-400 hover:border-[#0A4D94]/40 transition"
+        >
+          <HiOutlinePlusCircle size={15} /> Configure Plan &amp; Add-Ons
+        </Link>
+      </div>
 
       {/* ── Payment History ── */}
       <div className="rounded-2xl border border-line bg-card p-6">

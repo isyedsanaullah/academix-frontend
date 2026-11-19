@@ -2,41 +2,41 @@
 
 import { useState } from 'react';
 import SlideOverDrawer from '@/components/common/SlideOverDrawer';
-import Icon from '@/components/Icon';
 import api from '@/services/api';
 import toast from 'react-hot-toast';
 import {
   HiOutlineMail,
+  HiOutlineOfficeBuilding,
   HiOutlineCheck,
   HiOutlineCheckCircle,
   HiOutlineClipboardCopy,
+  HiOutlineSparkles,
 } from 'react-icons/hi';
-
-const ACTUAL_PLANS = [
-  { id: 'starter', name: 'Starter' },
-  { id: 'standard', name: 'Standard' },
-  { id: 'premium', name: 'Premium' },
-  { id: 'custom_quote', name: 'Custom Quote' },
-];
 
 export default function InviteCollegeDrawer({
   open = false,
   onClose,
   onInviteSent,
 }) {
-  const [inviteForm, setInviteForm] = useState({ email: '', planId: 'starter' });
+  const [inviteForm, setInviteForm] = useState({ email: '', collegeName: '' });
   const [submitting, setSubmitting] = useState(false);
   const [createdInviteUrl, setCreatedInviteUrl] = useState('');
   const [copied, setCopied] = useState(false);
 
   const handleSendInvite = async (e) => {
     e.preventDefault();
-    if (!inviteForm.email) return toast.error('Please enter official email address');
+    if (!inviteForm.email.trim()) {
+      return toast.error('Please enter official college email address');
+    }
 
     setSubmitting(true);
     setCopied(false);
     try {
-      const { data } = await api.post('/super-admin/invitations', inviteForm);
+      const payload = {
+        email: inviteForm.email.trim(),
+        ...(inviteForm.collegeName.trim() ? { collegeName: inviteForm.collegeName.trim() } : {}),
+      };
+      const { data } = await api.post('/super-admin/invitations', payload);
       toast.success(data.message || 'Invitation sent successfully!');
       setCreatedInviteUrl(data.data?.inviteUrl || '');
       if (onInviteSent) onInviteSent();
@@ -56,7 +56,7 @@ export default function InviteCollegeDrawer({
 
   const handleDrawerClose = () => {
     setCreatedInviteUrl('');
-    setInviteForm({ email: '', planId: 'starter' });
+    setInviteForm({ email: '', collegeName: '' });
     onClose();
   };
 
@@ -65,7 +65,7 @@ export default function InviteCollegeDrawer({
       open={open}
       onClose={handleDrawerClose}
       title="Invite College to CollegesHub"
-      subtitle="Generate a secure single-use token for institution self-onboarding"
+      subtitle="Generate a secure single-use invitation link (14-day free trial included)"
       icon="mail"
       width="w-full sm:max-w-lg"
     >
@@ -92,53 +92,36 @@ export default function InviteCollegeDrawer({
               />
             </div>
             <p className="text-[11px] text-t-tertiary mt-1">
-              An invitation token valid for 48 hours will be generated for this address.
+              An invitation link valid for 48 hours will be generated and emailed to this address.
             </p>
           </div>
 
           <div>
-            <label className="block text-caption font-semibold text-t-secondary uppercase tracking-wider mb-2">
-              Initial Subscription Plan *
+            <label className="block text-caption font-semibold text-t-secondary uppercase tracking-wider mb-1.5">
+              Institution Name (Optional)
             </label>
-            <div className="grid grid-cols-2 gap-2.5">
-              {ACTUAL_PLANS.map((plan) => {
-                const isSelected = inviteForm.planId === plan.id;
-                return (
-                  <button
-                    key={plan.id}
-                    type="button"
-                    onClick={() =>
-                      setInviteForm({ ...inviteForm, planId: plan.id })
-                    }
-                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-b-surface1 border-primary-01 shadow-widget text-t-primary ring-1 ring-primary-01/30'
-                        : 'bg-b-surface1/60 border-s-subtle text-t-secondary hover:text-t-primary hover:border-s-highlight'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-semibold text-caption">{plan.name}</span>
-                      {isSelected && (
-                        <Icon name="check" className="!size-4 fill-primary-01" />
-                      )}
-                    </div>
-                    <p className="text-[11px] text-t-tertiary">
-                      {plan.id === 'starter' && 'Essential core tools (26 live)'}
-                      {plan.id === 'standard' && 'Expanding institutions (70 live)'}
-                      {plan.id === 'premium' && 'Full AI & multi-campus (86 live)'}
-                      {plan.id === 'custom_quote' && '>3,000 students / 4+ campuses'}
-                    </p>
-                  </button>
-                );
-              })}
+            <div className="relative">
+              <HiOutlineOfficeBuilding
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-t-secondary pointer-events-none"
+                size={18}
+              />
+              <input
+                type="text"
+                value={inviteForm.collegeName}
+                onChange={(e) =>
+                  setInviteForm({ ...inviteForm, collegeName: e.target.value })
+                }
+                className="w-full h-12 pl-10 pr-4 rounded-2xl bg-b-surface1 border border-s-subtle text-body-2 text-t-primary focus:border-s-focus outline-none"
+                placeholder="e.g. Punjab College of Science"
+              />
             </div>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-b-surface1 border border-s-subtle text-caption text-t-secondary leading-relaxed flex items-start gap-2.5">
-            <span className="shrink-0 text-base">🔒</span>
+          <div className="p-3.5 rounded-2xl bg-[#299A49]/10 border border-[#299A49]/25 text-caption text-t-primary leading-relaxed flex items-start gap-2.5">
+            <HiOutlineSparkles size={18} className="text-[#299A49] shrink-0 mt-0.5" />
             <span>
-              The College Administrator will securely set up their own account password
-              and complete institution details during onboarding.
+              No plan is pre-selected. On registration, the college automatically starts a{' '}
+              <strong>14-day free trial</strong> and chooses its own plan &amp; add-ons before the trial ends.
             </span>
           </div>
 
@@ -151,7 +134,7 @@ export default function InviteCollegeDrawer({
               {submitting ? (
                 <span className="inline-flex items-center gap-2">
                   <span className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Generating Token…
+                  Generating Link…
                 </span>
               ) : (
                 'Send Secure Invitation'
@@ -177,7 +160,7 @@ export default function InviteCollegeDrawer({
               Invitation Link Ready!
             </h3>
             <p className="text-caption text-t-secondary mt-1">
-              Token valid for 48 hours generated for{' '}
+              Single-use invitation valid for 48 hours sent to{' '}
               <strong>{inviteForm.email}</strong>.
             </p>
           </div>
@@ -223,4 +206,3 @@ export default function InviteCollegeDrawer({
     </SlideOverDrawer>
   );
 }
-

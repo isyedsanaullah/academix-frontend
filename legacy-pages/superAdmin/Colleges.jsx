@@ -369,11 +369,13 @@ const Colleges = () => {
   const filteredInvitations = useMemo(() => {
     return invitations.filter((inv) => {
       const query = debouncedSearch.toLowerCase().trim();
-      const matchesSearch = !query || inv.email?.toLowerCase().includes(query);
-      const matchesPlan = !planFilter || inv.planId === planFilter;
-      return matchesSearch && matchesPlan;
+      return (
+        !query ||
+        inv.email?.toLowerCase().includes(query) ||
+        inv.collegeName?.toLowerCase().includes(query)
+      );
     });
-  }, [invitations, debouncedSearch, planFilter]);
+  }, [invitations, debouncedSearch]);
 
   const isDefaultView = selectedCard === null;
   const isInvitationsMode = selectedCard === 'invitations';
@@ -469,10 +471,12 @@ const Colleges = () => {
 
         {/* Filters on Right */}
         <div className="flex items-center gap-2.5">
-          <PlanFilterDropdown
-            value={planFilter}
-            onChange={(val) => setPlanFilter(val)}
-          />
+          {!isInvitationsMode && (
+            <PlanFilterDropdown
+              value={planFilter}
+              onChange={(val) => setPlanFilter(val)}
+            />
+          )}
 
           {!isInvitationsMode && (
             <button
