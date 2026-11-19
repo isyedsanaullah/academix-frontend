@@ -23,7 +23,6 @@ const ACTUAL_PLANS = [
   { id: 'starter', name: 'Starter' },
   { id: 'standard', name: 'Standard' },
   { id: 'premium', name: 'Premium' },
-  { id: 'enterprise', name: 'Enterprise' },
 ];
 
 const Colleges = () => {

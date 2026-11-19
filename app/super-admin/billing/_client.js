@@ -21,6 +21,7 @@ import {
   HiOutlineLockClosed,
   HiOutlineLockOpen,
   HiOutlineClipboardList,
+  HiOutlineCurrencyRupee,
 } from 'react-icons/hi';
 
 function fmtPkr(val) {
@@ -63,11 +64,17 @@ function StatusPill({ status, map }) {
 }
 
 export default function SuperAdminBillingClient() {
-  const [activeTab, setActiveTab] = useState('colleges'); // 'colleges' | 'pending' | 'audit'
+  const [activeTab, setActiveTab] = useState('colleges'); // 'colleges' | 'pending' | 'plans' | 'audit'
   const [overview, setOverview] = useState(null);
   const [auditLogs, setAuditLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [auditLoading, setAuditLoading] = useState(false);
+
+  // Plan pricing management (3 fixed plans)
+  const [planList, setPlanList] = useState([]);
+  const [plansLoading, setPlansLoading] = useState(false);
+  const [planDrafts, setPlanDrafts] = useState({});
+  const [savingPlanId, setSavingPlanId] = useState('');
 
   // Filters
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -126,18 +133,68 @@ export default function SuperAdminBillingClient() {
     }
   }, []);
 
+  const loadPlans = useCallback(async () => {
+    setPlansLoading(true);
+    try {
+      const res = await apiGet('/super-admin/plans');
+      if (res?.success && Array.isArray(res.plans)) {
+        setPlanList(res.plans);
+        const drafts = {};
+        for (const p of res.plans) {
+          drafts[p.id] = {
+            monthlyPricePkr: String(p.currentPrices?.monthly ?? 0),
+            yearlyPricePkr: String(p.currentPrices?.yearly ?? 0),
+          };
+        }
+        setPlanDrafts(drafts);
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to load plan pricing.');
+    } finally {
+      setPlansLoading(false);
+    }
+  }, []);
+
+  const handleSavePlanPrice = async (planId) => {
+    const draft = planDrafts[planId];
+    if (!draft) return;
+    const monthlyPricePkr = Number(draft.monthlyPricePkr);
+    const yearlyPricePkr = Number(draft.yearlyPricePkr);
+    if (!Number.isFinite(monthlyPricePkr) || monthlyPricePkr < 0 || !Number.isFinite(yearlyPricePkr) || yearlyPricePkr < 0) {
+      toast.error('Enter valid non-negative PKR prices.');
+      return;
+    }
+    setSavingPlanId(planId);
+    try {
+      const { data } = await api.put(`/super-admin/plans/${planId}`, {
+        monthlyPricePkr,
+        yearlyPricePkr,
+      });
+      if (data?.success) {
+        toast.success(data.message || `Updated ${planId} pricing.`);
+        await loadPlans();
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to update plan pricing.');
+    } finally {
+      setSavingPlanId('');
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
     (async () => {
       if (!mounted) return;
       if (activeTab === 'audit') {
         await loadAuditLogs();
+      } else if (activeTab === 'plans') {
+        await loadPlans();
       } else {
         await loadOverview();
       }
     })();
     return () => { mounted = false; };
-  }, [activeTab, loadOverview, loadAuditLogs]);
+  }, [activeTab, loadOverview, loadAuditLogs, loadPlans]);
 
   const openInvoiceDetail = async (invoiceId) => {
     if (!invoiceId) return;
@@ -293,7 +350,7 @@ export default function SuperAdminBillingClient() {
 
         <button
           type="button"
-          onClick={() => (activeTab === 'audit' ? loadAuditLogs() : loadOverview())}
+          onClick={() => (activeTab === 'audit' ? loadAuditLogs() : activeTab === 'plans' ? loadPlans() : loadOverview())}
           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#DDE6F0] bg-white hover:bg-slate-50 text-xs font-bold text-[#0E2238] cursor-pointer"
         >
           <HiOutlineRefresh size={15} /> Refresh
@@ -326,6 +383,7 @@ export default function SuperAdminBillingClient() {
             label: `Pending Proof Reviews${summary.pendingReviewInvoicesCount > 0 ? ` (${summary.pendingReviewInvoicesCount})` : ''}`,
             icon: HiOutlineClock,
           },
+          { id: 'plans', label: 'Plan Pricing (3 Fixed Plans)', icon: HiOutlineCurrencyRupee },
           { id: 'audit', label: 'Billing Audit Log', icon: HiOutlineClipboardList },
         ].map((tab) => {
           const IconComp = tab.icon;
@@ -349,7 +407,80 @@ export default function SuperAdminBillingClient() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'audit' ? (
+      {activeTab === 'plans' ? (
+        <div className="bg-white border border-[#DDE6F0] rounded-2xl shadow-sm p-5 space-y-4">
+          <div>
+            <h2 className="text-sm font-extrabold text-[#0E2238]">Fixed 3 Plans — Super Admin Price Control</h2>
+            <p className="text-xs text-[#52657C] mt-0.5">
+              CollegesHub uses 3 fixed plans (Starter, Standard, Premium). Updating a price publishes a new Plan Version for new checkouts and renewals while keeping existing active subscribers price-locked until their current term ends.
+            </p>
+          </div>
+          {plansLoading ? (
+            <CollegesHubLoader size="md" text="Loading plan pricing…" />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {planList.map((p) => {
+                const draft = planDrafts[p.id] || { monthlyPricePkr: '', yearlyPricePkr: '' };
+                const isSaving = savingPlanId === p.id;
+                return (
+                  <div key={p.id} className="rounded-2xl border border-[#DDE6F0] bg-[#F8FAFD] p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <PlanBadge plan={p.id} />
+                      <span className="text-[11px] font-bold text-[#52657C]">
+                        v{p.currentVersion || 0} · {p.totalCollegesOnPlan || 0} college(s)
+                      </span>
+                    </div>
+                    <div className="space-y-2.5">
+                      <div>
+                        <label className="block text-[11px] font-bold text-[#0E2238] mb-1">
+                          Monthly Price (PKR)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={draft.monthlyPricePkr}
+                          onChange={(e) =>
+                            setPlanDrafts((prev) => ({
+                              ...prev,
+                              [p.id]: { ...prev[p.id], monthlyPricePkr: e.target.value },
+                            }))
+                          }
+                          className="w-full px-3 py-2 rounded-xl border border-[#DDE6F0] bg-white text-xs font-bold text-[#0E2238] focus:border-[#0A4D94] focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-[#0E2238] mb-1">
+                          Yearly Price (PKR)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={draft.yearlyPricePkr}
+                          onChange={(e) =>
+                            setPlanDrafts((prev) => ({
+                              ...prev,
+                              [p.id]: { ...prev[p.id], yearlyPricePkr: e.target.value },
+                            }))
+                          }
+                          className="w-full px-3 py-2 rounded-xl border border-[#DDE6F0] bg-white text-xs font-bold text-[#0E2238] focus:border-[#0A4D94] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isSaving}
+                      onClick={() => handleSavePlanPrice(p.id)}
+                      className="w-full py-2 px-3 rounded-xl bg-[#0A4D94] hover:bg-[#083B74] text-white text-xs font-extrabold transition cursor-pointer disabled:opacity-50"
+                    >
+                      {isSaving ? 'Publishing Version…' : `Save ${p.name} Pricing`}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : activeTab === 'audit' ? (
         <div className="bg-white border border-[#DDE6F0] rounded-2xl shadow-sm p-5">
           <h2 className="text-sm font-extrabold text-[#0E2238] mb-4">Platform Billing &amp; Entitlement Audit Trail</h2>
           {auditLoading ? (

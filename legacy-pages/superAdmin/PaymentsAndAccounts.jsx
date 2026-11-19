@@ -292,7 +292,6 @@ const PaymentsAndAccounts = () => {
       starter: 0,
       standard: 0,
       premium: 0,
-      enterprise: 0,
     };
 
     unifiedPayments.forEach((item) => {
@@ -301,7 +300,8 @@ const PaymentsAndAccounts = () => {
 
       if (item.status === 'paid') {
         totalCollected += amt;
-        byPlan[item.planId] = (byPlan[item.planId] || 0) + amt;
+        const planBucket = item.planId === 'enterprise' ? 'premium' : item.planId;
+        byPlan[planBucket] = (byPlan[planBucket] || 0) + amt;
 
         if (d && !Number.isNaN(d.getTime())) {
           if (d.getMonth() === thisMonth && d.getFullYear() === thisYear) {
@@ -576,12 +576,6 @@ const PaymentsAndAccounts = () => {
       amount: summary.byPlan.premium || 0,
       color: 'var(--chart-3)',
     },
-    {
-      id: 'enterprise',
-      label: 'Enterprise',
-      amount: summary.byPlan.enterprise || 0,
-      color: 'var(--chart-4)',
-    },
   ];
 
   return (
@@ -826,7 +820,6 @@ const PaymentsAndAccounts = () => {
               <option value="starter">Starter</option>
               <option value="standard">Standard</option>
               <option value="premium">Premium</option>
-              <option value="enterprise">Enterprise</option>
             </select>
 
             <select

@@ -401,14 +401,8 @@ const SuperAdminDashboard = () => {
       {
         id: 'premium',
         name: 'Premium',
-        count: (plans.premium || 0) + (plans.plus || 0),
+        count: (plans.premium || 0) + (plans.plus || 0) + (plans.enterprise || 0),
         color: 'var(--chart-3)',
-      },
-      {
-        id: 'enterprise',
-        name: 'Enterprise',
-        count: plans.enterprise || 0,
-        color: 'var(--chart-4)',
       },
     ];
     const sumCounts = raw.reduce((acc, item) => acc + item.count, 0);
