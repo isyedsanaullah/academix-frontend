@@ -110,7 +110,7 @@ export default function CollegePublicProfileView({
   const hasSocials = Object.values(socialLinks).some(Boolean);
 
   return (
-    <div className={`text-white/85 selection:bg-indigo-500/30 selection:text-white ${isPreview ? 'rounded-2xl overflow-hidden border border-white/[0.08] bg-surface-950 pb-10' : 'min-h-screen bg-surface-950 pb-20'}`}>
+    <div className={`text-white/85 selection:bg-indigo-500/30 selection:text-white ${isPreview ? 'rounded-2xl overflow-hidden border border-white/[0.08] bg-surface-950 pb-10' : 'flex-1 bg-surface-950 pb-12'}`}>
 
       {/* Preview Notification Banner */}
       {isPreview && (

@@ -12,8 +12,14 @@ const Tabs = ({
   isOnlyIcon = false,
 }) => {
   const handleSelect = (item) => {
-    if (setValue) setValue(item);
-    if (onChange) onChange(typeof item === 'object' ? item.id ?? item.value ?? item.key : item);
+    const nextId =
+      typeof item === 'object' && item !== null
+        ? item.id ?? item.value ?? item.key
+        : item;
+    if (setValue) {
+      setValue(typeof value === 'object' && value !== null ? item : nextId);
+    }
+    if (onChange) onChange(nextId);
   };
 
   const activeId =

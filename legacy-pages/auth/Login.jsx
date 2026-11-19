@@ -671,7 +671,7 @@ export default function Login() {
   const leftMode = showTenantSkeleton ? 'skeleton' : showCollege ? 'college' : showSuper ? 'super' : 'default';
 
   return (
-    <div className="grid min-h-dvh bg-app text-fg selection:bg-accent-soft lg:h-dvh lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+    <div className="grid min-h-dvh bg-app text-fg selection:bg-accent-soft lg:h-dvh lg:overflow-hidden lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
 
       {/* ════════ LEFT: animated brand panel (desktop only) ════════ */}
       {/* This panel is always dark (the artwork is drawn for a dark background), so it uses
@@ -836,7 +836,7 @@ export default function Login() {
       </aside>
 
       {/* ════════ RIGHT: sliding forms ════════ */}
-      <section className="relative flex flex-col overflow-y-auto bg-card">
+      <section className="relative flex min-h-0 flex-col overflow-y-auto bg-card">
         <div className="brand-rail" aria-hidden="true" />
 
         {/* Mobile / tablet brand strip (the artwork panel is desktop only) */}

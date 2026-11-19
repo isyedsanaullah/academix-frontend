@@ -238,8 +238,14 @@ export default function AdminSubscriptionPage() {
   } = sub;
 
   const lim = effectiveLimits || {};
-  const storageUsedGb = (usage?.storageBytes || 0) / 1073741824;
-  const storageLimitGb = (lim.maxStorageBytes || 0) / 1073741824;
+  const useMbStorage = (lim.maxStorageBytes || 0) > 0 && (lim.maxStorageBytes || 0) < 1073741824;
+  const storageUsedDisplay = useMbStorage
+    ? Math.round(((usage?.storageBytes || 0) / 1048576) * 10) / 10
+    : Math.round(((usage?.storageBytes || 0) / 1073741824) * 100) / 100;
+  const storageLimitDisplay = useMbStorage
+    ? Math.round((lim.maxStorageBytes || 0) / 1048576)
+    : Math.round(((lim.maxStorageBytes || 0) / 1073741824) * 100) / 100;
+  const storageUnit = useMbStorage ? ' MB' : ' GB';
 
   // Compute >=80% quota utilization warnings across meters
   const highUsageAlerts = [];
@@ -250,7 +256,7 @@ export default function AdminSubscriptionPage() {
   };
   pushAlert('Students', usage?.students || 0, lim.maxStudents || 0);
   pushAlert('Staff', usage?.staff || 0, lim.maxStaff || 0);
-  pushAlert('Storage', storageUsedGb, storageLimitGb);
+  pushAlert('Storage', storageUsedDisplay, storageLimitDisplay);
   pushAlert('Online Applications', usage?.applications || 0, lim.maxApplications || 0);
   pushAlert('Monthly Emails', usage?.emailsSent || 0, lim.emailsMonthly || 0);
   if (credits?.ai?.warning80Pct) {
@@ -409,7 +415,11 @@ export default function AdminSubscriptionPage() {
         <SectionHeader
           icon={HiOutlineCollection}
           title="Quota Usage"
-          subtitle="Live resource consumption for this billing period"
+          subtitle={
+            sub.isTrialLimits
+              ? '14-Day Free Trial evaluation limits active — upgrade or pay to unlock full plan capacity'
+              : 'Live resource consumption for this billing period'
+          }
           action={
             <button onClick={fetchAll} className="text-fg-muted hover:text-fg transition" title="Refresh">
               <HiOutlineRefresh size={15} />
@@ -419,7 +429,7 @@ export default function AdminSubscriptionPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <UsageMeter icon={HiOutlineUsers} label="Students" used={usage?.students || 0} limit={lim.maxStudents || 0} />
           <UsageMeter icon={HiOutlineUsers} label="Staff" used={usage?.staff || 0} limit={lim.maxStaff || 0} />
-          <UsageMeter icon={HiOutlineServer} label="Storage" used={Math.round(storageUsedGb * 100) / 100} limit={Math.round(storageLimitGb * 100) / 100} unit=" GB" />
+          <UsageMeter icon={HiOutlineServer} label="Storage" used={storageUsedDisplay} limit={storageLimitDisplay} unit={storageUnit} />
           <UsageMeter icon={HiOutlineDocumentText} label="Online Applications (yearly)" used={usage?.applications || 0} limit={lim.maxApplications || 0} />
           <UsageMeter icon={HiOutlineLightningBolt} label="Monthly Bulk Emails (2FA exempt)" used={usage?.emailsSent || 0} limit={lim.emailsMonthly || 0} />
           <UsageMeter icon={HiOutlineShieldCheck} label="Administrator Seats (Fixed Cap)" used={usage?.admins || 0} limit={lim.maxAdmins || 0} />

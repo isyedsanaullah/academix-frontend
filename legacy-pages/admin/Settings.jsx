@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import ApiKeyManager from '../../components/ai/ApiKeyManager';
@@ -24,22 +26,48 @@ const AUTO_FINE_OPTIONS = [
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('general');
-  const [settings, setSettings] = useState(null);
+  const [settings, setSettings] = useState({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const fetchSettings = useCallback(async () => {
+    setLoadError('');
+    try {
+      const { data } = await api.get('/colleges/settings');
+      setSettings(data?.data && typeof data.data === 'object' ? data.data : {});
+    } catch (err) {
+      setSettings((prev) => prev || {});
+      const msg = err?.response?.data?.message || 'Failed to load settings';
+      setLoadError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const { data } = await api.get('/colleges/settings');
-        setSettings(data.data || {});
-      } catch {
-        toast.error('Failed to load settings');
-      } finally {
-        setLoading(false);
-      }
+    let active = true;
+    api
+      .get('/colleges/settings')
+      .then(({ data }) => {
+        if (!active) return;
+        setLoadError('');
+        setSettings(data?.data && typeof data.data === 'object' ? data.data : {});
+      })
+      .catch((err) => {
+        if (!active) return;
+        setSettings((prev) => prev || {});
+        const msg = err?.response?.data?.message || 'Failed to load settings';
+        setLoadError(msg);
+        toast.error(msg);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
     };
-    fetchSettings();
   }, []);
 
   const handleSave = async () => {
@@ -89,7 +117,16 @@ const Settings = () => {
       </div>
 
       {/* Core 2.0 Segmented Pill Tabs */}
-      <Tabs items={TABS} value={activeTab} setValue={setActiveTab} />
+      <Tabs items={TABS} value={activeTab} setValue={setActiveTab} onChange={setActiveTab} />
+
+      {loadError && (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50/70 px-4 py-3 text-xs text-amber-900 flex items-center justify-between gap-3">
+          <span>{loadError} — showing editable defaults.</span>
+          <button type="button" onClick={fetchSettings} className="font-bold underline cursor-pointer">
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Tab 1: General Settings */}
       {activeTab === 'general' && (

@@ -232,6 +232,7 @@ export function ThemeProvider({ children }) {
           data-theme={themeMounted ? theme : undefined}
           data-plan={plan || undefined}
           data-sub-status={subStatus}
+          style={{ minHeight: 0, height: 0, overflow: 'visible' }}
           className="no-print"
         >
           {toasterNode}

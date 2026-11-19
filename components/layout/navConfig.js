@@ -90,6 +90,7 @@ export const NAV = {
       label: 'System & Account',
       icon: HiOutlineCog,
       children: [
+        { to: '/super-admin/banners', icon: HiOutlineSpeakerphone, label: 'Announcement Banners' },
         { to: '/super-admin/activity-log', icon: HiOutlineClock, label: 'Activity Log' },
         { to: '/super-admin/trash', icon: HiOutlineTrash, label: 'Trash' },
         { to: '/super-admin/settings', icon: HiOutlineCog, label: 'Profile & Settings' },
@@ -182,6 +183,7 @@ export const NAV = {
       icon: HiOutlineSpeakerphone,
       children: [
         { to: '/admin/announcements', icon: HiOutlineSpeakerphone, label: 'Announcements', feature: 'announcements' },
+        { to: '/admin/banners', icon: HiOutlineSpeakerphone, label: 'Campus Banners' },
         { to: '/admin/guidance', icon: HiOutlineUserGroup, label: 'Parents & Guidance', feature: 'career-counselling' },
         { to: '/admin/templates', icon: HiOutlineTemplate, label: 'Document Templates', feature: 'doc-templates' },
         { to: '/admin/reports', icon: HiOutlineDocumentDuplicate, label: 'Report Center (PDF)', feature: 'analytics-reports' },

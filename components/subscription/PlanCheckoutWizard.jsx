@@ -21,6 +21,9 @@ import {
   HiOutlineMinus,
   HiOutlineShieldCheck,
   HiOutlineOfficeBuilding,
+  HiOutlineChevronDown,
+  HiOutlineChevronUp,
+  HiOutlineX,
 } from 'react-icons/hi';
 
 const MAX_PROOF_BYTES = 5 * 1024 * 1024;
@@ -38,6 +41,13 @@ function fmtDate(d) {
     month: 'short',
     day: 'numeric',
   });
+}
+
+function fmtAiCredits(val) {
+  const num = Number(val || 0);
+  if (num <= 0) return 'None';
+  if (num >= 1000000) return `${Math.round(num / 1000000)}M / mo`;
+  return `${num.toLocaleString()} / mo`;
 }
 
 const INVOICE_STATUS_META = {
@@ -75,9 +85,10 @@ export default function PlanCheckoutWizard({ lockedMode = false, onStatusChange 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
-  // Selection state
+  // Selection state (one plan unfolded & selected at a time; others folded)
   const [selectedPlanId, setSelectedPlanId] = useState('standard');
   const [billingCycle, setBillingCycle] = useState('MONTHLY');
+  // activeAddonQty tracks only add-ons explicitly expanded by clicking their '+' button
   const [addonQty, setAddonQty] = useState({});
 
   // Live server quote
@@ -149,7 +160,7 @@ export default function PlanCheckoutWizard({ lockedMode = false, onStatusChange 
     return () => { active = false; };
   }, [loadData]);
 
-  // Fetch server-calculated quote whenever plan, cycle, or add-on quantities change
+  // Fetch authoritative server quote on plan, cycle, or add-on changes
   useEffect(() => {
     if (!catalog?.plans?.length || !selectedPlanId) return;
     let cancelled = false;
@@ -176,7 +187,7 @@ export default function PlanCheckoutWizard({ lockedMode = false, onStatusChange 
           setQuote(res.data);
         }
       } catch {
-        // Silent fallback: backend checkout validates quote authoritatively
+        // Checkout recalculates authoritatively
       } finally {
         if (!cancelled) setQuoteLoading(false);
       }
@@ -192,7 +203,6 @@ export default function PlanCheckoutWizard({ lockedMode = false, onStatusChange 
   const selectedPlan = plans.find(p => p.planId === selectedPlanId) || plans[0] || null;
   const availableAddons = selectedPlan?.addons || [];
 
-  // Filter addonQty when switching plans so only valid purchasable add-ons for the selected plan apply
   const handleSelectPlan = (planId) => {
     setSelectedPlanId(planId);
     const nextPlan = plans.find(p => p.planId === planId);
@@ -203,9 +213,35 @@ export default function PlanCheckoutWizard({ lockedMode = false, onStatusChange 
       for (const [key, qty] of Object.entries(prev)) {
         const rule = allowedMap.get(key);
         if (rule && rule.isAvailable && rule.isPurchasable !== false && qty > 0) {
-          next[key] = Math.min(qty, rule.maxUnitsAllowed || 1);
+          next[key] = Math.min(qty, rule.maxUnitsAllowed ?? 99);
         }
       }
+      return next;
+    });
+  };
+
+  const handleActivateAddon = (addon) => {
+    if (!addon?.isPurchasable) return;
+    setAddonQty((prev) => ({
+      ...prev,
+      [addon.addonType]: prev[addon.addonType] > 0 ? prev[addon.addonType] : 1,
+    }));
+  };
+
+  const handleSetAddonQty = (addonType, rawValue, maxUnits) => {
+    const parsed = parseInt(rawValue, 10);
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      setAddonQty((prev) => ({ ...prev, [addonType]: 1 }));
+      return;
+    }
+    const clamped = maxUnits !== null && maxUnits !== undefined ? Math.min(maxUnits, parsed) : parsed;
+    setAddonQty((prev) => ({ ...prev, [addonType]: clamped }));
+  };
+
+  const handleRemoveAddon = (addonType) => {
+    setAddonQty((prev) => {
+      const next = { ...prev };
+      delete next[addonType];
       return next;
     });
   };
@@ -213,9 +249,9 @@ export default function PlanCheckoutWizard({ lockedMode = false, onStatusChange 
   const pendingReviewInvoice = invoices.find(inv => inv.status === 'PENDING_REVIEW');
   const activeInvoice = invoices.find(inv => inv.id === activeInvoiceId) || null;
   const bankDetails = activeInvoice?.bankDetailsSnapshot || catalog?.bankDetails || {
-    bankName: 'United Bank Limited (UBL)',
-    accountTitle: 'CollegesHub / Academix (Dummy Account)',
-    accountNumber: '0000-0000000-00',
+    bankName: 'UBL (United Bank Limited)',
+    accountTitle: 'CollegesHub Technologies (Dummy Account)',
+    accountNumber: '0123-4567890123',
   };
 
   const handleConfirmCheckout = async () => {
@@ -402,9 +438,16 @@ export default function PlanCheckoutWizard({ lockedMode = false, onStatusChange 
     (li) => li.itemType && li.itemType !== 'PLAN_SUBSCRIPTION' && li.itemType !== 'PLAN_UPGRADE'
   );
 
+  const selectedAddonsList = availableAddons.filter(
+    (a) => a.isAvailable && a.isPurchasable !== false && (addonQty[a.addonType] || 0) > 0
+  );
+  const availablePlusButtons = availableAddons.filter(
+    (a) => a.isAvailable && !(addonQty[a.addonType] > 0)
+  );
+
   return (
     <div className="space-y-6">
-      {/* Step 1 Banner / Active Status Context */}
+      {/* Active Price-Lock Context */}
       {activeSub && effectiveStatus === 'ACTIVE' && (
         <div className="rounded-2xl border border-[#299A49]/30 bg-emerald-50/70 p-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-start gap-3">
@@ -454,7 +497,7 @@ export default function PlanCheckoutWizard({ lockedMode = false, onStatusChange 
         </div>
       )}
 
-      {/* ── SECTION A: PLAN + BILLING TERM + ADD-ONS ── */}
+      {/* ── SECTION A: FOLDABLE PLAN ACCORDION + ADD-ON '+' BUTTONS ── */}
       <div className="bg-white border border-[#DDE6F0] rounded-2xl shadow-sm p-6 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#DDE6F0] pb-5">
           <div>
@@ -465,11 +508,11 @@ export default function PlanCheckoutWizard({ lockedMode = false, onStatusChange 
               {lockedMode ? 'Choose a plan to reactivate your college' : 'Choose your Academix plan'}
             </h2>
             <p className="text-xs text-[#52657C] mt-0.5">
-              All rates are loaded live from the CollegesHub catalog in {catalog?.currency || 'PKR'}. Lock your term rate on activation.
+              Select a plan below to inspect full included limits and services. Click any folded plan to switch and unfold its details.
             </p>
           </div>
 
-          {/* Billing Term Switcher */}
+          {/* Sleek Monthly / Yearly Term Toggle */}
           <div className="inline-flex items-center p-1 rounded-xl bg-[#F4F7FB] border border-[#DDE6F0] self-start sm:self-auto">
             {['MONTHLY', 'YEARLY'].map((term) => {
               const active = billingCycle === term;
@@ -484,173 +527,270 @@ export default function PlanCheckoutWizard({ lockedMode = false, onStatusChange 
                       : 'text-[#52657C] hover:text-[#0E2238]'
                   }`}
                 >
-                  {term === 'MONTHLY' ? 'Monthly Billing' : 'Yearly (1 Month Free)'}
+                  {term === 'MONTHLY' ? 'Monthly' : 'Yearly'}
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Plan Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Foldable Plan Cards Accordion */}
+        <div className="space-y-3">
           {plans.map((plan) => {
             const isSelected = plan.planId === selectedPlan?.planId;
-            const termPrice = billingCycle === 'YEARLY' ? plan.yearlyPrice : plan.monthlyPrice;
             const lim = plan.limits || {};
+            const original12Mo = Number(plan.monthlyPrice || 0) * 12;
+            const yearlySavings = Math.max(0, original12Mo - Number(plan.yearlyPrice || 0));
+            const finalPrice = billingCycle === 'YEARLY' ? plan.yearlyPrice : plan.monthlyPrice;
 
             return (
               <div
                 key={plan.planId}
-                onClick={() => handleSelectPlan(plan.planId)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelectPlan(plan.planId); } }}
-                className={`relative rounded-2xl border-2 p-5 transition-all cursor-pointer flex flex-col justify-between ${
+                className={`rounded-2xl border-2 transition-all overflow-hidden ${
                   isSelected
-                    ? 'border-[#0A4D94] bg-blue-50/40 shadow-md ring-4 ring-[#0A4D94]/10'
-                    : 'border-[#DDE6F0] bg-white hover:border-[#0A4D94]/40'
+                    ? 'border-[#0A4D94] bg-white shadow-md ring-4 ring-[#0A4D94]/10'
+                    : 'border-[#DDE6F0] bg-[#F8FAFC] hover:border-[#0A4D94]/40'
                 }`}
               >
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-base font-extrabold text-[#0E2238]">{plan.name}</span>
-                    {plan.recommended && (
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#299A49] text-white text-[10px] font-bold uppercase tracking-wider">
-                        Recommended
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-[#52657C] min-h-[32px]">{plan.description}</p>
-
-                  <div className="mt-4 pb-4 border-b border-[#DDE6F0]">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-2xl font-black text-[#0A4D94]">
-                        {fmtPkr(termPrice)}
-                      </span>
-                      <span className="text-xs font-semibold text-[#52657C]">
-                        /{billingCycle === 'YEARLY' ? 'year' : 'month'}
-                      </span>
+                {/* Plan Header (Always visible; clicking unfolds this plan & folds others) */}
+                <button
+                  type="button"
+                  onClick={() => handleSelectPlan(plan.planId)}
+                  aria-expanded={isSelected}
+                  className="w-full px-5 py-4 flex flex-wrap items-center justify-between gap-4 text-left cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                        isSelected ? 'border-[#0A4D94] bg-[#0A4D94]' : 'border-slate-300 bg-white'
+                      }`}
+                    >
+                      {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
                     </div>
-                    {billingCycle === 'YEARLY' && plan.yearlySavingsPkr > 0 && (
-                      <p className="text-[11px] font-bold text-[#299A49] mt-1">
-                        Save {fmtPkr(plan.yearlySavingsPkr)} compared to 12 monthly payments
-                      </p>
-                    )}
+
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-base font-extrabold text-[#0E2238]">{plan.name}</span>
+                        {plan.recommended && (
+                          <span className="px-2.5 py-0.5 rounded-full bg-[#299A49] text-white text-[10px] font-bold uppercase tracking-wider">
+                            Most Popular
+                          </span>
+                        )}
+                        <span className="px-2 py-0.5 rounded-full bg-[#EEF4FB] text-[#0A4D94] text-[10px] font-bold">
+                          {plan.liveServicesCount || 0} live / {plan.servicesCount || 0} services
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#52657C] mt-0.5 truncate">{plan.description}</p>
+                    </div>
                   </div>
 
-                  {/* Included Limits & Services */}
-                  <ul className="mt-4 space-y-2 text-xs text-[#0E2238]">
-                    <li className="flex items-center gap-2">
-                      <HiOutlineCheckCircle size={15} className="text-[#299A49] shrink-0" />
-                      <span>Up to <strong>{Number(lim.maxStudents || 0).toLocaleString()}</strong> students</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <HiOutlineCheckCircle size={15} className="text-[#299A49] shrink-0" />
-                      <span>Up to <strong>{Number(lim.maxStaff || 0).toLocaleString()}</strong> staff · <strong>{lim.maxAdmins || 1}</strong> admin seats</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <HiOutlineCheckCircle size={15} className="text-[#299A49] shrink-0" />
-                      <span><strong>{lim.maxStorageGb || 0} GB</strong> R2 cloud storage</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <HiOutlineCheckCircle size={15} className="text-[#299A49] shrink-0" />
-                      <span><strong>{Number(lim.maxApplications || 0).toLocaleString()}</strong> online admissions/yr</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <HiOutlineCheckCircle size={15} className="text-[#299A49] shrink-0" />
-                      <span>
-                        <strong>{Number(lim.aiCreditsMonthly || 0).toLocaleString()}</strong> AI +{' '}
-                        <strong>{Number(lim.messageCreditsMonthly || 0).toLocaleString()}</strong> msg credits/mo
-                      </span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <HiOutlineSparkles size={15} className="text-[#0A4D94] shrink-0" />
-                      <span><strong>{plan.liveServicesCount || plan.servicesCount || 0}</strong> modules included</span>
-                    </li>
-                  </ul>
-                </div>
+                  {/* Price block (with thin red strikethrough + Save Rs X on Yearly) */}
+                  <div className="flex items-center gap-4 ml-auto shrink-0">
+                    <div className="text-right">
+                      {billingCycle === 'YEARLY' ? (
+                        <div className="flex flex-col items-end">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-[#52657C] line-through decoration-red-500 decoration-[1.5px]">
+                              Rs. {original12Mo.toLocaleString()}
+                            </span>
+                            {yearlySavings > 0 && (
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-[#1F7A3A] text-[10px] font-extrabold">
+                                Save Rs. {yearlySavings.toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-baseline gap-1 mt-0.5">
+                            <span className="text-xl font-black text-[#0A4D94]">
+                              PKR {Number(finalPrice || 0).toLocaleString()}
+                            </span>
+                            <span className="text-xs font-semibold text-[#52657C]">/yr</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-xl font-black text-[#0A4D94]">
+                            PKR {Number(finalPrice || 0).toLocaleString()}
+                          </span>
+                          <span className="text-xs font-semibold text-[#52657C]">/mo</span>
+                        </div>
+                      )}
+                    </div>
 
-                <div className="mt-5 pt-3 border-t border-[#DDE6F0] flex items-center justify-between">
-                  <span className={`text-xs font-extrabold ${isSelected ? 'text-[#0A4D94]' : 'text-[#52657C]'}`}>
-                    {isSelected ? 'Selected Plan' : 'Click to select'}
-                  </span>
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                    isSelected ? 'border-[#0A4D94] bg-[#0A4D94]' : 'border-slate-300'
-                  }`}>
-                    {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                    <span className="w-8 h-8 rounded-lg border border-[#DDE6F0] bg-white flex items-center justify-center text-[#52657C]">
+                      {isSelected ? <HiOutlineChevronUp size={16} /> : <HiOutlineChevronDown size={16} />}
+                    </span>
                   </div>
-                </div>
+                </button>
+
+                {/* Unfolded Plan Details (Shown ONLY for the currently selected plan) */}
+                {isSelected && (
+                  <div className="border-t border-[#DDE6F0] bg-blue-50/20 px-5 py-5 space-y-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-xs">
+                      <div className="rounded-xl border border-[#DDE6F0] bg-white p-3">
+                        <p className="text-[10px] font-bold uppercase text-[#52657C]">Students Included</p>
+                        <p className="text-sm font-black text-[#0E2238] mt-0.5">
+                          {Number(lim.maxStudents || 0).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-[#DDE6F0] bg-white p-3">
+                        <p className="text-[10px] font-bold uppercase text-[#52657C]">Staff &amp; Admins</p>
+                        <p className="text-sm font-black text-[#0E2238] mt-0.5">
+                          {Number(lim.maxStaff || 0).toLocaleString()} staff · {lim.maxAdmins || 2} admins
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-[#DDE6F0] bg-white p-3">
+                        <p className="text-[10px] font-bold uppercase text-[#52657C]">Campuses</p>
+                        <p className="text-sm font-black text-[#0E2238] mt-0.5">
+                          {lim.maxCampuses || 1} campus{(lim.maxCampuses || 1) > 1 ? 'es' : ''}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-[#DDE6F0] bg-white p-3">
+                        <p className="text-[10px] font-bold uppercase text-[#52657C]">Cloud Storage</p>
+                        <p className="text-sm font-black text-[#0E2238] mt-0.5">
+                          {lim.maxStorageGb || 0} GB ({lim.maxUploadMb || 10} MB max file)
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-[#DDE6F0] bg-white p-3">
+                        <p className="text-[10px] font-bold uppercase text-[#52657C]">Online Admissions</p>
+                        <p className="text-sm font-black text-[#0E2238] mt-0.5">
+                          {lim.maxApplications > 0 ? `${Number(lim.maxApplications).toLocaleString()} / yr` : 'Manual desk only'}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-[#DDE6F0] bg-white p-3">
+                        <p className="text-[10px] font-bold uppercase text-[#52657C]">AI Credits</p>
+                        <p className="text-sm font-black text-[#0E2238] mt-0.5">
+                          {fmtAiCredits(lim.aiCreditsMonthly)}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-[#DDE6F0] bg-white p-3">
+                        <p className="text-[10px] font-bold uppercase text-[#52657C]">Emails &amp; SMS</p>
+                        <p className="text-sm font-black text-[#0E2238] mt-0.5">
+                          {Number(lim.emailsMonthly || 0).toLocaleString()} emails · {lim.messageCreditsMonthly || 0} msg
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-[#DDE6F0] bg-white p-3">
+                        <p className="text-[10px] font-bold uppercase text-[#52657C]">Included Modules</p>
+                        <p className="text-sm font-black text-[#299A49] mt-0.5 flex items-center gap-1">
+                          <HiOutlineSparkles size={14} /> {plan.liveServicesCount || 0} live ({plan.servicesCount || 0} total)
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
 
-        {/* Add-ons Builder */}
+        {/* Add-Ons Section: '+' buttons that reveal quantity needed on click */}
         {availableAddons.length > 0 && (
-          <div className="pt-4 border-t border-[#DDE6F0] space-y-3">
+          <div className="pt-4 border-t border-[#DDE6F0] space-y-4">
             <div>
               <h3 className="text-sm font-extrabold text-[#0E2238]">
-                Optional Capacity &amp; Module Add-Ons for {selectedPlan?.name}
+                Optional Add-Ons for {selectedPlan?.name}
               </h3>
               <p className="text-xs text-[#52657C]">
-                Add extra student blocks, storage, online applications, or campus seats billed with your selected term.
+                Click a <strong className="text-[#0A4D94]">+</strong> add-on button to specify how many units you need.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {availableAddons.filter(a => a.isAvailable).map((addon) => {
-                const purchasable = addon.isPurchasable !== false;
-                const qty = purchasable ? (addonQty[addon.addonType] || 0) : 0;
-                const unitPrice = billingCycle === 'YEARLY' ? addon.unitPriceYearlyPkr : addon.unitPriceMonthlyPkr;
-                const maxUnits = addon.maxUnitsAllowed ?? 10;
+            {/* Active Add-Ons (expanded after clicking '+') */}
+            {selectedAddonsList.length > 0 && (
+              <div className="space-y-2.5">
+                {selectedAddonsList.map((addon) => {
+                  const qty = addonQty[addon.addonType] || 1;
+                  const unitPrice = billingCycle === 'YEARLY' ? addon.unitPriceYearlyPkr : addon.unitPriceMonthlyPkr;
+                  const maxUnits = addon.maxUnitsAllowed;
 
-                return (
-                  <div
-                    key={addon.addonType}
-                    className={`rounded-xl border border-[#DDE6F0] bg-[#F4F7FB] p-4 flex items-center justify-between gap-3 ${
-                      !purchasable ? 'opacity-70' : ''
-                    }`}
-                  >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
+                  return (
+                    <div
+                      key={addon.addonType}
+                      className="rounded-xl border border-[#0A4D94]/30 bg-blue-50/30 p-3.5 flex flex-wrap items-center justify-between gap-3"
+                    >
+                      <div className="min-w-0">
                         <p className="text-xs font-extrabold text-[#0E2238]">{addon.name}</p>
-                        {!purchasable && (
-                          <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
-                            Coming soon
-                          </span>
-                        )}
+                        <p className="text-[11px] text-[#52657C]">
+                          {fmtPkr(unitPrice)} {addon.unitLabel || 'per unit'}
+                          {maxUnits !== null && maxUnits !== undefined ? ` · Max ${maxUnits}` : ''}
+                          {' · '}
+                          <strong className="text-[#0A4D94]">Subtotal: {fmtPkr(unitPrice * qty)}</strong>
+                        </p>
                       </div>
-                      <p className="text-[11px] text-[#52657C] mt-0.5">
-                        {fmtPkr(unitPrice)} / {addon.unitLabel || 'unit'} ({billingCycle === 'YEARLY' ? 'yearly' : 'monthly'})
-                        {purchasable ? ` · Max ${maxUnits}` : ''}
-                      </p>
-                    </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        disabled={!purchasable || qty <= 0}
-                        onClick={() => setAddonQty(prev => ({ ...prev, [addon.addonType]: Math.max(0, (prev[addon.addonType] || 0) - 1) }))}
-                        className="w-8 h-8 rounded-lg border border-[#DDE6F0] bg-white flex items-center justify-center text-[#0E2238] hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                        aria-label={`Decrease ${addon.name}`}
-                      >
-                        <HiOutlineMinus size={14} />
-                      </button>
-                      <span className="w-7 text-center text-xs font-extrabold text-[#0E2238]">{qty}</span>
-                      <button
-                        type="button"
-                        disabled={!purchasable || qty >= maxUnits}
-                        onClick={() => setAddonQty(prev => ({ ...prev, [addon.addonType]: Math.min(maxUnits, (prev[addon.addonType] || 0) + 1) }))}
-                        className="w-8 h-8 rounded-lg border border-[#DDE6F0] bg-white flex items-center justify-center text-[#0E2238] hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                        aria-label={`Increase ${addon.name}`}
-                      >
-                        <HiOutlinePlus size={14} />
-                      </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[11px] font-semibold text-[#52657C]">Qty needed:</span>
+                        <button
+                          type="button"
+                          onClick={() => handleSetAddonQty(addon.addonType, Math.max(1, qty - 1), maxUnits)}
+                          disabled={qty <= 1}
+                          className="w-7 h-7 rounded-lg border border-[#DDE6F0] bg-white flex items-center justify-center text-[#0E2238] hover:bg-slate-50 disabled:opacity-40 cursor-pointer"
+                          aria-label={`Decrease ${addon.name}`}
+                        >
+                          <HiOutlineMinus size={13} />
+                        </button>
+                        <input
+                          type="number"
+                          min={1}
+                          max={maxUnits ?? 9999}
+                          value={qty}
+                          onChange={(e) => handleSetAddonQty(addon.addonType, e.target.value, maxUnits)}
+                          className="w-16 rounded-lg border border-[#DDE6F0] bg-white px-2 py-1 text-center text-xs font-extrabold text-[#0E2238] focus:border-[#0A4D94] focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSetAddonQty(addon.addonType, qty + 1, maxUnits)}
+                          disabled={maxUnits !== null && maxUnits !== undefined && qty >= maxUnits}
+                          className="w-7 h-7 rounded-lg border border-[#DDE6F0] bg-white flex items-center justify-center text-[#0E2238] hover:bg-slate-50 disabled:opacity-40 cursor-pointer"
+                          aria-label={`Increase ${addon.name}`}
+                        >
+                          <HiOutlinePlus size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAddon(addon.addonType)}
+                          className="ml-1 p-1.5 rounded-lg text-red-600 hover:bg-red-50 cursor-pointer"
+                          title="Remove add-on"
+                          aria-label={`Remove ${addon.name}`}
+                        >
+                          <HiOutlineX size={15} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Compact '+' Buttons for Remaining Add-Ons */}
+            {availablePlusButtons.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {availablePlusButtons.map((addon) => {
+                  const purchasable = addon.isPurchasable !== false;
+                  const unitPrice = billingCycle === 'YEARLY' ? addon.unitPriceYearlyPkr : addon.unitPriceMonthlyPkr;
+                  return (
+                    <button
+                      key={addon.addonType}
+                      type="button"
+                      disabled={!purchasable}
+                      onClick={() => handleActivateAddon(addon)}
+                      className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold transition ${
+                        purchasable
+                          ? 'border-[#DDE6F0] bg-[#F4F7FB] text-[#0E2238] hover:border-[#0A4D94] hover:bg-blue-50/40 cursor-pointer'
+                          : 'border-dashed border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <span className={`w-5 h-5 rounded-md flex items-center justify-center ${purchasable ? 'bg-[#0A4D94] text-white' : 'bg-slate-200 text-slate-500'}`}>
+                        <HiOutlinePlus size={12} />
+                      </span>
+                      <span>{addon.name}</span>
+                      <span className="text-[11px] font-semibold text-[#52657C]">
+                        {purchasable ? `${fmtPkr(unitPrice)} ${addon.unitLabel || ''}` : 'Coming soon'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -668,7 +808,14 @@ export default function PlanCheckoutWizard({ lockedMode = false, onStatusChange 
               <span>
                 {selectedPlan?.name} Plan ({billingCycle === 'YEARLY' ? 'Yearly' : 'Monthly'})
               </span>
-              <span className="font-bold">{fmtPkr(displayedQuote.basePlanAmount)}</span>
+              <div className="flex items-center gap-2">
+                {billingCycle === 'YEARLY' && selectedPlan && (
+                  <span className="text-[11px] text-[#52657C] line-through decoration-red-500 decoration-[1.5px]">
+                    Rs. {(Number(selectedPlan.monthlyPrice || 0) * 12).toLocaleString()}
+                  </span>
+                )}
+                <span className="font-bold">{fmtPkr(displayedQuote.basePlanAmount)}</span>
+              </div>
             </div>
 
             {displayedQuote.prorationCredit > 0 && (
@@ -702,7 +849,7 @@ export default function PlanCheckoutWizard({ lockedMode = false, onStatusChange 
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
             <p className="text-[11px] text-[#52657C]">
-              Confirming creates your subscription record and generates a downloadable 3-copy UBL Bank Pay Voucher (status: <strong>UNPAID</strong>).
+              Confirming generates your subscription invoice and 3-copy UBL Bank Pay Voucher (status: <strong>UNPAID</strong>).
             </p>
             <button
               type="button"
@@ -770,7 +917,6 @@ export default function PlanCheckoutWizard({ lockedMode = false, onStatusChange 
             </div>
           </div>
 
-          {/* Rejection alert */}
           {activeInvoice.status === 'REJECTED' && (
             <div className="rounded-xl border border-red-200 bg-red-50 p-4 flex items-start gap-3">
               <HiOutlineXCircle size={20} className="text-red-600 mt-0.5 shrink-0" />
@@ -783,7 +929,6 @@ export default function PlanCheckoutWizard({ lockedMode = false, onStatusChange 
             </div>
           )}
 
-          {/* Bank Details + Line Items Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <div className="rounded-xl border border-[#DDE6F0] bg-[#F4F7FB] p-4 space-y-2.5">
               <div className="flex items-center gap-2">
@@ -818,7 +963,6 @@ export default function PlanCheckoutWizard({ lockedMode = false, onStatusChange 
               </dl>
             </div>
 
-            {/* Line Items Snapshot */}
             <div className="rounded-xl border border-[#DDE6F0] bg-white overflow-hidden">
               <table className="w-full text-xs">
                 <thead className="bg-[#F4F7FB] border-b border-[#DDE6F0]">
@@ -841,18 +985,15 @@ export default function PlanCheckoutWizard({ lockedMode = false, onStatusChange 
             </div>
           </div>
 
-          {/* Proof Upload Form (for UNPAID or REJECTED) */}
           {canUploadOnActive && (
             <form onSubmit={(e) => handleUploadProof(e, activeInvoice)} className="rounded-2xl border border-[#0A4D94]/25 bg-blue-50/30 p-5 space-y-4">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <h4 className="text-sm font-extrabold text-[#0E2238]">
-                    {activeInvoice.status === 'REJECTED' ? 'Re-Upload Bank Transfer Proof' : 'Upload Payment Screenshot / Receipt'}
-                  </h4>
-                  <p className="text-xs text-[#52657C]">
-                    Accepted formats: JPG, PNG, or PDF (max 5 MB). Stored securely on Cloudflare R2.
-                  </p>
-                </div>
+              <div>
+                <h4 className="text-sm font-extrabold text-[#0E2238]">
+                  {activeInvoice.status === 'REJECTED' ? 'Re-Upload Bank Transfer Proof' : 'Upload Payment Screenshot / Receipt'}
+                </h4>
+                <p className="text-xs text-[#52657C]">
+                  Accepted formats: JPG, PNG, or PDF (max 5 MB). Stored securely on Cloudflare R2.
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
